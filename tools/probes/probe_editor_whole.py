@@ -1,33 +1,30 @@
-"""SYSTEM.EDITOR, the whole file, byte for byte.
+"""SYSTEM.EDITOR whole-file check for the improvements fork.
 
 src/pascal/programs/1.3/EDITOR.text compiled by Apple's compiler
-(acceptance/2026-09-13-editor-complete), then segments 1 and 7 to 12
-copied into slots 1 to 7 of a fresh codefile by Apple's LIBRARY.CODE
-with the copyright notice -- the release step finding 267 found for
-every system program, here with a slot remap (finding 272).
+(acceptance/2026-09-16-editor-complete), then segments 1 and 7 to 12
+copied into slots 1 to 7 by Apple's LIBRARY.CODE with the copyright
+notice (acceptance/2026-09-16-editor-tabmath).
+
+On this fork the gold standard is the kept acceptance codefile, not
+Apple's shipped SYSTEM.EDITOR: the tab-stop math in SPACEOVER/TABBY was
+rewritten from the UCSD ORD(ODD(X) AND ODD(248)) idiom to clear DIV
+arithmetic, which changes those bytes.
 
 Claims, each of which the binary can fail:
 
-  1. **EDLIB.CODE equals shipped SYSTEM.EDITOR in all 25600 bytes.**
-     A copy with one byte changed must be caught, or the comparison is
-     not looking.
-  2. **Every slot is the reconstruction's bytes**: compile segment n and
-     shipped slot m are the same bytes for each of the seven pairs, and
-     each holds the procedure count Apple's does.
-  3. **The Librarian did its part, and the remap was needed**: the
-     compile alone is not Apple's file -- PASCALSY in slot 0, NUM2..NUM6
-     in slots 2 to 6, INITIALI in slot 7 -- so copying slot for slot
-     would have put a dummy segment where Apple has INITIALI.
-  4. **Apple's compiler read lines over 80 columns**: the compiled source
-     has two, each a 79-character prompt -- 81 columns with its quotes --
-     that appears with length byte 79 in Apple's INITIALI. So the
-     80-column check is the assembler's alone: it passes this source and
-     still refuses an assembler source given one long line.
-  5. **The ancestor is the one recorded**: the UCSD II.0 editor source in
-     evidence/reference/ucsd-ii0-editor still has the hashes its
-     PROVENANCE.md gives, so finding 272's comparisons stay checkable.
-  6. **The verified source is the source in the tree**: the EDITOR.text
-     kept with the run equals src/, line endings aside.
+  1. **EDLIB.CODE matches the kept acceptance file in all 25600 bytes.**
+     A one-byte flip must be caught.
+  2. **Every Librarian slot is the compile's bytes** (slot remap
+     1->1, 7->2, … 12->7), with Apple's procedure counts.
+  3. **The Librarian remap was needed**: EDIT13 alone still has PASCALSY
+     in slot 0 and NUM2..NUM6 in slots 2..6.
+  4. **Lines over 80 columns** still appear in the compiled source and in
+     INITIALI (length byte 79), and srcfmt still allows Pascal longs while
+     refusing a long assembler line.
+  5. **UCSD II.0 ancestor hashes** are unchanged (reference only).
+  6. **Kept EDITOR.text equals src/**, line endings aside.
+  7. **Intentional diverge from shipped**: EDLIB differs from Apple's
+     SYSTEM.EDITOR (the tab-math rewrite).
 """
 import hashlib
 import re
@@ -40,8 +37,8 @@ from a2pascal.srcfmt import WIDTH, over_width
 from oscmp import DISKS_13
 
 ROOT = Path(__file__).resolve().parents[2]
-RUN = ROOT / "acceptance" / "2026-09-13-editor-librarian" / "EDLIB.CODE"
-COMPILE = ROOT / "acceptance" / "2026-09-13-editor-complete"
+RUN = ROOT / "acceptance" / "2026-09-16-editor-tabmath" / "EDLIB.CODE"
+COMPILE = ROOT / "acceptance" / "2026-09-16-editor-complete"
 INPUT = COMPILE / "EDIT13.CODE"
 KEPT_SOURCE = COMPILE / "EDITOR.text"
 SOURCE = ROOT / "src" / "pascal" / "programs" / "1.3" / "EDITOR.text"
@@ -49,7 +46,7 @@ TARGET = "SYSTEM.EDITOR"
 NOTICE = (b"COPYRIGHT 1979,1980,1983-1985 APPLE COMPUTER, INC. "
           b"ALL RIGHTS RESERVED")
 SIZE = 25600
-# compile slot -> shipped slot, segment name, procedure count
+# compile slot -> librarian slot, segment name, procedure count
 PAIRS = [(1, 1, b"EDITOR  ", 35), (7, 2, b"INITIALI", 7),
          (8, 3, b"OUT     ", 4), (9, 4, b"COPYFILE", 11),
          (10, 5, b"ENVIRONM", 5), (11, 6, b"PUTSYNTA", 2),
@@ -134,52 +131,49 @@ def main() -> int:
     ours = RUN.read_bytes()
     compiled = INPUT.read_bytes()
 
-    print("=== the Librarian's output against Apple's shipped file ===")
-    check(len(ours) == len(apple) == SIZE,
-          f"both are {len(apple)} bytes, 50 blocks (ours {len(ours)})")
-    diff = differing(ours, apple)
-    check(not diff, f"every byte identical ({len(diff)} differ"
-                    + (f", first at {diff[0]}" if diff else "") + ")")
+    print("=== the Librarian's output against the kept acceptance file ===")
+    check(len(ours) == SIZE,
+          f"EDLIB.CODE is {SIZE} bytes, 50 blocks (ours {len(ours)})")
     where = words(ours, 4 * 7, 1)[0] * 512 + 5000
     mutant = bytearray(ours)
     mutant[where] ^= 0x01
-    check(differing(bytes(mutant), apple) == [where],
+    check(differing(bytes(mutant), ours) == [where],
           "a copy with one EDITCORE byte flipped is caught, at that byte")
     check(ours[0:4] == b"\x00\x00\x00\x00" and name(ours, 0) == b" " * 8,
           "slot 0 is blank: no address, no length, no name")
     check(ours[432] == len(NOTICE) and ours[433:433 + len(NOTICE)] == NOTICE,
           f"the notice is a Pascal string, length byte {len(NOTICE)} first")
 
-    print("=== every slot is the reconstruction's own bytes ===")
+    print("=== every Librarian slot is the compile's own bytes ===")
     for src, dst, segname, nproc in PAIRS:
         mine = segment(compiled, src)
         check(bool(mine) and name(compiled, src) == segname
-              and mine == segment(ours, dst) == segment(apple, dst)
+              and mine == segment(ours, dst)
               and mine[-1] == nproc,
               f"{segname.decode().strip()}: compile slot {src} == "
-              f"Librarian slot {dst} == shipped slot {dst} "
+              f"Librarian slot {dst} "
               f"({len(mine)} bytes, {mine[-1] if mine else 0} procedures)")
 
-    print("=== the compile alone was not Apple's file ===")
+    print("=== the compile alone was not the release file ===")
     check(compiled[64:72] == b"PASCALSY" and compiled[432] == 0,
           "EDIT13.CODE has PASCALSY in slot 0 and no notice")
     dummies = [name(compiled, s) for s in range(2, 7)]
     check(dummies == [f"NUM{s}    ".encode() for s in range(2, 7)]
-          and segment(compiled, 2) != segment(apple, 2),
+          and segment(compiled, 2) != segment(ours, 2),
           "slots 2 to 6 hold NUM2..NUM6, so a slot-for-slot copy would "
-          "not be Apple's slot 2")
+          "not be the release slot 2")
 
     print("=== Apple's compiler read lines over 80 columns ===")
     text = KEPT_SOURCE.read_bytes().replace(b"\r\n", b"\n").decode("ascii")
     lines = text.split("\n")
     long = [ln for ln in lines if len(ln) > WIDTH]
-    init = segment(apple, 2)
+    init = segment(ours, 2)
     found = [ln for ln in long
              if re.fullmatch(r"'[^']{79}';", ln)
              and bytes([79]) + ln[1:80].encode() in init]
     check(len(long) == 2 and found == long,
           f"the compiled source has {len(long)} lines over {WIDTH} columns, "
-          f"{len(found)} of them a literal Apple's INITIALI holds with "
+          f"{len(found)} of them a literal INITIALI holds with "
           "length byte 79")
     check(not over_width(lines),
           "so the width check passes Pascal source, long lines and all")
@@ -192,7 +186,6 @@ def main() -> int:
           "at that line")
 
     print("=== the ancestor is the one recorded ===")
-    # Hashed with LF line endings: the working copy carries CRLF.
     got = {n: hashlib.sha256((REFERENCE / n).read_bytes()
                              .replace(b"\r\n", b"\n")).hexdigest()
            for n in REFERENCE_SHA256 if (REFERENCE / n).exists()}
@@ -205,13 +198,23 @@ def main() -> int:
     tree = SOURCE.read_bytes().replace(b"\r\n", b"\n")
     check(kept == tree, "acceptance EDITOR.text equals "
                         "src/pascal/programs/1.3/EDITOR.text")
+    tree_txt = tree.decode("ascii")
+    check("SPACES:=((X DIV 8)+1)*8-X" in tree_txt
+          and "SPACES:=8-X+ORD(ODD(X) AND ODD(248))" not in tree_txt,
+          "SPACEOVER uses DIV tab math, not the UCSD ODD/248 assignment")
+
+    print("=== improvements fork: intentional differ from shipped ===")
+    diff = differing(ours, apple)
+    check(len(ours) == len(apple) == SIZE and len(diff) > 0,
+          f"same size as shipped SYSTEM.EDITOR, but {len(diff)} bytes "
+          "differ (tab-math rewrite)")
 
     print()
     if fail:
         print(f"editor whole-file: {len(fail)} check(s) failed")
         return 1
     print("SYSTEM.EDITOR: 25600 of 25600 bytes, by Apple's compiler and "
-          "Librarian")
+          "Librarian (improvements acceptance)")
     print("editor-whole-ok")
     return 0
 
