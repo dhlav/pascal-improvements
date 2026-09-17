@@ -291,9 +291,12 @@ BEGIN (* INSYMBOL *)
   IF GETSTMTLEV THEN BEGIN BEGSTMTLEV := STMTLEV; GETSTMTLEV := FALSE END;
   OP := NOOP;
 1:  SY := OTHERSY; (* IF NO CASES EXERCISED BLOW UP *)
-  CASE SYMBUFP^[SYMCURSOR] OF
-  '''':NUMSTRING(FALSE,LVP);
-  '0','1','2','3','4','5','6','7','8','9':
+  { ORD so CASE labels are ASCII numbers -- avoids a literal TAB (9) in
+    quotes. CHR(n) is illegal as a CASE label (error 103). CR/EOL stays
+    on the post-CASE path below, as before. }
+  CASE ORD(SYMBUFP^[SYMCURSOR]) OF
+  39: (* quote *) NUMSTRING(FALSE,LVP);
+  48,49,50,51,52,53,54,55,56,57: (* digits 0..9 *)
        BEGIN
          LCH := SYMBUFP^[SYMCURSOR];
          LI := 0; LVAL := 0;
@@ -311,13 +314,13 @@ BEGIN (* INSYMBOL *)
              VAL.IVAL := LVAL
            END
        END;
-  'A','B','C','D','E','F','G','H','I','J','K','L','M',
-  'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-  'a','b','c','d','e','f','g','h','i','j','k','l','m',
-  'n','o','p','q','r','s','t','u','v','w','x','y','z':
+  65,66,67,68,69,70,71,72,73,74,75,76,77, (* A..M *)
+  78,79,80,81,82,83,84,85,86,87,88,89,90, (* N..Z *)
+  97,98,99,100,101,102,103,104,105,106,107,108,109, (* a..m *)
+  110,111,112,113,114,115,116,117,118,119,120,121,122: (* n..z *)
        IDSEARCH(SYMCURSOR,SYMBUFP^); (* MAGIC PROC *)
-  '{': BEGIN COMMENTER('}'); GOTO 1 END;
-  '(': BEGIN
+  123: (* left brace *) BEGIN COMMENTER('}'); GOTO 1 END;
+  40: (* left paren *) BEGIN
          IF SYMBUFP^[SYMCURSOR+1]='*' THEN
              BEGIN
                 SYMCURSOR := SYMCURSOR+1;
@@ -328,10 +331,10 @@ BEGIN (* INSYMBOL *)
            ELSE
              SY := LPARENT;
        END;
-  ')': SY := RPARENT;
-  ',': SY := COMMA;
-  '	',' ': BEGIN SYMCURSOR := SYMCURSOR+1; GOTO 1; END;
-  '.': BEGIN
+  41: (* right paren *) SY := RPARENT;
+  44: (* comma *) SY := COMMA;
+  9,32: (* TAB, space *) BEGIN SYMCURSOR := SYMCURSOR+1; GOTO 1; END;
+  46: (* period *) BEGIN
          IF SYMBUFP^[SYMCURSOR+1]='.'
            THEN
              BEGIN
@@ -341,7 +344,7 @@ BEGIN (* INSYMBOL *)
            ELSE
              SY := PERIOD;
        END;
-  ':': IF SYMBUFP^[SYMCURSOR+1]='='
+  58: (* colon *) IF SYMBUFP^[SYMCURSOR+1]='='
          THEN
            BEGIN
              SYMCURSOR := SYMCURSOR+1;
@@ -349,30 +352,30 @@ BEGIN (* INSYMBOL *)
           END
         ELSE
            SY := COLON;
-  ';': SY := SEMICOLON;
-  '^': SY := ARROW;
-  '[': SY := LBRACK;
-  ']': SY := RBRACK;
-  '*': BEGIN SY := MULOP; OP := MUL END;
-  '+': BEGIN SY := ADDOP; OP := PLUS END;
-  '-': BEGIN SY := ADDOP; OP := MINUS END;
-  '/': BEGIN SY := MULOP; OP := RDIV END;
-  '<': BEGIN
+  59: (* semicolon *) SY := SEMICOLON;
+  94: (* up-arrow *) SY := ARROW;
+  91: (* left bracket *) SY := LBRACK;
+  93: (* right bracket *) SY := RBRACK;
+  42: (* star *) BEGIN SY := MULOP; OP := MUL END;
+  43: (* plus *) BEGIN SY := ADDOP; OP := PLUS END;
+  45: (* minus *) BEGIN SY := ADDOP; OP := MINUS END;
+  47: (* slash *) BEGIN SY := MULOP; OP := RDIV END;
+  60: (* less-than *) BEGIN
          SY := RELOP;
          OP := LTOP;
-         CASE SYMBUFP^[SYMCURSOR+1] OF
-           '>': BEGIN
+         CASE ORD(SYMBUFP^[SYMCURSOR+1]) OF
+           62: (* greater-than *) BEGIN
                   OP := NEOP;
                   SYMCURSOR := SYMCURSOR+1
                 END;
-           '=': BEGIN
+           61: (* equals *) BEGIN
                   OP := LEOP;
                   SYMCURSOR := SYMCURSOR+1
                 END
          END;
        END;
-  '=': BEGIN SY := RELOP; OP := EQOP END;
-  '>': BEGIN
+  61: (* equals *) BEGIN SY := RELOP; OP := EQOP END;
+  62: (* greater-than *) BEGIN
          SY := RELOP;
          IF SYMBUFP^[SYMCURSOR+1]='='
            THEN
@@ -383,7 +386,7 @@ BEGIN (* INSYMBOL *)
            ELSE
              OP := GTOP;
        END
-END (* CASE SYMBUFP^[SYMCURSOR] OF *);
+END (* CASE ORD(SYMBUFP^[SYMCURSOR]) OF *);
   IF SY=OTHERSY THEN
     IF SYMBUFP^[SYMCURSOR] = CHR(EOL) THEN
       BEGIN CHECKEND; GETSTMTLEV := TRUE; GOTO 1 END
