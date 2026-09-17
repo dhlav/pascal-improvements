@@ -1,0 +1,119 @@
+{ Segment 12. One procedure, and a straight descendant of II.0's
+  CASESTATEMENT -- the case list is still built as a sorted chain of
+  three-word CASEINFO records and then reversed to emit the jump table.
+  What is Apple's is the OTHERWISE clause, symbol 54, which 1.3 added and
+  which shows up here three times: in the follow set handed to STATEMENT,
+  in the UNTIL of the outer loop, and as the clause itself.
+
+  The frame is 28 bytes, which is fourteen words: thirteen declared below
+  and one the compiler takes for the WITH statements, all three of which
+  reuse it. That is what pins the declarations -- with reverse allocation
+  inside a list (finding 33) there is exactly one arrangement that puts
+  LSP1 at 1 and LMIN at 12.
+
+  The three labels are the one loose end. They occupy 8, 9 and 10 in the
+  order they are first used, so a single list has to name them in the
+  reverse of that order, which is what is written here. A list in II.0's
+  order -- LADDR,LCIX,LCIX1 -- allocates the same three words and compiles
+  to the same bytes, with all three names moved one role along. SPECULATION
+  as to which Apple wrote; the offsets cannot tell them apart. }
+
+    LABEL 1;
+
+    TYPE CIP = ^CASEINFO;
+	 CASEINFO = PACKED RECORD
+		      NEXT: CIP;
+		      CSSTART: INTEGER;
+		      CSLAB: INTEGER
+		    END;
+
+    VAR LSP,LSP1: STP;
+	FSTPTR,LPT1,LPT2,LPT3: CIP;
+	LVAL: VALU;
+	LCIX1,LCIX,LADDR: LBP;
+	LMIN,LMAX: INTEGER;
+	LDEFIC: ADDRRANGE;
+
+  BEGIN
+    EXPRESSION(FSYS + [OFSY,COMMA,COLON]);
+    LOAD; MASKBOOL;
+    GENLABEL(LADDR); GENJMP(57(*UJP*),LADDR);
+    LSP := GATTR.TYPTR;
+    IF LSP <> NIL THEN
+      IF (LSP^.FORM <> SCALAR) OR (LSP = REALPTR) THEN
+	BEGIN ERROR(144); LSP := NIL END;
+    IF SY = OFSY THEN INSYMBOL ELSE ERROR(8);
+    FSTPTR := NIL;
+    GENLABEL(LCIX); GENLABEL(LCIX1);
+    REPEAT
+      LPT3 := NIL;
+      REPEAT
+	CONSTANT(FSYS + [COMMA,COLON],LSP1,LVAL);
+	IF LSP <> NIL THEN
+	  IF COMPTYPES(LSP,LSP1) THEN
+	    BEGIN
+	      LPT1 := FSTPTR; LPT2 := NIL;
+	      WHILE LPT1 <> NIL DO
+		WITH LPT1^ DO
+		  BEGIN
+  { No ELSE here: Apple's compiler always emits a jump over an else part,
+    and there is only one UJP in the binary -- the GOTO. The walk falls
+    through to the step instead. }
+		    IF CSLAB <= LVAL.IVAL THEN
+		      BEGIN
+			IF CSLAB = LVAL.IVAL THEN ERROR(156);
+			GOTO 1
+		      END;
+		    LPT2 := LPT1; LPT1 := NEXT
+		  END;
+	 1:   NEW(LPT3);
+	      WITH LPT3^ DO
+		BEGIN NEXT := LPT1; CSLAB := LVAL.IVAL; CSSTART := IC END;
+	      IF LPT2 = NIL THEN FSTPTR := LPT3
+	      ELSE LPT2^.NEXT := LPT3
+	    END
+	  ELSE ERROR(147);
+	TEST := SY <> COMMA;
+	IF NOT TEST THEN INSYMBOL
+      UNTIL TEST;
+      IF SY = COLON THEN INSYMBOL ELSE ERROR(5);
+      REPEAT
+	STATEMENT(FSYS + [SEMICOLON,SEPARATSY])
+      UNTIL NOT (SY IN STATBEGSYS);
+      IF LPT3 <> NIL THEN GENJMP(57(*UJP*),LCIX);
+      TEST := SY <> SEMICOLON;
+      IF NOT TEST THEN INSYMBOL
+    UNTIL TEST OR (SY = ENDSY) OR (SY = SEPARATSY);
+    PUTLABEL(LADDR);
+    IF FSTPTR <> NIL THEN
+      BEGIN
+	LMAX := FSTPTR^.CSLAB;
+	LPT1 := FSTPTR; FSTPTR := NIL;
+	REPEAT
+	  LPT2 := LPT1^.NEXT; LPT1^.NEXT := FSTPTR;
+	  FSTPTR := LPT1; LPT1 := LPT2
+	UNTIL LPT1 = NIL;
+	LMIN := FSTPTR^.CSLAB;
+	GEN0(44(*XJP*)); GENWORD(LMIN); GENWORD(LMAX);
+	LDEFIC := IC; GENJMP(57(*UJP*),LCIX1);
+	IF IC + (LMAX-LMIN)*2 >= MAXCODE THEN ERROR(302)
+	ELSE
+	  REPEAT
+	    WITH FSTPTR^ DO
+	      BEGIN
+		WHILE CSLAB > LMIN DO
+		  BEGIN GENWORD(IC-LDEFIC); LMIN := LMIN + 1 END;
+		GENWORD(IC-CSSTART);
+		FSTPTR := NEXT; LMIN := LMIN + 1
+	      END
+	  UNTIL FSTPTR = NIL;
+	PUTLABEL(LCIX1);
+	IF SY = SEPARATSY THEN
+	  BEGIN INSYMBOL;
+	    STATEMENT(FSYS + [SEMICOLON]);
+	    IF SY = SEMICOLON THEN INSYMBOL
+	  END;
+	PUTLABEL(LCIX)
+      END;
+    IF SY = ENDSY THEN INSYMBOL ELSE ERROR(13)
+  END;

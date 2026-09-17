@@ -1,0 +1,149 @@
+Command: F(ile, E(dit, R(un, C(omp, L(ink, X(ecute, A(ssem, ?  [1.3]XExecute what file (<ret> to exit) ? SYSHD:LIBRARY
+<1E>  Apple Pascal Librarian [1.3]<00><1E> -Output file -> <00>WORKHD:LIBCOMP.CODE[*]
+<1E> $Input File -> <00>WORKHD:COMPLINK.CODE
+<1E> %            0-( 0) PASCALSY   100            8-(13) FORSTATE   498
+            1-( 1) PASCALCO  5606            9-(14) BODY1      326
+            2-( 7) COMPINIT  4032           10-(15) BODY3      902
+            3-( 8) DECLARAT  7600           11-(16) WRITELIN   826
+            4-( 9) BODYPART  7454           12-(17) UNITPART  1664
+            5-(10) ROUTINE   2892           13-(18) COMPOPTI  1104
+            6-(11) STATEMEN  1690           14-(19) NUMSTRIN   898
+            7-(12) CASESTAT   512           15-(20) FINISHUP   650
+<1E> .File length - <00>1<1E>  Slot # to copy and <space>, = for all, ? for select, N(ew file, Q(uit, A(bort<00><1E> "<00>?<1E> "Copy slot <00>0? N
+<1E> "Copy slot <00>1? Y
+<1E> /            0-                  0            8-                  0
+            1-( 1) PASCALCO  5606            9-                  0
+            2-                  0           10-                  0
+            3-                  0           11-                  0
+            4-                  0           12-                  0
+            5-                  0           13-                  0
+            6-                  0           14-                  0
+            7-                  0           15-                  0
+<1E> .File length - <00>12<1E> "Copy slot <00>2? Y
+<1E> /            0-                  0            8-                  0
+            1-( 1) PASCALCO  5606            9-                  0
+            2-( 7) COMPINIT  4032           10-                  0
+            3-                  0           11-                  0
+            4-                  0           12-                  0
+            5-                  0           13-                  0
+            6-                  0           14-                  0
+            7-                  0           15-                  0
+<1E> .File length - <00>20<1E> "Copy slot <00>3? Y
+<1E> /            0-                  0            8-                  0
+            1-( 1) PASCALCO  5606            9-                  0
+            2-( 7) COMPINIT  4032           10-                  0
+            3-( 8) DECLARAT  7600           11-                  0
+            4-                  0           12-                  0
+            5-                  0           13-                  0
+            6-                  0           14-                  0
+            7-                  0           15-                  0
+<1E> .File length - <00>35<1E> "Copy slot <00>4? Y
+<1E> /            0-                  0            8-                  0
+            1-( 1) PASCALCO  5606            9-                  0
+            2-( 7) COMPINIT  4032           10-                  0
+            3-( 8) DECLARAT  7600           11-                  0
+            4-( 9) BODYPART  7454           12-                  0
+            5-                  0           13-                  0
+            6-                  0           14-                  0
+            7-                  0           15-                  0
+<1E> .File length - <00>50<1E> "Copy slot <00>5? Y
+<1E> /            0-                  0            8-                  0
+            1-( 1) PASCALCO  5606            9-                  0
+            2-( 7) COMPINIT  4032           10-                  0
+            3-( 8) DECLARAT  7600           11-                  0
+            4-( 9) BODYPART  7454           12-                  0
+            5-(10) ROUTINE   2892           13-                  0
+            6-                  0           14-                  0
+            7-                  0           15-                  0
+<1E> .File length - <00>56<1E> "Copy slot <00>6? Y
+<1E> /            0-                  0            8-                  0
+            1-( 1) PASCALCO  5606            9-                  0
+            2-( 7) COMPINIT  4032           10-                  0
+            3-( 8) DECLARAT  7600           11-                  0
+            4-( 9) BODYPART  7454           12-                  0
+            5-(10) ROUTINE   2892           13-                  0
+            6-(11) STATEMEN  1690           14-                  0
+            7-                  0           15-                  0
+<1E> .File length - <00>60<1E> "Copy slot <00>7? Y
+<1E> /            0-                  0            8-                  0
+            1-( 1) PASCALCO  5606            9-                  0
+            2-( 7) COMPINIT  4032           10-                  0
+            3-( 8) DECLARAT  7600           11-                  0
+            4-( 9) BODYPART  7454           12-                  0
+            5-(10) ROUTINE   2892           13-                  0
+            6-(11) STATEMEN  1690           14-                  0
+            7-(12) CASESTAT   512           15-                  0
+<1E> .File length - <00>61<1E> "Copy slot <00>8? Y
+<1E> /            0-                  0            8-(13) FORSTATE   498
+            1-( 1) PASCALCO  5606            9-                  0
+            2-( 7) COMPINIT  4032           10-                  0
+            3-( 8) DECLARAT  7600           11-                  0
+            4-( 9) BODYPART  7454           12-                  0
+            5-(10) ROUTINE   2892           13-                  0
+            6-(11) STATEMEN  1690           14-                  0
+            7-(12) CASESTAT   512           15-                  0
+<1E> .File length - <00>62<1E> "Copy slot <00>9? Y
+<1E> /            0-                  0            8-(13) FORSTATE   498
+            1-( 1) PASCALCO  5606            9-(14) BODY1      326
+            2-( 7) COMPINIT  4032           10-                  0
+            3-( 8) DECLARAT  7600           11-                  0
+            4-( 9) BODYPART  7454           12-                  0
+            5-(10) ROUTINE   2892           13-                  0
+            6-(11) STATEMEN  1690           14-                  0
+            7-(12) CASESTAT   512           15-                  0
+<1E> .File length - <00>63<1E> "Copy slot <00>10? Y
+<1E> /            0-                  0            8-(13) FORSTATE   498
+            1-( 1) PASCALCO  5606            9-(14) BODY1      326
+            2-( 7) COMPINIT  4032           10-(15) BODY3      902
+            3-( 8) DECLARAT  7600           11-                  0
+            4-( 9) BODYPART  7454           12-                  0
+            5-(10) ROUTINE   2892           13-                  0
+            6-(11) STATEMEN  1690           14-                  0
+            7-(12) CASESTAT   512           15-                  0
+<1E> .File length - <00>65<1E> "Copy slot <00>11? Y
+<1E> /            0-                  0            8-(13) FORSTATE   498
+            1-( 1) PASCALCO  5606            9-(14) BODY1      326
+            2-( 7) COMPINIT  4032           10-(15) BODY3      902
+            3-( 8) DECLARAT  7600           11-(16) WRITELIN   826
+            4-( 9) BODYPART  7454           12-                  0
+            5-(10) ROUTINE   2892           13-                  0
+            6-(11) STATEMEN  1690           14-                  0
+            7-(12) CASESTAT   512           15-                  0
+<1E> .File length - <00>67<1E> "Copy slot <00>12? Y
+<1E> /            0-                  0            8-(13) FORSTATE   498
+            1-( 1) PASCALCO  5606            9-(14) BODY1      326
+            2-( 7) COMPINIT  4032           10-(15) BODY3      902
+            3-( 8) DECLARAT  7600           11-(16) WRITELIN   826
+            4-( 9) BODYPART  7454           12-(17) UNITPART  1664
+            5-(10) ROUTINE   2892           13-                  0
+            6-(11) STATEMEN  1690           14-                  0
+            7-(12) CASESTAT   512           15-                  0
+<1E> .File length - <00>71<1E> "Copy slot <00>13? Y
+<1E> /            0-                  0            8-(13) FORSTATE   498
+            1-( 1) PASCALCO  5606            9-(14) BODY1      326
+            2-( 7) COMPINIT  4032           10-(15) BODY3      902
+            3-( 8) DECLARAT  7600           11-(16) WRITELIN   826
+            4-( 9) BODYPART  7454           12-(17) UNITPART  1664
+            5-(10) ROUTINE   2892           13-(18) COMPOPTI  1104
+            6-(11) STATEMEN  1690           14-                  0
+            7-(12) CASESTAT   512           15-                  0
+<1E> .File length - <00>74<1E> "Copy slot <00>14? Y
+<1E> /            0-                  0            8-(13) FORSTATE   498
+            1-( 1) PASCALCO  5606            9-(14) BODY1      326
+            2-( 7) COMPINIT  4032           10-(15) BODY3      902
+            3-( 8) DECLARAT  7600           11-(16) WRITELIN   826
+            4-( 9) BODYPART  7454           12-(17) UNITPART  1664
+            5-(10) ROUTINE   2892           13-(18) COMPOPTI  1104
+            6-(11) STATEMEN  1690           14-(19) NUMSTRIN   898
+            7-(12) CASESTAT   512           15-                  0
+<1E> .File length - <00>76<1E> "Copy slot <00>15? Y
+<1E> /            0-                  0            8-(13) FORSTATE   498
+            1-( 1) PASCALCO  5606            9-(14) BODY1      326
+            2-( 7) COMPINIT  4032           10-(15) BODY3      902
+            3-( 8) DECLARAT  7600           11-(16) WRITELIN   826
+            4-( 9) BODYPART  7454           12-(17) UNITPART  1664
+            5-(10) ROUTINE   2892           13-(18) COMPOPTI  1104
+            6-(11) STATEMEN  1690           14-(19) NUMSTRIN   898
+            7-(12) CASESTAT   512           15-(20) FINISHUP   650
+<1E> .File length - <00>78<1E> "<00>Q<1E> 7Notice? <00>COPYRIGHT 1979,1980,1983-1985 APPLE COMPUTER, INC. ALL RIGHTS RESERVED
+Command:

@@ -1,0 +1,102 @@
+{ Segment 13. One procedure, and the last of STATEMENT's two segment
+  children. The frame is 20 bytes -- ten words: LATTR takes five, LSY,
+  LADDR and LCIX one each, one more is the WITH temp for WITH LCP^, and
+  one word at offset 6 is never touched by any instruction in the segment.
+
+  That word is II.0's LSP. II.0 keeps the control variable's type in it
+  and checks the range against LSP^.MIN/LSP^.MAX; Apple's code goes back
+  to LATTR.TYPTR^ each time and never assigns it, so the declaration
+  survives with nothing reading it -- the same leftover as WITHSTATEMENT's
+  LLC (finding 85c). Its position between LATTR and LSY is fixed by the
+  offsets; STRONG INFERENCE that it is an STP, SPECULATION as to the name.
+
+  LADDR at 8 and LCIX at 9 are one list named in the reverse of the order
+  they are used, exactly as in CASESTATEMENT (finding 33).
+
+  The control variable is not searched for in FORSTATEMENT's own frame:
+  SEARCHID writes into STATEMENT's LCP at 1,5, and the WITH copies it from
+  there. That is the check on STATEMENT's own declarations -- LCP has to
+  be STATEMENT's fifth word for this segment to compile as Apple's does.
+
+  Two things the binary settles that II.0 would not predict. The loop
+  limit is stored with GEN2(56(*STR*),LEVEL,LC) and LC is stepped once and
+  never given back here. And the step is GENLDC(1) followed by GEN0(2
+  (*ADI*)) or GEN0(21(*SBI*)) -- one increment either way, chosen by the
+  saved LSY rather than by re-reading SY. }
+
+    VAR LATTR: ATTR;
+        LSP: STP;
+        LSY: SYMBOL;
+        LCIX,LADDR: LBP;
+
+  BEGIN
+    IF SY = IDENT THEN
+      BEGIN SEARCHID(VARS,LCP);
+        WITH LCP^ DO
+          BEGIN LATTR.TYPTR := IDTYPE; LATTR.KIND := VARBL;
+            IF KLASS = ACTUALVARS THEN
+              BEGIN LATTR.ACCESS := DRCT; LATTR.VLEVEL := VLEV;
+                LATTR.DPLMT := VADDR
+              END
+            ELSE BEGIN ERROR(155); LATTR.TYPTR := NIL END
+          END;
+        IF LATTR.TYPTR <> NIL THEN
+          IF (LATTR.TYPTR^.FORM > SUBRANGE)
+             OR COMPTYPES(REALPTR,LATTR.TYPTR) THEN
+            BEGIN ERROR(143); LATTR.TYPTR := NIL END;
+        INSYMBOL
+      END
+    ELSE BEGIN ERROR(2); SKIP(FSYS + [BECOMES,TOSY,DOWNTOSY,DOSY]) END;
+    IF SY = BECOMES THEN
+      BEGIN INSYMBOL;
+        EXPRESSION(FSYS + [TOSY,DOWNTOSY,DOSY]);
+        IF GATTR.TYPTR <> NIL THEN
+          IF GATTR.TYPTR^.FORM <> SCALAR THEN ERROR(144)
+          ELSE
+            IF COMPTYPES(LATTR.TYPTR,GATTR.TYPTR) THEN
+              BEGIN LOAD; MASKBOOL;
+                IF LATTR.TYPTR <> NIL THEN
+                  IF (LATTR.TYPTR^.FORM = SUBRANGE) AND RANGECHECK THEN
+                    BEGIN GENLDC(LATTR.TYPTR^.MIN.IVAL);
+                      GENLDC(LATTR.TYPTR^.MAX.IVAL);
+                      GEN0(8(*CHK*))
+                    END;
+                STORE(LATTR)
+              END
+            ELSE ERROR(145)
+      END
+    ELSE BEGIN ERROR(51); SKIP(FSYS + [TOSY,DOWNTOSY,DOSY]) END;
+    GENLABEL(LADDR);
+    IF SY IN [TOSY,DOWNTOSY] THEN
+      BEGIN LSY := SY; INSYMBOL;
+        EXPRESSION(FSYS + [DOSY]);
+        IF GATTR.TYPTR <> NIL THEN
+          IF GATTR.TYPTR^.FORM <> SCALAR THEN ERROR(144)
+          ELSE
+            IF COMPTYPES(LATTR.TYPTR,GATTR.TYPTR) THEN
+              BEGIN LOAD; MASKBOOL;
+                IF LATTR.TYPTR <> NIL THEN
+                  IF (LATTR.TYPTR^.FORM = SUBRANGE) AND RANGECHECK THEN
+                    BEGIN GENLDC(LATTR.TYPTR^.MIN.IVAL);
+                      GENLDC(LATTR.TYPTR^.MAX.IVAL);
+                      GEN0(8(*CHK*))
+                    END;
+                GEN2(56(*STR*),LEVEL,LC);
+                PUTLABEL(LADDR);
+                GATTR := LATTR; LOAD;
+                GEN2(54(*LOD*),LEVEL,LC); LC := LC + 1;
+                IF LSY = TOSY THEN GEN2(52(*LEQ*),0,1)
+                ELSE GEN2(48(*GEQ*),0,1)
+              END
+            ELSE ERROR(145)
+      END
+    ELSE BEGIN ERROR(55); SKIP(FSYS + [DOSY]) END;
+    GENLABEL(LCIX); GENJMP(33(*FJP*),LCIX);
+    IF SY = DOSY THEN INSYMBOL ELSE ERROR(54);
+    STATEMENT(FSYS);
+    GATTR := LATTR; LOAD; GENLDC(1);
+    IF LSY = TOSY THEN GEN0(2(*ADI*)) ELSE GEN0(21(*SBI*));
+    STORE(LATTR);
+    GENJMP(57(*UJP*),LADDR);
+    PUTLABEL(LCIX)
+  END;

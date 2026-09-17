@@ -1,0 +1,138 @@
+{ Segment 15. The last third of UCSD II.0's BODY: close the block's files,
+  emit the return, check the labels, and write out the attribute table --
+  jump table, data size, param size, exit IC, enter IC, procedure number and
+  lexical level, low address first. That table is what the codefile reader
+  in tools/a2pascal/codefile.py takes apart, so this procedure is the other
+  end of the whole project.
+
+  HOLDSEGS is Apple's, and has no II.0 ancestor at all. }
+
+    PROCEDURE HOLDSEGS;
+{ The segments this block wants held in memory. Everything named in a
+  (*$R*) list is in LRES, and the outermost block of a program also holds
+  the units it USES and the two library segments the runtime needs.
+
+  The shape it emits is the one BODYPART.27 and .38 are made of:
+
+	  UJP  load          <- the two bytes BODY1 reserved
+    body: ...
+	  <unload each segment>
+	  UJP  done
+    load: <load each segment>
+	  UJP  body
+    done:
+
+  so the loading runs once on entry and the unloading once on the way out,
+  and neither is in the path of anything else. The RESIDENT and USINGLIST
+  chains are reversed as they are walked, which is why each is unloaded in
+  the order it was declared and loaded in the reverse. }
+    BEGIN
+      LCP := LRES; LPREV := NIL;
+      WHILE LCP <> NIL DO
+	BEGIN GENLDC(LCP^.SEGID); GEN1(30(*CSP*),22(*UNLOADSEG*));
+	  IF LCP^.MODLINK THEN LINKERREF(PROC,LCP^.SEGID,IC-3);
+	  LNEXT := LCP^.NEXT; LCP^.NEXT := LPREV;
+	  LPREV := LCP; LCP := LNEXT
+	END;
+      LRES := LPREV;
+      IF LMAIN THEN
+	BEGIN LCP := USINGLIST; LPREV := NIL;
+	  WHILE LCP <> NIL DO
+	    BEGIN
+	      IF LCP^.MODSEG AND NOT NOLOAD THEN
+		BEGIN GENLDC(LCP^.SEGID); GEN1(30(*CSP*),22(*UNLOADSEG*)) END;
+	      IF LCP^.MODDATA THEN
+		BEGIN GENLDC(LCP^.MODDSEG);
+		  GEN1(30(*CSP*),22(*UNLOADSEG*))
+		END;
+	      LNEXT := LCP^.NEXT; LCP^.NEXT := LPREV;
+	      LPREV := LCP; LCP := LNEXT
+	    END;
+	  USINGLIST := LPREV;
+	  FOR LI := 31 DOWNTO 30 DO
+	    IF LI IN SEGSUSED THEN
+	      BEGIN GENLDC(LI); GEN1(30(*CSP*),22(*UNLOADSEG*)) END
+	END;
+      GENLABEL(LDONELB); GENJMP(57(*UJP*),LDONELB);
+      GENLABEL(LLOADLB); PUTLABEL(LLOADLB);
+      LOLDIC := IC; IC := LSEGIC;
+      GENJMP(57(*UJP*),LLOADLB);
+      IC := LOLDIC;
+      IF LMAIN THEN
+	BEGIN
+	  FOR LI := 30 TO 31 DO
+	    IF LI IN SEGSUSED THEN
+	      BEGIN GENLDC(LI); GEN1(30(*CSP*),21(*LOADSEG*)) END;
+	  LCP := USINGLIST;
+	  WHILE LCP <> NIL DO
+	    BEGIN
+	      IF LCP^.MODDATA THEN
+		BEGIN GENLDC(LCP^.MODDSEG); GEN1(30(*CSP*),21(*LOADSEG*)) END;
+	      IF LCP^.MODSEG AND NOT NOLOAD THEN
+		BEGIN GENLDC(LCP^.SEGID); GEN1(30(*CSP*),21(*LOADSEG*)) END;
+	      LCP := LCP^.NEXT
+	    END;
+	  LCP := LRES
+	END;
+      LCP := LRES;
+      WHILE LCP <> NIL DO
+	BEGIN GENLDC(LCP^.SEGID); GEN1(30(*CSP*),21(*LOADSEG*));
+	  IF LCP^.MODLINK THEN LINKERREF(PROC,LCP^.SEGID,IC-3);
+	  LCP := LCP^.NEXT
+	END;
+      GENJMP(57(*UJP*),LBODYLB);
+      PUTLABEL(LDONELB)
+    END (*HOLDSEGS*) ;
+
+  BEGIN (*BODY3*)
+    IF SY = ENDSY THEN INSYMBOL ELSE ERROR(13);
+    EXITIC := IC;
+    IF NOT INMODULE THEN
+      BEGIN LCP := DISPLAY[TOP].FFILE;
+	WHILE LCP <> NIL DO
+	  WITH LCP^ DO
+	    BEGIN GEN2(50(*LDA*),VLEV,VADDR);
+	      GENLDC(0); GEN2(77(*CXP*),0(*SYS*),6(*FCLOSE*));
+	      LCP := NEXT
+	    END
+      END;
+    IF (LRES <> NIL) OR
+       (LMAIN AND ((SEGSUSED <> []) OR
+		   (NOT NOLOAD AND (USINGLIST <> NIL)))) THEN HOLDSEGS;
+    IF FPROCP = NIL THEN GEN0(86(*XIT*))
+    ELSE
+      BEGIN
+	IF FPROCP^.PFLEV = 0 THEN LOP := 65(*RBP*)
+	ELSE LOP := 45(*RNP*);
+	IF FPROCP^.IDTYPE = NIL THEN GEN1(LOP,0)
+	ELSE GEN1(LOP,FPROCP^.IDTYPE^.SIZE)
+      END;
+    LLP := DISPLAY[TOP].FLABEL;
+    WHILE LLP <> NIL DO
+      WITH LLP^,CODELBP^ DO
+	BEGIN
+	  IF NOT DEFINED THEN
+	    IF REFLIST <> MAXADDR THEN ERROR(168);
+	  LLP := NEXTLAB
+	END;
+    JTINX := NEXTJTAB - 1;
+    IF ODD(IC) THEN GENBYTE(0);
+    WHILE JTINX > 0 DO
+      BEGIN GENWORD(IC-JTAB[JTINX]); JTINX := JTINX-1 END;
+    IF FPROCP = NIL THEN
+      BEGIN GENWORD((LCMAX-LCAFTERMARKSTACK)*2); GENWORD(0) END
+    ELSE
+      WITH FPROCP^ DO
+	BEGIN GENWORD((LCMAX-LOCALLC)*2);
+	  GENWORD((LOCALLC-LCAFTERMARKSTACK)*2)
+	END;
+    GENWORD(IC-EXITIC); GENWORD(IC);
+    GENBYTE(CURPROC); GENBYTE(LEVEL-1);
+    IF NOT CODEINSEG THEN
+      BEGIN CODEINSEG := TRUE;
+	SEGTABLE[SEGMAP[SEG]].DISKADDR := CURBLK
+      END;
+    WRITECODE(FALSE);
+    SEGINX := SEGINX + IC;
+    PROCTABLE[CURPROC] := SEGINX - 2
+  END;

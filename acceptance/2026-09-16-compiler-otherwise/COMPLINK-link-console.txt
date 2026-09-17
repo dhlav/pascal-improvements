@@ -1,0 +1,38 @@
+Command: F(ile, E(dit, R(un, C(omp, L(ink, X(ecute, A(ssem, ?  [1.3]LLinking...
+
+
+
+
+
+
+
+Apple Pascal Linker [1.3]
+
+Link what host codefile? WORKHD:BODY13.CODE
+Opening WORKHD:BODY13.CODE
+Using what library file? WORKHD:SEARCH.CODE
+Opening WORKHD:SEARCH.CODE
+Another library file (<ret> for none) ? 
+Map file (<ret> for none) ? 
+Reading PASCALCO
+Reading IDSEARCH
+Output file (<ret> for workfile) ? WORKHD:COMPLINK.CODE[*]
+Linking PASCALSY # 0
+Linking COMPINIT # 7
+Linking DECLARAT # 8
+Linking BODYPART # 9
+Linking ROUTINE  # 10
+Linking STATEMEN # 11
+Linking CASESTAT # 12
+Linking FORSTATE # 13
+Linking BODY1    # 14
+Linking BODY3    # 15
+Linking WRITELIN # 16
+Linking UNITPART # 17
+Linking COMPOPTI # 18
+Linking NUMSTRIN # 19
+Linking FINISHUP # 20
+Linking PASCALCO # 1
+   Copying proc IDSEARCH
+   Copying func TREESEAR
+Command:

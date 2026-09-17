@@ -1,0 +1,159 @@
+{ Segment 16. UCSD II.0's WRITELINKERINFO, which is unitpart.text:10-247 --
+  a segment procedure there too, but the first of two in one file, and Apple
+  gave it a file and a segment of its own.
+
+  Apple's version is a different shape in one respect worth naming up front.
+  II.0 decides whether a symbol interests the linker BEFORE writing anything,
+  carrying a NEEDEDBYLINKER flag through the whole of GLOBALSEARCH. Apple
+  writes the name first, remembers where IC was, and winds IC back over the
+  record when the answer turns out to be no. Every arm below that declines a
+  symbol does it with `IC := SAVEIC` and nothing else. }
+  TYPE
+    LITYPES = (EOFMARK,MODDULE,GLOBREF,PUBBLIC,PRIVVATE,CONNSTANT,GLOBDEF,
+	       PUBLICDEF,CONSTDEF,EXTPROC,EXTFUNC,SSEPPROC,SSEPFUNC,
+	       SEPPREF,SEPFREF);
+    OPFORMAT = (WORD, BYTE, BIG);
+
+{ Apple has no LIENTRY. The record's fields are these five scalars, and the
+  variant that held them is gone with it -- NWORDS and NPARAMS were never
+  live at once, so one word does for both. }
+  VAR CURRENTBLOCK: INTEGER;
+      NWORDS: INTEGER;
+      REFID: INTEGER;
+      SAVEIC: ADDRRANGE;
+      LITYPE: LITYPES;
+      INDATASEG: BOOLEAN;
+
+  PROCEDURE GETREFS(ID: INTEGER);
+{ II.0 takes a second parameter, LENGTH, and never reads it; Apple dropped
+  it, and every call site with it. }
+    VAR LIC: ADDRRANGE;
+	FIC: ADDRRANGE;
+	J,MAX,BLOCKCOUNT,COUNT: INTEGER;
+
+    PROCEDURE GETNEXTBLOCK;
+    BEGIN
+      CURRENTBLOCK := CURRENTBLOCK + 1;
+      IF CURRENTBLOCK > REFBLK THEN CURRENTBLOCK := 0;
+      IF BLOCKREAD(REFFILE,REFLIST^,1,CURRENTBLOCK) <> 1 THEN ERROR(404)
+    END (*GETNEXTBLOCK*) ;
+
+  BEGIN (*GETREFS*)
+    COUNT := 0; FIC := IC - 4;
+    IF (NREFS <> 1) OR (REFBLK <> 0) THEN
+      FOR BLOCKCOUNT := 0 TO REFBLK DO
+	BEGIN
+	  IF CURRENTBLOCK < REFBLK THEN MAX := REFSPERBLK ELSE MAX := NREFS-1;
+	  FOR J := 1 TO MAX DO
+	    IF ID = REFLIST^[J].KEY THEN
+	      BEGIN GENWORD(REFLIST^[J].OFFSET); COUNT := COUNT + 1 END;
+	  IF BLOCKCOUNT < REFBLK THEN GETNEXTBLOCK;
+	END;
+    IF COUNT = 0 THEN IC := IC - 16
+    ELSE
+      BEGIN LIC := IC; IC := FIC; GENWORD(COUNT); IC := LIC END;
+    (*NOW FILL REST OF 8-WORD RECORD*)
+    FOR J := 1 TO ((8 - (COUNT MOD 8)) MOD 8) DO GENWORD(0)
+  END (* GETREFS *) ;
+
+  PROCEDURE GLOBALSEARCH(FCP: CTP);
+  BEGIN
+    REFID := -9999; SAVEIC := IC;
+    IF FCP <> NIL THEN
+      BEGIN
+	WITH FCP^ DO
+	  IF KLASS IN [KONST,FORMALVARS,ACTUALVARS,PROC,FUNC,MODULE] THEN
+	    BEGIN
+	      MOVELEFT(NAME,CODEP^[IC],8); IC := IC + 8;
+	      CASE KLASS OF
+		KONST: IF (IDTYPE^.SIZE = 1) AND NOT INMODULE THEN
+			 BEGIN GENWORD(ORD(CONSTDEF));
+			   GENWORD(VALUES.IVAL);
+			   GENWORD(0); GENWORD(0)
+			 END
+		       ELSE IC := SAVEIC;
+		FORMALVARS,
+		ACTUALVARS:
+		       BEGIN
+			 INDATASEG := VLEV < 0;
+			 IF INDATASEG OR INTRINSIC OR NOT INMODULE THEN
+			   BEGIN
+			     IF (INTRINSIC AND (-VLEV <> DATASEG))
+				OR (INDATASEG AND NOT INTRINSIC) THEN
+			       IC := SAVEIC
+			     ELSE
+			       BEGIN GENWORD(ORD(PUBLICDEF));
+				 GENWORD(VADDR);
+				 GENWORD(0); GENWORD(0)
+			       END
+			   END
+			 ELSE
+			   BEGIN
+			     IF PUBLIC THEN
+			       BEGIN GENWORD(ORD(PUBBLIC));
+				 NWORDS := 0
+			       END
+			     ELSE
+			       BEGIN GENWORD(ORD(PRIVVATE));
+				 IF KLASS = FORMALVARS THEN
+				   NWORDS := PTRSIZE
+				 ELSE
+				   NWORDS := IDTYPE^.SIZE
+			       END;
+			     GENWORD(ORD(BIG));
+			     GENWORD(0); GENWORD(NWORDS);
+			     REFID := VADDR + 63 + 1
+			   END
+		       END;
+		PROC,
+		FUNC:  BEGIN
+			 IF PFDECKIND = DECLARED THEN
+			   IF PFKIND = ACTUAL THEN
+			     IF KLASS = PROC THEN
+			       IF EXTURNAL THEN LITYPE := EXTPROC
+			       ELSE IC := SAVEIC
+			     ELSE (*KLASS = FUNC*)
+			       IF EXTURNAL THEN LITYPE := EXTFUNC
+			       ELSE IC := SAVEIC
+			   ELSE IC := SAVEIC
+			 ELSE IC := SAVEIC;
+			 IF SAVEIC <> IC THEN
+			   BEGIN GENWORD(ORD(LITYPE));
+			     NWORDS := LOCALLC - 1 - 2*ORD(KLASS = FUNC);
+			     IF LITYPE IN [EXTPROC,EXTFUNC] THEN
+			       BEGIN GENWORD(PFNAME);
+				 GENWORD(NWORDS);
+				 GENWORD(ORD(NIL))
+			       END
+			   END
+		       END (*PROC,FUNC*);
+		MODULE: IF INMODULE AND NOT INTRINSIC
+			   AND MODSEG AND MODLINK THEN
+			  BEGIN GENWORD(ORD(MODDULE));
+			    GENWORD(ORD(BYTE));
+			    GENWORD(0); GENWORD(0);
+			    REFID := SEGID
+			  END
+			ELSE IC := SAVEIC
+	      END (*CASE,WITH*);
+	      IF REFID <> -9999 THEN GETREFS(REFID)
+	    END;
+	IF IC >= 1024 THEN BEGIN WRITECODE(FALSE); IC := 0 END;
+	GLOBALSEARCH(FCP^.LLINK);
+	GLOBALSEARCH(FCP^.RLINK)
+      END
+  END (*GLOBALSEARCH*);
+
+BEGIN (*WRITELINKERINFO*)
+  IC := 0;
+  IF CODEINSEG THEN ERROR(399);
+  IF INMODULE THEN
+      CURRENTBLOCK := REFBLK;
+  GLOBALSEARCH(DISPLAY[GLEV].FNAME);
+  (* NOW DO EOFMARK END-RECORD*)
+  FOR LGTH := 1 TO 8 DO GENBYTE(ORD(' '));
+  GENWORD(ORD(EOFMARK)); GENWORD(LCMAX);
+  GENWORD(DATASEG); GENWORD(0);
+  WRITECODE(TRUE);
+  LINKINFO := FALSE
+END (*WRITELINKERINFO*);

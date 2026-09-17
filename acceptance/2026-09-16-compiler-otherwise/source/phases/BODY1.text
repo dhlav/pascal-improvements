@@ -1,0 +1,62 @@
+{ Segment 14. The first third of UCSD II.0's BODY, split out so that it can
+  be swapped: BODY calls BODY1, then BODY2 (or HOLDSTMT, which is BODY2 with
+  STATEMENT held resident), then BODY3. All three read BODY's frame with
+  LOD 1,n, which is what forces them to be declared inside it.
+
+  What it does is II.0's, in order: reset the jump table, copy each
+  value parameter that arrived as a pointer, take the label list, and --
+  Apple's addition -- reserve two bytes at the head of the body for the
+  jump into the segment-loading code that BODY3 will write behind it. }
+
+  BEGIN (*BODY1*)
+    NEXTJTAB := 1;
+    LMAIN := FALSE;
+    IF LEVEL = 1 THEN
+      IF NOT SYSCOMP THEN
+	IF NOT INMODULE THEN LMAIN := TRUE;
+    IF FPROCP <> NIL THEN
+      BEGIN
+	LLC1 := FPROCP^.LOCALLC; LCP := FPROCP^.NEXT;
+	WHILE LCP <> NIL DO
+	  WITH LCP^ DO
+	    BEGIN
+	      IF IDTYPE <> NIL THEN
+		IF KLASS = ACTUALVARS THEN
+		  IF IDTYPE^.FORM > POWER THEN
+		    BEGIN LLC1 := LLC1 - PTRSIZE;
+		      GEN2(50(*LDA*),LEVEL,VADDR);
+		      GEN2(54(*LOD*),LEVEL,LLC1);
+		      IF PAOFCHAR(IDTYPE) THEN
+			WITH IDTYPE^ DO
+			  IF AISSTRNG THEN GEN1(42(*SAS*),MAXLENG)
+			  ELSE
+			    IF INXTYPE <> NIL THEN
+			      BEGIN GETBOUNDS(INXTYPE,LMIN,LMAX);
+				GEN1(40(*MOV*),(LMAX-LMIN+1+1) DIV 2)
+			      END
+			    ELSE
+		      ELSE GEN1(40(*MOV*),IDTYPE^.SIZE)
+		    END
+		  ELSE LLC1 := LLC1 - IDTYPE^.SIZE
+		ELSE
+		  IF KLASS = FORMALVARS THEN LLC1 := LLC1 - PTRSIZE;
+	      LCP := NEXT
+	    END
+      END;
+    STARTDOTS := SCREENDOTS;
+    LCMAX := LC;
+    LLP := DISPLAY[TOP].FLABEL;
+    WHILE LLP <> NIL DO
+      BEGIN GENLABEL(LLP^.CODELBP);
+	LLP := LLP^.NEXTLAB
+      END;
+    LRES := RESIDENT;
+{ Two NOPs, and a label on the instruction after them. If this block turns
+  out to need segments loaded, BODY3 goes back and overwrites the pair with
+  a UJP into the loading code, which jumps back here when it is done. }
+    IF (LRES <> NIL) OR LMAIN THEN
+      BEGIN LSEGIC := IC;
+	GENBYTE(215(*NOP*)); GENBYTE(215(*NOP*));
+	GENLABEL(LBODYLB); PUTLABEL(LBODYLB)
+      END
+  END;

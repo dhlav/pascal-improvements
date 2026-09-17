@@ -1,0 +1,317 @@
+{ Segment 17. UCSD II.0's UNITPART, which is unitpart.text:249-370 -- the
+  second of the two segment procedures in that file, WRITELINKERINFO being
+  the first. Apple gave each a file and a segment of its own.
+
+  The shape II.0 does not have is Apple's INTRINSIC unit. `UNIT X;
+  INTRINSIC CODE 20 DATA 21;` names the two segment numbers the unit will
+  own, and UNITDECLARATION parses them: CODE is required and DATA is not,
+  which is what the two flags in UNITPART's own frame carry back. Everything
+  that follows -- the fourth procedure, the interface text copied into the
+  codefile, the two bytes patched behind it -- is downstream of that.
+
+  The other addition is the fourth procedure. II.0 has a unit's
+  initialisation body compiled by BLOCK like any other; Apple pushes a lex
+  stack entry with a procedure identifier it builds by hand, named for the
+  unit, and hands that to BODYPART. }
+
+  VAR UMARKP: TESTP;
+{ Whether the INTRINSIC clause named a DATA segment, and whether it named a
+  CODE segment. UNITDECLARATION writes both -- `STR 1,6` and `STR 1,7` --
+  and everything that reads them is here. }
+      LDATASEG: BOOLEAN;
+      LCODESEG: BOOLEAN;
+{ Where the interface text ends, as a codefile block and a byte within it.
+  The two bytes at LLENG+1 and LLENG+3 are patched after the text is
+  written, so the block has to be remembered before WRITECODE advances
+  CURBLK past it. }
+      LBLK: INTEGER;
+      LLENG: INTEGER;
+
+  PROCEDURE OPENREFFILE;
+  BEGIN
+    REWRITE(REFFILE,'%SYSTEM.INFO[*]');
+    IF IORESULT <> 0 THEN ERROR(404)
+  END (*OPENREFFILE*) ;
+
+  PROCEDURE UNITDECLARATION(FSYS: SETOFSYS; VAR UMARKP: TESTP);
+    VAR LCP: CTP;
+	LSP: STP;
+	FOUND: BOOLEAN;
+	LDATA: VALU;
+	LCODE: VALU;
+	LLEXSTK: LEXSTKREC;
+  BEGIN
+    IF INMODULE THEN ERROR(182 (* NESTED MODULES NOT ALLOWED *));
+    IF CODEINSEG THEN
+      BEGIN ERROR(399); SEGINX := 0; CURBYTE := 0 END;
+    WITH LLEXSTK DO
+      BEGIN
+	DOLDTOP := TOP;
+	DOLDLEV := LEVEL;
+	POLDPROC := CURPROC;
+	SOLDPROC := NEXTPROC;
+	DOLDSEG := SEG;
+	DLLC := LC;
+	PREVLEXSTACKP := TOS
+      END;
+{ II.0 takes the segment number here, off NEXTSEG. Apple cannot: an
+  INTRINSIC unit names its own, and the name has not been read yet. So the
+  three that do not depend on it are set now and SEG is set below, in both
+  arms. }
+    CURPROC := 1;
+    NEXTPROC := 2;
+    LC := 1;
+    PUBLICPROCS := FALSE;
+    INMODULE := TRUE;
+    ININTERFACE := FALSE;
+    INSYMBOL;
+    IF SY <> IDENT THEN
+      BEGIN ERROR(2); SKIP(FSYS+[SEMICOLON]) END
+    ELSE
+      BEGIN FOUND := FALSE;
+	LCP := MODPTR;
+	WHILE (LCP <> NIL) AND NOT FOUND DO
+	  IF LCP^.NAME <> ID THEN LCP := LCP^.NEXT
+	  ELSE BEGIN FOUND := TRUE; ERROR(101) END;
+	IF NOT FOUND THEN
+	  BEGIN NEW(LCP,MODULE,TRUE);
+	    WITH LCP^ DO
+	      BEGIN NAME := ID; IDTYPE := NIL; NEXT := MODPTR;
+		KLASS := MODULE;
+		MODSEG := TRUE;
+		MODDATA := FALSE;
+		MODLINK := TRUE
+	      END;
+	    MODPTR := LCP
+	  END;
+	INSYMBOL;
+	IF SY = SEMICOLON THEN INSYMBOL ELSE ERROR(14);
+	IF SY = IDENT THEN
+	  IF ID = 'INTRINSI' THEN
+	    BEGIN INTRINSIC := TRUE;
+	      LCODESEG := FALSE;
+	      LDATASEG := FALSE;
+	      DATASEG := 1;
+	      INSYMBOL;
+	      IF SY = IDENT THEN
+		BEGIN
+		  IF ID = 'CODE    ' THEN
+		    BEGIN INSYMBOL;
+		      CONSTANT(FSYS+[IDENT,SEMICOLON],LSP,LCODE);
+		      IF LSP = INTPTR THEN
+			BEGIN SEG := LCODE.IVAL;
+			  IF NOT (SEG IN [0..63]) THEN
+			    BEGIN ERROR(203); SEG := 1 END;
+			  NEWSEG(FALSE);
+			  WITH SEGTABLE[SEGSLOT] DO
+			    BEGIN SEGKIND := 6; SEGNUM := SEG END;
+			  LCODESEG := TRUE
+			END
+		      ELSE ERROR(15)
+		    END;
+		  IF (SY = IDENT) AND (ID = 'DATA    ') THEN
+		    BEGIN INSYMBOL;
+		      CONSTANT(FSYS+[SEMICOLON],LSP,LDATA);
+		      IF LSP = INTPTR THEN
+			BEGIN DATASEG := LDATA.IVAL;
+			  IF (DATASEG < 0) OR (DATASEG > 63)
+			     OR (DATASEG = SEG) THEN
+			    BEGIN
+			      IF DATASEG = SEG THEN ERROR(350)
+			      ELSE ERROR(203);
+			      DATASEG := SEG + 1
+			    END;
+			  BUMPSEG(SEGSLOT,15,354);
+			  SEGMAP[DATASEG] := SEGSLOT;
+			  WITH SEGTABLE[SEGSLOT] DO
+			    BEGIN SEGNAME := LCP^.NAME;
+			      SEGKIND := 7;
+			      SEGNUM := DATASEG
+			    END;
+			  LDATASEG := TRUE;
+			  LCP^.MODDATA := TRUE
+			END
+		      ELSE ERROR(15)
+		    END
+		END;
+{ Apple closes the IF SY = IDENT here, not after the two statements below.
+  Both spellings emit the same bytes -- the statements follow either way --
+  and the only trace of the difference is the jump table word the FJP at
+  the head of the IF resolves through, which is why the p-code diff cannot
+  see it and the codefile comparison can (finding 90). }
+	      IF NOT LCODESEG THEN
+		BEGIN ERROR(352); LCP^.MODSEG := FALSE END;
+	      IF SY = SEMICOLON THEN INSYMBOL ELSE ERROR(14)
+	    END
+	  ELSE ERROR(22)
+	ELSE
+	  BEGIN SEG := NEXTSEG;
+	    NEWSEG(TRUE);
+	    WITH SEGTABLE[SEGSLOT] DO
+	      BEGIN SEGNUM := SEG; SEGKIND := 3 END
+	  END;
+	WITH LCP^ DO
+	  IF MODSEG THEN
+	    WITH SEGTABLE[SEGMAP[SEG]] DO
+	      BEGIN SEGNAME := NAME;
+		TEXTADDR := CURBLK;
+		SEGID := SEG
+	      END
+      END;
+    MARK(UMARKP);
+    NEW(REFLIST);
+    NEW(TOS);
+    TOS^ := LLEXSTK;
+    LEVEL := 1;
+    IF TOP < DISPLIMIT THEN
+      BEGIN TOP := TOP +1;
+	WITH DISPLAY[TOP] DO
+	  BEGIN FNAME := NIL; FFILE := NIL; FLABEL := NIL; OCCUR := BLCK END;
+	IF LCP <> NIL THEN ENTERID(LCP)
+      END
+    ELSE ERROR(250)
+  END (*UNITDECLARATION*) ;
+
+  PROCEDURE UNITBODY;
+{ The unit's initialisation body, which is procedure 1 of the unit's own
+  segment. There is no identifier for it anywhere -- the body is anonymous
+  in the source -- so one is built here: named for the unit, at lex 1,
+  procedure 1 of SEG. BODYPART wants a CTP and this is where it comes
+  from. }
+    VAR LTOS: ^LEXSTKREC;
+  BEGIN
+    LTOS := TOS;
+    NEW(TOS);
+    WITH TOS^ DO
+      BEGIN
+	NEW(DFPROCP,PROC,DECLARED,ACTUAL,TRUE);
+	WITH DFPROCP^ DO
+	  BEGIN NAME := MODPTR^.NAME;
+	    IDTYPE := NIL;
+	    NEXT := NIL;
+	    KLASS := PROC;
+	    PFDECKIND := DECLARED;
+	    PFLEV := 1;
+	    PFNAME := 1;
+	    PFSEG := SEG;
+	    PFKIND := ACTUAL;
+	    LOCALLC := 1;
+	    FORWDECL := FALSE;
+	    EXTURNAL := FALSE;
+	    INSCOPE := TRUE;
+	    IMPORTED := FALSE
+	  END;
+	DLLC := LC;
+	PREVLEXSTACKP := LTOS
+      END;
+    LC := 1;
+    LEVEL := 2;
+    RESIDENT := NIL;
+    IF SY = BEGINSY THEN INSYMBOL;
+    BODYPART(FSYS+[CASESY]-[ENDSY],TOS^.DFPROCP);
+    LC := TOS^.DLLC;
+    TOS := TOS^.PREVLEXSTACKP
+  END (*UNITBODY*) ;
+
+BEGIN (*UNITPART*)
+  IF CODEP = NIL THEN NEW(CODEP);
+  OPENREFFILE;
+  REPEAT
+    RESET(REFFILE); NREFS := 1; REFBLK := 0;
+    UNITDECLARATION(FSYS,UMARKP);
+{ The interface text is copied into the codefile verbatim, so that USING a
+  unit can compile against it without the unit's source. TEXTSTRT is where
+  it begins in the symbol buffer and SYMCURSOR is where it ends. }
+    TEXTSTRT := SYMCURSOR;
+    IC := 1024;
+    ININTERFACE := TRUE;
+    IF INCLUDING THEN ERROR(406);
+    IF SY = INTERSY THEN INSYMBOL
+    ELSE ERROR(22);
+    DECLARATIONPART(FSYS);
+    IF INTRINSIC THEN
+      IF NOT LDATASEG AND (LC > 1) THEN ERROR(350);
+    IC := SYMCURSOR - TEXTSTRT + 10;
+    IF IC > 1024 THEN IC := 1034;
+    LLENG := IC - 10;
+    LBLK := CURBLK;
+    WHILE LLENG >= 512 DO
+      BEGIN LLENG := LLENG - 512; LBLK := LBLK + 1 END;
+    MOVELEFT(SYMBUFP^[TEXTSTRT],CODEP^[0],IC);
+{ Ten blank bytes past the text, and an E in the ninth of them. Two of the
+  other nine are written below, after the block has been read back. }
+    FILLCHAR(CODEP^[IC-10],10,' ');
+    CODEP^[IC-2] := 'E';
+    IF IC > 1024 THEN
+      BEGIN CODEP^[SYMCURSOR-TEXTSTRT] := CHR(13);
+	CODEP^[SYMCURSOR-TEXTSTRT+1] := CHR(0)
+      END;
+    WRITECODE(TRUE);
+    IF PUBLICPROCS OR (NOT PUBLICPROCS AND (SY = BEGINSY)) THEN
+      BEGIN
+	ININTERFACE := FALSE;
+	IF INTRINSIC AND NOT LCODESEG THEN ERROR(352);
+	IF PUBLICPROCS THEN
+	  IF SY <> IMPLESY THEN BEGIN ERROR(23); SKIP(FSYS-STATBEGSYS) END
+	  ELSE INSYMBOL;
+	BLOCK(FSYS-[UNITSY,INTERSY,IMPLESY]);
+	UNITBODY;
+	FINISHSEG;
+{ Whether the unit's code needs the two support segments. The flags go in
+  the blanks left behind the interface text, so that a program USING this
+  unit picks them up without reading the code. }
+	IF [30,31]*SEGSUSED <> [] THEN
+	  BEGIN
+	    IF BLOCKREAD(USERINFO.WORKCODE^,DISKBUF,1,LBLK) <> 1 THEN
+	      ERROR(402);
+	    IF 31 IN SEGSUSED THEN DISKBUF[LLENG+1] := 'P';
+	    IF 30 IN SEGSUSED THEN DISKBUF[LLENG+3] := 'L';
+	    IF BLOCKWRITE(USERINFO.WORKCODE^,DISKBUF,1,LBLK) <> 1 THEN
+	      ERROR(402);
+	    SEGSUSED := SEGSUSED - [30,31]
+	  END;
+	IF NOT INTRINSIC THEN LINKINFO := TRUE;
+	IF LINKINFO THEN
+	  BEGIN
+	    IF INTRINSIC THEN SEGTABLE[SEGMAP[SEG]].SEGKIND := 5;
+	    IF REFBLK > 0 THEN
+	      IF BLOCKWRITE(REFFILE,REFLIST^,1,REFBLK) <> 1 THEN ERROR(404);
+	    WRITELINKERINFO
+	  END
+      END
+    ELSE
+      BEGIN
+	IF SY = ENDSY THEN INSYMBOL
+	ELSE BEGIN ERROR(13); SKIP(FSYS) END;
+	IF MODPTR^.MODSEG THEN
+	  WITH SEGTABLE[SEGMAP[SEG]] DO
+	    BEGIN CODELENG := 0; DISKADDR := CURBLK; SEGKIND := 0 END
+      END;
+    IF INTRINSIC THEN
+      IF LDATASEG THEN
+	WITH SEGTABLE[SEGMAP[DATASEG]] DO
+	  BEGIN DISKADDR := 0;
+	    CODELENG := (LC-1)*2;
+	    IF CODELENG = 0 THEN ERROR(355)
+	  END
+      ELSE
+	IF LC > 1 THEN ERROR(350);
+    INTRINSIC := FALSE;
+    INMODULE := FALSE;
+    IF SY <> PERIOD THEN
+      IF SY = SEMICOLON THEN INSYMBOL
+      ELSE ERROR(14);
+    WITH TOS^ DO
+	BEGIN
+	  TOP := DOLDTOP;
+	  LEVEL := DOLDLEV;
+	  CURPROC := POLDPROC;
+	  NEXTPROC := SOLDPROC;
+	  SEG := DOLDSEG;
+	  LC := DLLC;
+	END;
+    TOS := TOS^.PREVLEXSTACKP;
+    RELEASE(UMARKP)
+  UNTIL SY <> UNITSY;
+  CLOSE(REFFILE)
+END (*UNITPART*);
