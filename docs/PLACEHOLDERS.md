@@ -15,12 +15,12 @@ Already done on this fork: see `docs/RENAMES.md`.
 
 | File | ID | Comment / role | Suggested name |
 |------|-----|----------------|----------------|
-| `FILER.text` | `G361` | blocks on the destination volume | `DESTBLKS` |
-| `FILER.text` | `G362` | blocks on the source volume | `SRCBLKS` |
+| `FILER.text` | ~~`G361`~~ | ~~blocks on destination~~ | **done → `DESTBLKS`** |
+| `FILER.text` | ~~`G362`~~ | ~~blocks on source~~ | **done → `SRCBLKS`** |
 | `LINKER.text` | `G91` | heap pointers count words | `WORDHEAP` / keep until ancestor check |
 | `LINKER.text` | `L12` | linking an intrinsic unit | `INTRLINK` |
 
-`FILER` `G361`/`G362` are the clearest next pair (same pattern as EDITOR).
+FILER `G361`/`G362` renamed 2026-09-16. Next easy comment-backed pair: LINKER `G91` / `L12` (confirm 8-char collisions first).
 
 ### Tier B — FINDINGS map exists; need careful GETCMD.* → English names
 
@@ -72,10 +72,11 @@ Tier C unless comments pin them.
 
 ## Suggested order on this fork
 
-1. **FILER `G361`/`G362`** → `DESTBLKS`/`SRCBLKS` (or similar 8-char-safe names).
-2. **GETCMD `GC*`** one-at-a-time from FINDINGS 225–227 English names.
-3. **LINKER/LIBRARY/LIBMAP** leftovers only if an ancestor body turns up.
-4. **ASSMBLER / natives** as dedicated naming campaigns, not drive-by renames.
+1. ~~**FILER `G361`/`G362`**~~ done (`DESTBLKS`/`SRCBLKS`).
+2. **LINKER `G91`/`L12`** if comments suffice (Tier A remainder).
+3. **GETCMD `GC*`** one-at-a-time from FINDINGS 225–227 English names.
+4. **LINKER/LIBRARY/LIBMAP** leftovers only if an ancestor body turns up.
+5. **ASSMBLER / natives** as dedicated naming campaigns, not drive-by renames.
 
 ## Counts snapshot (unique IDs, 2026-09-16)
 

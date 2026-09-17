@@ -376,8 +376,8 @@ VAR
   TYPESTR              : STRING[32];
   FROMWHERE, TOWHERE   : STRNG;
   INSTRING             : LONGSTRING;
-  G361                 : INTEGER;   { blocks on the destination volume }
-  G362                 : INTEGER;   { blocks on the source volume }
+  DESTBLKS                 : INTEGER;   { blocks on the destination volume }
+  SRCBLKS                 : INTEGER;   { blocks on the source volume }
 
   PROCEDURE CALLPROC;
     FORWARD;
@@ -1014,9 +1014,9 @@ VAR
             DESTUNIT := GUNIT;
           DESTVID := GVID;
           IF GDIR <> NIL THEN
-            G361 := GDIR^[0].DEOVBLK
+            DESTBLKS := GDIR^[0].DEOVBLK
           ELSE
-            G361 := 0;
+            DESTBLKS := 0;
           INSERTVOLUME(SOURCEUNIT,SOURCEVID,TRUE);
         END
       ELSE
@@ -1038,9 +1038,9 @@ VAR
     SOURCEUNIT := GUNIT;
     SOURCEVID := GVID;
     IF GDIR <> NIL THEN
-      G362 := GDIR^[0].DEOVBLK
+      SRCBLKS := GDIR^[0].DEOVBLK
     ELSE
-      G362 := 0;
+      SRCBLKS := 0;
     IF DEFAULT > 0 THEN
       EXIT(CHECKFILE);
     IF (INSTRING = '') AND (DEFAULT < 0) THEN
@@ -1250,8 +1250,8 @@ VAR
       IF (STRING1 = '') AND NOT WILDCARD THEN
         BEGIN
           IF (STRING3 = '') AND (SOURCEUNIT IN [4,5,9..12]) AND
-             (DESTUNIT IN [4,5,9..12]) AND (G362 <> G361) AND
-             (G362 <> 0) AND (G361 <> 0) THEN
+             (DESTUNIT IN [4,5,9..12]) AND (SRCBLKS <> DESTBLKS) AND
+             (SRCBLKS <> 0) AND (DESTBLKS <> 0) THEN
             BEGIN
               CLEARLINE;
               WRITELN('Number of blocks on the destination volume is not ',

@@ -21,3 +21,12 @@ Rename only; no intended code-byte change (identifiers are not stored in p-code)
 
 `EDITOR(XXX,YYY: INTEGER)` left unchanged — UCSD’s own unused parameters
 (never referenced in the body). Source-only; `probe_editor_whole` still green.
+
+## 2026-09-16 — FILER volume block counters
+
+| Old | New | Role |
+|-----|-----|------|
+| `G361` | `DESTBLKS` | blocks on the destination volume |
+| `G362` | `SRCBLKS` | blocks on the source volume |
+
+Source-only; `probe_filer_whole` still green (byte-identical to shipped).
