@@ -97,7 +97,7 @@ EVIDENCE_CODEFILES = ["BINDER.CODE", "SET40COLS.CODE", "SETUP.CODE"]
 FILES = [
     ("SEARCH.TEXT", ROOT / "src" / "native" / "SEARCH.TEXT"),
     ("SKEL13.TEXT", ROOT / "analysis" / "reconstruction" / "skeleton-1.3.text"),
-    ("SKEL11.TEXT", ROOT / "analysis" / "reconstruction" / "skeleton-1.1.text"),
+    # SKEL11 dropped: 1.1 is archived; srcskel.py only emits the 1.3 skeleton.
     ("LINEFEED.TEXT", ROOT / "src" / "pascal" / "programs" / "1.3" /
      "LINEFEED.text"),
     ("FORMATTR.TEXT", ROOT / "src" / "pascal" / "programs" / "1.3" /
