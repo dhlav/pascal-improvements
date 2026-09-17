@@ -1,0 +1,10 @@
+# Identifier renames on the improvements fork
+
+## 2026-09-16 — PASCALSYSTEM STUB48/STUB49
+
+| Old | New | Evidence |
+|-----|-----|----------|
+| `STUB49` | `CANTSTRETCH` | UCSD II.0 `SYSTEM.C.TEXT` (ii0src.sdk); finding **282a** (GOTO shape); finding **165** (body) |
+| `STUB48` | `MAINLOOP` | Finding **192** (PASCALSY top-level command loop). Not UCSD's `COMMAND` — Apple's proc 43 is a different routine (`TITLENORM` / finding 51c). `MAINLOOP` matches this repo's name for the same role elsewhere. |
+
+Rename only; no intended code-byte change (identifiers are not stored in p-code). `probe_os_exact` still green against the prior acceptance compile.

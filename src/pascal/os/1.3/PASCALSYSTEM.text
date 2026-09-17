@@ -609,16 +609,13 @@ PROGRAM PASCALSYSTEM;
   PROCEDURE EXECREADBLK; FORWARD;
   PROCEDURE EXECWRITEBLK; FORWARD;
 
-  { PASCALSY.48/49 are declared here only to hold their procedure
-    numbers -- Apple's real `PASCALSY.1` calls procedure 58 by that
-    exact number (`analysis/lifted/128K.PASCAL-1.3-128K.pas.txt:1038`),
-    and procedure numbers are assigned by declaration order with no
-    gaps (finding 61/126), so reaching 58 for real requires 49, 51-57
-    declared first too -- the lex-1 nested group (51/52/55/56/57/58)
-    needs its own enclosing-procedure analysis, not attempted yet.
-    STUB, not real content. }
-  PROCEDURE STUB48; FORWARD;
-  { `STUB49`'s real call site (`FBLOCKIO`, finding 161) pushes three
+  { PASCALSY.48 = MAINLOOP (finding 192: top-level command loop).
+    PASCALSY.49 = CANTSTRETCH (UCSD II.0 SYSTEM.C.TEXT / finding 282a).
+    Declared here for numbering: Apple's `PASCALSY.1` calls procedure 58
+    by that exact number, and numbers are assigned by declaration order
+    with no gaps (finding 61/126). }
+  PROCEDURE MAINLOOP; FORWARD;
+  { `CANTSTRETCH`'s real call site (`FBLOCKIO`, finding 161) pushes three
     words -- `F` (the raw `VAR F: FIB` address), then two `SLDC 0`
     constants. A first pass read those as two real trailing `INTEGER`
     arguments (finding 161's own first draft); a probe of this exact
@@ -633,7 +630,7 @@ PROGRAM PASCALSYSTEM;
     finding 161). Real body written for real, finding 165 -- the
     write-time file-extension attempt this whole chain was inferred to
     be from `FBLOCKIO`'s own call site alone. }
-  FUNCTION STUB49(VAR F: FIB): BOOLEAN; FORWARD;
+  FUNCTION CANTSTRETCH(VAR F: FIB): BOOLEAN; FORWARD;
 
   { PASCALSY.50: prompt for and wait until the correct boot volume is
     back in its unit before returning -- `WHILE UNITABLE[SYSCOM^.
@@ -768,7 +765,7 @@ PROGRAM PASCALSYSTEM;
       address into a *second* local (`STL 9`) even though it's already
       a trivially-addressable `VAR` parameter, on top of the expected
       `FHEADER` cache -- the same `WITH F DO WITH FHEADER DO` idiom used
-      successfully elsewhere in this file (`STUB49`, finding 165) still
+      successfully elsewhere in this file (`CANTSTRETCH`, finding 165) still
       doesn't reproduce that extra, semantically-redundant caching
       step under this host compiler; `params=6` bytes exact, `locals=12`
       against the real `14`, two words short from this alone.
@@ -785,7 +782,7 @@ PROGRAM PASCALSYSTEM;
       packing a subrange into fewer than its natural word when doing so
       saves nothing -- a real compiler-behavior divergence from this
       host tool, not a source-level choice available to fix. Any other
-      already-written `DLASTBYTE` reference in this file (`STUB49`,
+      already-written `DLASTBYTE` reference in this file (`CANTSTRETCH`,
       `FPCLOSE`) carries the same latent, previously-undetected gap.
 
       **Exact** since finding 215, and the one thing left was a shape,
@@ -944,7 +941,7 @@ PROGRAM PASCALSYSTEM;
         * The loop opens by *growing the file* when the write would
           run past the last allocated block: `(DFIRSTBLK + FNXTBLK) =
           DLASTBLK` and the record would overrun `DLASTBYTE` calls
-          `STUB49` (`CXP 0,49`, the extend-allocation routine), and
+          `CANTSTRETCH` (`CXP 0,49`, the extend-allocation routine), and
           only if that fails does it report `INOROOM` and give up.
           The `FJP` to the loop top is `jtab-10` at `$0186`, which is
           instruction 12 -- the same offset as `FPWINADV`'s -- so this
@@ -982,7 +979,7 @@ PROGRAM PASCALSYSTEM;
           REPEAT
             IF ((DFIRSTBLK + FNXTBLK) = DLASTBLK) AND
                ((FNXTBYTE + RECSIZE) > DLASTBYTE) THEN
-              IF STUB49(F) THEN
+              IF CANTSTRETCH(F) THEN
               BEGIN
                 SYSCOM^.IORSLT := INOROOM;
                 GOTO 1
@@ -2332,7 +2329,7 @@ PROGRAM PASCALSYSTEM;
 
       { `.18` -- turn the codefile's own title into its library's.
         `SCANTITLE`'s result is discarded with the same
-        `IF <call> THEN ;` shape `FBLOCKIO` uses for `STUB49`, and its
+        `IF <call> THEN ;` shape `FBLOCKIO` uses for `CANTSTRETCH`, and its
         fourth argument is this procedure's one declared word, reused
         immediately afterwards as the length scratch. `data=30` is
         fifteen words: that one, plus fourteen for the `CONCAT`
@@ -2564,7 +2561,7 @@ PROGRAM PASCALSYSTEM;
 
       The trailing `ASSOCIATE` is called for its side effect only --
       it reports the error -- and the result is discarded with the
-      same `IF <call> THEN` shape `FBLOCKIO` uses for `STUB49`. }
+      same `IF <call> THEN` shape `FBLOCKIO` uses for `CANTSTRETCH`. }
     FUNCTION SYSASSOC;
       VAR
         FVID: VID;
@@ -3399,7 +3396,7 @@ PROGRAM PASCALSYSTEM;
       `TEXTFILE`) at the end either way. `IORSLT`-style bookkeeping and
       absolute-block arithmetic (`FHEADER.DFIRSTBLK + FNXTBLK`, `-1`
       for the just-finished block vs. none for the new one) mirror the
-      same idiom `STUB49` already established (finding 165).
+      same idiom `CANTSTRETCH` already established (finding 165).
       **Exact** since finding 231: the last two instructions were the
       `<> 0` written where Apple wrote `ODD(FNXTBLK)`, the free cast
       described at `FPPEEK` above. }
@@ -3859,7 +3856,7 @@ PROGRAM PASCALSYSTEM;
       actually being open and not the system terminal (`F.FWINDOW <>
       SYSTERM^.FWINDOW`), then only block-device files (`FISBLKD`) with
       a sane cached header (`LENGTH(DVID) > 0`, the same sanity check
-      `STUB49` uses) do real work:
+      `CANTSTRETCH` uses) do real work:
 
       `CCRUNCH` (`FTYPE = 3`) shrinks the file to its current position
       first (`FMAXBLK := FNXTBLK`), marks the header temp (`DACCESS.
@@ -3871,9 +3868,9 @@ PROGRAM PASCALSYSTEM;
       flushes any pending soft-buffer write. If anything actually
       changed (`FMODIFIED`, the temp mark, or `CPURGE`), re-`VOLSEARCH`
       the file's volume (bailing `ILOSTUNIT` on a unit mismatch, the
-      same shape `STUB49` established) and re-scan the directory for
+      same shape `CANTSTRETCH` established) and re-scan the directory for
       the matching entry by block range (`ILOSTFILE` if not found,
-      again matching `STUB49`'s own idiom). Then: `CNORMAL` on a
+      again matching `CANTSTRETCH`'s own idiom). Then: `CNORMAL` on a
       temp-marked entry, or any `CPURGE`, deletes it outright
       (`DELENTRY`); otherwise `DIRSEARCH`es by *title* for a
       same-named conflicting entry and deletes that one first (with an
@@ -4306,7 +4303,7 @@ PROGRAM PASCALSYSTEM;
       already known to be right.
     - `SPACEWAIT(TRUE)` (`CBP 40`) gates a warm reboot: `UNITCLEAR`
       loops over units 1-20 and 128-143, `WAITSYSVOL`, then a non-local
-      `EXIT(STUB48)` -- `CSP 4` with the callee's own
+      `EXIT(MAINLOOP)` -- `CSP 4` with the callee's own
       `(segment, procedure)` pair, `(0, 48)`, matching `PASCALSY.1`'s
       own `REPEAT PASCALSY.48() ...` loop this exits back into.
       `"Press CONTROL-RESET"` is NOT the other arm of that prompt: it
@@ -4350,7 +4347,7 @@ PROGRAM PASCALSYSTEM;
           G1 := G1 + 1
         END;
         WAITSYSVOL;
-        EXIT(STUB48)
+        EXIT(MAINLOOP)
       END
     END
     { Apple's `FJP >+42` off the set test lands here, not on the inner
@@ -5162,7 +5159,7 @@ PROGRAM PASCALSYSTEM;
     seen for parameters, finding 156a; not the hand-counted order a
     first pass assumed). `RBLOCK`/`I` arrive relative to the file, not
     absolute -- the block-device branch converts by adding/subtracting
-    `F.FHEADER.DFIRSTBLK` around the transfer. `STUB49` (written for
+    `F.FHEADER.DFIRSTBLK` around the transfer. `CANTSTRETCH` (written for
     real, finding 165; its real one-`VAR F`-argument, `BOOLEAN`-result
     signature is finding 161's own correction of a first-pass
     misreading -- see its own forward declaration comment) is called
@@ -5224,7 +5221,7 @@ PROGRAM PASCALSYSTEM;
             RBLOCK := DFIRSTBLK + RBLOCK;
             IF RBLOCK + NBLOCKS > DLASTBLK THEN
               IF NOT DOREAD THEN
-                IF STUB49(F) THEN ;
+                IF CANTSTRETCH(F) THEN ;
             IF RBLOCK + NBLOCKS > DLASTBLK THEN
               NBLOCKS := DLASTBLK - RBLOCK;
             FEOF := RBLOCK >= DLASTBLK;
@@ -6115,10 +6112,10 @@ PROGRAM PASCALSYSTEM;
   END;
 
   { `GETCHAR` = `PASCALSY.41` (finding 224) -- UCSD's own body with one
-    substitution: `EXIT(COMMAND)` becomes `EXIT(STUB48)`, because 1.3
+    substitution: `EXIT(COMMAND)` becomes `EXIT(MAINLOOP)`, because 1.3
     has no `COMMAND` (finding 51c) and the `CSP 4` operand pair here is
-    `(0, 48)`, the same pair `STUB48`'s own warm-reboot path already
-    uses. `LOD 1,58` is `INPUTFIB`, not `SYSTERM`: `STUB48` is exact
+    `(0, 48)`, the same pair `MAINLOOP`'s own warm-reboot path already
+    uses. `LOD 1,58` is `INPUTFIB`, not `SYSTERM`: `MAINLOOP` is exact
     and its `GFILES[0] := INPUTFIB` compiles to that very load. }
   FUNCTION GETCHAR;
     VAR
@@ -6127,7 +6124,7 @@ PROGRAM PASCALSYSTEM;
     IF FLUSH THEN
       UNITCLEAR(1);
     IF INPUTFIB^.FEOF THEN
-      EXIT(STUB48);
+      EXIT(MAINLOOP);
     INPUTFIB^.FSTATE := FNEEDCHAR;
     READ(CH);
     IF (CH >= 'a') AND (CH <= 'z') THEN
@@ -6358,9 +6355,7 @@ PROGRAM PASCALSYSTEM;
     END
   END;
 
-  { STUBS -- procedure numbers 48/49 reserved only, see the forward
-    declaration comment above. Not Apple's real content. }
-  { `STUB48` (`PASCALSY.48`), with its two nested helpers `GETNEXTCMD`
+  { `MAINLOOP` (`PASCALSY.48`), with its two nested helpers `GETNEXTCMD`
     (real `PASCALSY.57`) and `CMDDISPATCH` (real `PASCALSY.58`)
     (finding 192). This is `PASCALSY`'s own top-level "wait for the
     system volume, read commands, launch the user program" loop --
@@ -6398,7 +6393,7 @@ PROGRAM PASCALSYSTEM;
 
     `CMDDISPATCH`: while still waiting, calls `WAITSYSVOL` and
     `GETNEXTCMD`, then launches `USERPROGRAM` when the flags allow it
-    or re-arms `SWAP_ON` and returns. `STUB48` itself is the outermost
+    or re-arms `SWAP_ON` and returns. `MAINLOOP` itself is the outermost
     version of the same three-step shape.
 
     Compiles clean; all three `params=0` bytes exact against the real
@@ -6409,7 +6404,7 @@ PROGRAM PASCALSYSTEM;
     already-documented, pre-existing numbering drift `BLKXFER`
     (finding "not chased further", `docs/PLAN.md`) already carries in
     this range, not something newly introduced here. }
-  PROCEDURE STUB48;
+  PROCEDURE MAINLOOP;
 
     { `(*$R FILEPROC*)` -- segment 6 resident for this body, same
       mechanism as `CMDDISPATCH`'s own (finding 203). }
@@ -6497,7 +6492,7 @@ PROGRAM PASCALSYSTEM;
         USERPROGRAM(NIL, NIL)
     UNTIL STATE = HALTINIT
   END;
-  { `STUB49`'s real body (finding 165), decoded from `PASCALSY.49`'s
+  { `CANTSTRETCH`'s real body (finding 165), decoded from `PASCALSY.49`'s
     addressed disassembly using `DIRENTRY`'s probe-verified offsets
     (finding 164). Attempts to extend `F`'s file allocation on disk:
     verifies `F.FHEADER.DVID` is non-empty, `VOLSEARCH`es for the
@@ -6541,7 +6536,7 @@ PROGRAM PASCALSYSTEM;
 
     `FOUND, DONE: BOOLEAN` in that order, since one clause descends:
     `DONE` at 5, `FOUND` at 6. }
-  FUNCTION STUB49;
+  FUNCTION CANTSTRETCH;
     LABEL 1;
     VAR
       I: INTEGER;
@@ -6549,7 +6544,7 @@ PROGRAM PASCALSYSTEM;
       NEWLAST: INTEGER;
       DIR: DIRP;
   BEGIN
-    STUB49 := TRUE;
+    CANTSTRETCH := TRUE;
     DONE := FALSE;
     WITH F DO
       WITH FHEADER DO
@@ -6602,7 +6597,7 @@ PROGRAM PASCALSYSTEM;
             DLASTBLK := NEWLAST;
             DLASTBYTE := 512;
             DACCESS.YEAR := 100;
-            STUB49 := FALSE
+            CANTSTRETCH := FALSE
           END;
           DONE := TRUE
         END;
@@ -6695,7 +6690,7 @@ PROGRAM PASCALSYSTEM;
   `LDL 54`, not `SLDO`/`SLDL`: at lex `255` the outer block reaches its
   own variables -- which *are* the globals -- with `LDL`/`STL`, and
   word 54 is `EMPTYHEAP`, the same word `EXEC_MARK` is saved from and
-  restored to. So `STUB48` returns, and if anything is left on the
+  restored to. So `MAINLOOP` returns, and if anything is left on the
   heap the system re-`INITIALIZE`s (`CXP 4,1`) and goes round again;
   only a clean, empty heap ends the program. `data` was already
   `902`/`902` before this -- the whole global block was right and only
@@ -6705,7 +6700,7 @@ BEGIN
   UNITCLEAR(1);
   INITIALIZE;
   REPEAT
-    STUB48;
+    MAINLOOP;
     IF EMPTYHEAP <> NIL THEN
       INITIALIZE
   UNTIL EMPTYHEAP = NIL
