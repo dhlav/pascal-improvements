@@ -129,6 +129,7 @@ FUNCTION FETCHDIR: INTEGER; FORWARD;
 PROCEDURE TITLENORM(VAR S: STRING; WANTTEXT: BOOLEAN; N: INTEGER); FORWARD;
 
 SEGMENT PROCEDURE EDITOR(XXX,YYY: INTEGER);
+{ XXX,YYY are UCSD's own unused parameters (never referenced). Left as-is. }
 CONST
   (* Unless otherwise noted all constants are upper bounds
      from zero.                                         *)
@@ -218,7 +219,7 @@ VAR
   COPYLENGTH,COPYSTART: PTRTYPE; (* For Copyc *)
   COPYLINE,COPYOK: BOOLEAN;      (*    "      *)
   INFINITY: BOOLEAN;             (* for slashc *)
-  G590: BOOLEAN;                 { the text has changed since it was read
+  DIRTY: BOOLEAN;                 { the text has changed since it was read
                                    or written }
   THEFILE: FILE;
   TRANSLATE: ARRAY [CHAR] OF COMMANDS;
@@ -239,10 +240,10 @@ VAR
             HASPREFIX: PACKED ARRAY [KEYCOMMAND] OF BOOLEAN;
             CH:        PACKED ARRAY [KEYCOMMAND] OF CHAR
           END;
-  G1623: STRING;                 { the name of the file being edited }
-  G1664: BOOLEAN;                { it has a name S(ave can use }
-  G1665: BOOLEAN;                { C(hange: start over with another file }
-  G1666: BOOLEAN;                { the screen can scroll down }
+  WORKNAME: STRING;                 { the name of the file being edited }
+  HASNAME: BOOLEAN;                { it has a name S(ave can use }
+  REOPEN: BOOLEAN;                { C(hange: start over with another file }
+  CANDOWN: BOOLEAN;                { the screen can scroll down }
 
 SEGMENT PROCEDURE NUM2; BEGIN END;      SEGMENT PROCEDURE NUM3; BEGIN END;
 SEGMENT PROCEDURE NUM4; BEGIN END;      SEGMENT PROCEDURE NUM5; BEGIN END;
@@ -332,7 +333,7 @@ PROCEDURE READFILE;
 BEGIN
   CLEARSCREEN;
   WRITELN('>Edit:');
-  WRITE('Reading from ',G1623);
+  WRITE('Reading from ',WORKNAME);
   IF BLOCKREAD(THEFILE,PAGEZERO,2)<>2 THEN ERROR('Reading file',FATAL);
   WRITE('.');
   PAGE:=1;
@@ -467,12 +468,12 @@ BEGIN
   L57.I := -16598;
   L56.I := -16361;
   IF L55.P^[6] AND (L57.B^[0] = 6) THEN
-    G1666 := TRUE
+    CANDOWN := TRUE
   ELSE
     IF L55.P^[7] AND L55.P^[0] AND (L57.B^[0] = 6) AND NOT L56.P^[7] THEN
-      G1666 := TRUE
+      CANDOWN := TRUE
     ELSE
-      G1666 := FALSE;
+      CANDOWN := FALSE;
   WITH PAGEZERO DO
     BEGIN
       LOADFROMSYSCOM;
@@ -498,7 +499,7 @@ BEGIN
 
       FOR CH:='0' TO '9' DO MAP(CH,DIGIT);
 
-      IF NOT G1665 THEN
+      IF NOT REOPEN THEN
         BEGIN
           IF L12 THEN
             QUIT:=2048+2048
@@ -525,12 +526,12 @@ BEGIN
       CURSOR:=1;
       CLEARSCREEN;
       WRITELN('>Edit:');
-      G1664:=TRUE;
-      IF USERINFO.GOTSYM AND NOT G1665 THEN
+      HASNAME:=TRUE;
+      IF USERINFO.GOTSYM AND NOT REOPEN THEN
         BEGIN
-          G1623:=CONCAT(USERINFO.SYMVID,':',USERINFO.SYMTID);
-          RESET(THEFILE,G1623);
-          G1664:=FALSE;
+          WORKNAME:=CONCAT(USERINFO.SYMVID,':',USERINFO.SYMTID);
+          RESET(THEFILE,WORKNAME);
+          HASNAME:=FALSE;
           IF IORESULT<>0 THEN ERROR('Workfile lost.',FATAL)
         END
       ELSE
@@ -544,8 +545,8 @@ BEGIN
             ED34;
             IF LENGTH(FILENAME)=0 THEN
               BEGIN
-                G1664:=FALSE;
-                G1623:='*SYSTEM.WRK.TEXT';
+                HASNAME:=FALSE;
+                WORKNAME:='*SYSTEM.WRK.TEXT';
                 FILLCHAR(PAGEZERO,SIZEOF(PAGEZERO),CHR(0)); GOTO 1;
               END;
             IF FILENAME[1]=CHR(27) THEN EXIT(EDITOR);
@@ -561,7 +562,7 @@ BEGIN
                 WRITELN(FILENAME,' is not present.')
               END
           UNTIL L13;
-          G1623:=FILENAME
+          WORKNAME:=FILENAME
         END;
 
       READFILE;
@@ -573,7 +574,7 @@ BEGIN
 
       DIRECTION:='>';
       LASTPAT:=1;
-      G590:=FALSE;
+      DIRTY:=FALSE;
       LINE1PTR:=1;
       WITH SYSCOM^.CRTINFO DO
         BEGIN
@@ -588,7 +589,7 @@ BEGIN
       ETX:=ORD(KEYBRD.CH[ETXKEY]);
       MAP(CHR(BS),LEFT);
       SYSCOM^.MISCINFO.NOBREAK := TRUE;
-      IF NOT G1665 THEN
+      IF NOT REOPEN THEN
         BEGIN
           COPYOK:=FALSE;
           DEFPROMPTS;
@@ -655,8 +656,8 @@ BEGIN
   WRITELN('               E(xit to main command line');
   WRITELN;
   WRITELN('       To store Text file on disk, type');
-  IF G1664 THEN
-    WRITELN('               S(ave as ',G1623);
+  IF HASNAME THEN
+    WRITELN('               S(ave as ',WORKNAME);
   WRITELN('               W(rite to a new file name');
   WRITELN('               U(pdate *SYSTEM.WRK.TEXT');
   WRITELN;
@@ -680,13 +681,13 @@ BEGIN
     OUT:=FALSE;
     REPEAT
       OU4;
-      IF (CH='S') AND NOT G1664 THEN CH:='X'
+      IF (CH='S') AND NOT HASNAME THEN CH:='X'
     UNTIL CH IN ['C','E','R','S','U','W'];
     IF CH='R' THEN GOTO 2;
     IF (CH='E') OR (CH='C') THEN
       BEGIN
         BLANKCRT(1);
-        IF G590 THEN
+        IF DIRTY THEN
           BEGIN
             WRITE(
           'Are you sure you want to throw away changes since last update?');
@@ -726,8 +727,8 @@ BEGIN
     ELSE
       IF CH='S' THEN
         BEGIN
-          FN:=G1623;
-          IF G1664 THEN
+          FN:=WORKNAME;
+          IF HASNAME THEN
             BEGIN
               BLANKCRT(1);
               WRITELN(FN,' already exists. Delete before S(ave?  -->');
@@ -774,15 +775,15 @@ BEGIN
         IF BLOCKWRITE(THEFILE,BUF,2) <> 2 THEN GOTO 1; WRITE('.')
       END;
     CLOSE(THEFILE,LOCK);
-    G1623:=FN;
+    WORKNAME:=FN;
     IF CH='U' THEN
       OU2
     ELSE
-      IF (CH='S') AND (G1623='*SYSTEM.WRK.TEXT') THEN
+      IF (CH='S') AND (WORKNAME='*SYSTEM.WRK.TEXT') THEN
         OU2;
-    IF (CH='S') OR (CH='W') THEN G1664:=TRUE;
+    IF (CH='S') OR (CH='W') THEN HASNAME:=TRUE;
     L559:=TRUE;
-    G590:=FALSE;
+    DIRTY:=FALSE;
     CURSOR:=SAVE;
     GOTO 2;
   1: ERROR('Writing out the file.',NONFATAL);
@@ -790,8 +791,8 @@ BEGIN
   UNTIL (CH='R') OR (CH='E') OR (CH='C');
   CLEARSCREEN;
   IF CH='E' THEN OUT:=TRUE;
-  G1665:=CH='C';
-  IF G1665 AND COPYOK THEN
+  REOPEN:=CH='C';
+  IF REOPEN AND COPYOK THEN
     IF COPYSTART<>BUFSIZE-COPYLENGTH+1 THEN
       BEGIN
         MOVERIGHT(EBUF^[COPYSTART],EBUF^[BUFSIZE-COPYLENGTH+1],COPYLENGTH);
@@ -967,7 +968,7 @@ BEGIN
   PROMPTLINE:=' Copy'; PROMPT;
   SPLITBUF;
   FINDMARKERS;
-  G590:=TRUE;
+  DIRTY:=TRUE;
   PAGE:=STARTPAGE;
   GETNEXT;
   WHILE (STARTOFFSET>=NOTNULLS) AND NOT DONE DO
@@ -1120,7 +1121,7 @@ BEGIN
       IF CH=CHR(ESC) THEN
         PAGEZERO:=L2
       ELSE
-        G590:=G590 OR (PAGEZERO<>L2);
+        DIRTY:=DIRTY OR (PAGEZERO<>L2);
       REDISPLAY;
     END;
 END;
@@ -1223,7 +1224,7 @@ BEGIN
           IF BUFCOUNT+COPYLENGTH>=BUFSIZE THEN ERROR('No room',NONFATAL)
           ELSE
             BEGIN
-              G590:=G590 OR (COPYLENGTH>0);
+              DIRTY:=DIRTY OR (COPYLENGTH>0);
               L1:=FALSE;
               ED33(CURSOR);
               IF EBUF^[COPYSTART]=CHR(DLE) THEN
@@ -1341,7 +1342,7 @@ BEGIN
       BLANKCRT(1);
       THEFIXER(CURSOR,REPEATFACTOR,TRUE);
       CENTERCURSOR(TRASH,MIDDLE,TRUE);
-      G590:=TRUE
+      DIRTY:=TRUE
     END
   ELSE ERROR('Inappropriate environment',NONFATAL);
   COPYOK:=FALSE;
@@ -1383,7 +1384,7 @@ BEGIN
               IF CH=CHR(ESC) THEN EXIT(SETMARKER);
               SLOT:=ORD(CH)-ORD('0')
             END;
-          G590:=TRUE;
+          DIRTY:=TRUE;
           NAME[SLOT]:=MNAME;
           POFFSET[SLOT]:=CURSOR;
           IF SLOT=COUNT THEN COUNT:=COUNT+1
@@ -1462,7 +1463,7 @@ BEGIN
       SHOWCURSOR; WRITE(SAVE:I); SHOWCURSOR;
       I:=0
     END;
-  G590:=G590 OR (I<>0);
+  DIRTY:=DIRTY OR (I<>0);
   NEXTCOMMAND;
 END (* XMACRO *);
 
@@ -1483,7 +1484,7 @@ BEGIN
     END;
   IF OKTODEL(MIN(CURSOR,LASTPAT),MAX(CURSOR,LASTPAT)) THEN
     BEGIN
-      G590:=G590 OR (LASTPAT<>CURSOR);
+      DIRTY:=DIRTY OR (LASTPAT<>CURSOR);
       COPYLINE:=FALSE;
       READJUST(MIN(CURSOR,LASTPAT),-ABS(CURSOR-LASTPAT));
       IF CURSOR>LASTPAT THEN
@@ -1916,7 +1917,7 @@ BEGIN (* INSERT *)
   UNTIL CH IN [CHR(ETX),CHR(ESC)];
   BUFCOUNT:=SAVEBUFCOUNT;
   WRAPUP;
-  G590:=G590 OR (CURSOR<>LEFTPART+1);
+  DIRTY:=DIRTY OR (CURSOR<>LEFTPART+1);
 END;
 
 PROCEDURE MOVEIT;
@@ -2029,7 +2030,7 @@ BEGIN
                    )
                );
   IF LINE<1 THEN
-    IF (LINE<-SCREENHEIGHT) OR INDELETE OR NOT G1666 THEN CENTER
+    IF (LINE<-SCREENHEIGHT) OR INDELETE OR NOT CANDOWN THEN CENTER
     ELSE SCROLLDOWN(-LINE+1);
 END(* UPALINE *);
 
@@ -2085,7 +2086,7 @@ BEGIN
     END;
   CURSOR:=MAX(STUFFSTART,CURSOR-REPEATFACTOR);
   IF LINE<1 THEN
-    IF (LINE<-SCREENHEIGHT) OR INDELETE OR NOT G1666 THEN CENTER
+    IF (LINE<-SCREENHEIGHT) OR INDELETE OR NOT CANDOWN THEN CENTER
     ELSE SCROLLDOWN(-LINE+1);
   FINDXY(X,LINE);
 END (* LEFTMOVE *);
@@ -2334,7 +2335,7 @@ BEGIN (* adjusting *)
                 ELSE
                   IF CH<>CHR(ETX) THEN BEGIN ERRWAIT; SHOWCURSOR END;
       UNTIL CH=CHR(ETX);
-      G590:=G590 OR (TDELTA<>0);
+      DIRTY:=DIRTY OR (TDELTA<>0);
       DIRECTION:=SAVEDIR;
     END;
 END;
@@ -2543,7 +2544,7 @@ BEGIN
         BEGIN CURSOR:=LINESTART; SAVE:=ANCHOR; ANCHOR:=ATBOL END;
       IF OKTODEL(CURSOR,ANCHOR) THEN
         BEGIN
-          G590:=G590 OR (ANCHOR<>CURSOR);
+          DIRTY:=DIRTY OR (ANCHOR<>CURSOR);
           READJUST(MIN(CURSOR,ANCHOR),-ABS(CURSOR-ANCHOR));
           COPYLINE:=(CURSOR=LINESTART) AND ATBOT;
           IF ANCHOR<CURSOR THEN
@@ -2910,7 +2911,7 @@ BEGIN
         END;
       IF (CH<>'R') AND (CH<>'r') THEN GOTO 1;
     END;
-    G590:=TRUE;
+    DIRTY:=TRUE;
     (* Replace TARGET with SUBSTRING *)
       IF SLENGTH>CURSOR-LASTPAT THEN
         IF SLENGTH-(CURSOR-LASTPAT)+BUFCOUNT>BUFSIZE-200 THEN
@@ -3620,13 +3621,13 @@ BEGIN
 END;
 
 BEGIN (* Segment procedure EDITOR *)
-  G1665:=FALSE;
+  REOPEN:=FALSE;
   INITIALIZE; GETLEADING; CURSOR:=MAX(CURSOR,STUFFSTART);
   REPEAT
-    IF G1665 THEN
+    IF REOPEN THEN
       BEGIN
         INITIALIZE; GETLEADING; CURSOR:=MAX(CURSOR,STUFFSTART);
-        G1665:=FALSE
+        REOPEN:=FALSE
       END;
     CENTERCURSOR(TRASH,(SCREENHEIGHT DIV 2)+1,TRUE);
     NEEDPROMPT:=TRUE;
