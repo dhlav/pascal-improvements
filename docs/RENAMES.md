@@ -136,3 +136,30 @@ plus roles pinned in ASSMBLER source comments. Source-only;
 | `G539` | `LINEBUF` | listing line buffer |
 | `G42` | `LOCLBASE` | local-label block base |
 | `G44` | `LOCLTOP` | local-label block top |
+
+## 2026-09-17 — ASSMBLER second G* batch (20 ids)
+
+FINDINGS **262** / **263c** and ASSMBLER comments. **~68 unique `G*` remain.**
+
+| Old | New | Basis |
+|-----|-----|-------|
+| `G3` | `CURSYM` | current `ASMREC` while walking symbol chains |
+| `G7` | `MACBPOS` | index into macro body (CHSOURCE 0) |
+| `G8` | `LINEPOS` | column in `LINEBUF` |
+| `G10` | `CURROP` | current opcode (`OPREC`) |
+| `G22` | `LOCCTR` | location counter |
+| `G28` | `MACPPOS` | index into macro actual-parameter text |
+| `G37` | `ERRCOL` | saved column for `USERINFO.ERRSYM` |
+| `G38` | `SAVBLK` | saved block for work-file error path |
+| `G39` | `FILEBLK` | `BLOCKREAD` block counter |
+| `G41` | `SRCPOS` | index into source window (`CHSOURCE` 2) |
+| `G43` | `LOCLCUR` | local-label frontier (with `LOCLBASE`/`LOCLTOP`) |
+| `G52` | `EMITMODE` | mode written into `CURFIVE` |
+| `G59` | `EXPRADV` | I.5 `EXPRSSADVANCE` |
+| `G68` | `NOPRINT` | with print-suppression `LAND` vs `G12` |
+| `G673` | `LOCLLVLS` | per-level local-label bases |
+| `G1094` | `DEFSYM` | symbol being `.DEF`/`.REF`'d |
+| `G1443` | `KEYTAB` | keyword name table |
+| `G1608` | `SRCWIN` | source window buffer |
+| `G2136` | `EMITBUF` | code emit buffer |
+| `G2147` | `PATCHBUF` | patch / alternate code buffer |
