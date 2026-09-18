@@ -12,12 +12,13 @@
 - Linker: `WORDHEAP` / `INTRLINK` / `HOSTSLOT`
 - GETCMD: all `GC*` → role names (`SEGOFENT`, `USELIB`, `AFTERCMP`, …)
 - LINKER/LIBRARY/FILER: `CLOSEINS`/`QUITLINK`/`STRIPDLE`/`CHECKVER`/…
+- ASSMBLER: first 24 `G*` → `ASMCH`/`ADVANCE`/`MACLEVEL`/… (~88 left)
 - Docs: `RENAMES.md`, `PLACEHOLDERS.md`, `CONTINUE.md`
 
 ## Next
 
-See **`docs/PLACEHOLDERS.md`**: start the **ASSMBLER `G*`** naming mine
-(or another clarity scan).
+Continue **ASSMBLER `G*`** naming (I.5 / comment evidence), or a clarity
+scan. See `docs/PLACEHOLDERS.md` / `docs/RENAMES.md`.
 
 ## Remember
 

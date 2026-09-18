@@ -42,7 +42,7 @@ FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
 
 | Area | Scale | Ancestor |
 |------|-------|----------|
-| `ASSMBLER.text` | **~112 unique `G*`** (many uses) | UCSD I.5 assembler (not II.0 in-tree) |
+| `ASSMBLER.text` | **~88 unique `G*` left** (24 renamed 2026-09-17) | UCSD I.5; see RENAMES.md first batch |
 | `TURTLEGR.TEXT` | ~54 `Lnnnn` labels | UCSD turtle_graphics mirror (unmined) |
 | `LONGINTS.TEXT` | ~49 `Lnnnn` | pascalio / longint native |
 | `ASMFORMAT` / `BOOTII` / `BOOTPD` | dozens of `L*` | native / boot |
@@ -64,8 +64,9 @@ FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
 3. ~~**LINKER `G29`→`HOSTSLOT`**~~ done.
 4. ~~**GETCMD `GC*`**~~ done (role-based names; see RENAMES.md).
 5. ~~**LINKER/LIBRARY/FILER leftovers**~~ done (comment-backed batch).
-6. **ASSMBLER / natives** as dedicated naming campaigns, not drive-by renames.
-7. Optional: LIBMAP `L85` / LIBRARY `M2` (loop indices — low value).
+6. **ASSMBLER** — continue G* batches from I.5 / comments (~88 left).
+7. **Natives** (TURTLEGR/LONGINTS/…) as separate campaigns.
+8. Optional: LIBMAP `L85` / LIBRARY `M2` (loop indices — low value).
 
 ## Counts snapshot (unique IDs, 2026-09-16)
 

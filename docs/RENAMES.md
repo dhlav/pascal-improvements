@@ -103,3 +103,36 @@ probes still green.
 | `L14` | `VOLCONF` | volume-name confirmation in ZEROVOLUME |
 
 Skipped: `M2`, `L85` (pure loop indices); no-ancestor leftovers none left in this batch.
+
+## 2026-09-17 — ASSMBLER first G* batch (24 ids)
+
+I.5 correspondences recorded in FINDINGS **263c** (adopted on this fork)
+plus roles pinned in ASSMBLER source comments. Source-only;
+`probe_assembler_whole` still green. **~88 unique `G*` remain.**
+
+| Old | New | Basis |
+|-----|-----|-------|
+| `G11` | `ASMCH` | I.5 `CH` (CH taken); scanner current char |
+| `G62` | `ADVANCE` | I.5 `ADVANCE` |
+| `G6` | `SPCLSTIX` | I.5 `SPCIALSTKINDEX` |
+| `G685` | `SPECSTK` | I.5 `SPECIALSTK` |
+| `G622` | `RELOCATE` | I.5 `RELOCATE` |
+| `G72` | `SRCBUF` | I.5 `BUFFER` (BUFFER collides) |
+| `G71` | `MACBUFP` | macro text buffer pointer (`MACP`) |
+| `G406` | `STRCONST` | string constant being built (`PSTRING`) |
+| `G29` | `NUMVAL` | numeric constant (`PCONST`) |
+| `G13` | `CURFIVE` | current `FIVEREC` / reloc record |
+| `G70` | `DEFGATE` | gates `.DEF`/`.REF` helper |
+| `G14` | `EXPRVAL` | expression value |
+| `G15` | `EXPRCLS` | expression class |
+| `G60` | `NAMEDSRC` | source is operator-named file |
+| `G64` | `DOSYMDMP` | enable `SYMTBLDUMP` |
+| `G27` | `MACLEVEL` | macro nesting level |
+| `G661` | `MACBUFS` | array of macro buffers |
+| `G659` | `CHSOURCE` | which source feeds `ASMCH` (0/1/2) |
+| `G65` | `FOLDCAS` | fold case / collapse blanks |
+| `G58` | `INMACDEF` | suppress fold while defining a macro |
+| `G67` | `DLEZERO` | DLE blank-count was zero |
+| `G539` | `LINEBUF` | listing line buffer |
+| `G42` | `LOCLBASE` | local-label block base |
+| `G44` | `LOCLTOP` | local-label block top |
