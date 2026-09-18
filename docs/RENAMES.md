@@ -39,3 +39,11 @@ Source-only; `probe_filer_whole` still green (byte-identical to shipped).
 | `L12` | `INTRLINK` | linking an intrinsic unit |
 
 Source-only; `probe_linker_whole` still green (byte-identical to shipped).
+
+## 2026-09-17 — LINKER host slot
+
+| Old | New | Role |
+|-----|-----|------|
+| `G29` | `HOSTSLOT` | host segment's slot (`MAXSEG1` if none) |
+
+(`HOSTSEG` collides with an existing name.) Source-only; linker probe still green.

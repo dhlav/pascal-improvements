@@ -9,15 +9,12 @@
 - Editor: tab-stop DIV math; `DIRTY`/`WORKNAME`/`HASNAME`/`REOPEN`/`CANDOWN`
 - OS: `CANTSTRETCH` / `MAINLOOP`
 - Filer: `DESTBLKS` / `SRCBLKS`
-- Linker: `WORDHEAP` / `INTRLINK`
+- Linker: `WORDHEAP` / `INTRLINK` / `HOSTSLOT`
 - Docs: `RENAMES.md`, `PLACEHOLDERS.md`, `CONTINUE.md`
 
 ## Next
 
-See **`docs/PLACEHOLDERS.md`**:
-
-1. LINKER `G29` → `HOSTSLOT` (comment-backed), or
-2. GETCMD `GC*` renames from FINDINGS 225–227
+See **`docs/PLACEHOLDERS.md`**: GETCMD **`GC*`** renames from FINDINGS 225–227.
 
 ## Remember
 

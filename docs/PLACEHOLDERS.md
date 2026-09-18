@@ -19,9 +19,9 @@ Already done on this fork: see `docs/RENAMES.md`.
 | `FILER.text` | ~~`G362`~~ | ~~blocks on source~~ | **done → `SRCBLKS`** |
 | `LINKER.text` | ~~`G91`~~ | ~~heap pointers count words~~ | **done → `WORDHEAP`** |
 | `LINKER.text` | ~~`L12`~~ | ~~linking an intrinsic unit~~ | **done → `INTRLINK`** |
-| `LINKER.text` | `G29` | host segment's slot, MAXSEG1 if none | `HOSTSLOT` (candidate) |
+| `LINKER.text` | ~~`G29`~~ | ~~host segment's slot~~ | **done → `HOSTSLOT`** |
 
-FILER + LINKER Tier A comment renames done. Next: `G29`→`HOSTSLOT`, or GETCMD `GC*`.
+FILER + LINKER comment-backed globals done. Next: GETCMD `GC*` from FINDINGS 225–227.
 
 ### Tier B — FINDINGS map exists; need careful GETCMD.* → English names
 
@@ -47,7 +47,7 @@ Tier C unless comments pin them.
 
 | File | IDs | Status |
 |------|-----|--------|
-| `LINKER.text` | `G29`, `LK2`, `LK3`, `LK17`, `LK51`, `L45` | Apple additions; keep until body match |
+| `LINKER.text` | `LK2`, `LK3`, `LK17`, `LK51`, `L45` | Apple additions; keep until body match (`G29`/`G91`/`L12` renamed) |
 | `LIBRARY.text` | `G131`, `LB6`, `LB15` (+ older note `M2`/`M3` if still present) | same |
 | `LIBMAP.text` | `L85` | same |
 | `FILER.text` | `FL56`, `L12`, `L14`, `L29` | Apple / local; `FL56` is a procedure |
@@ -75,9 +75,10 @@ Tier C unless comments pin them.
 
 1. ~~**FILER `G361`/`G362`**~~ done (`DESTBLKS`/`SRCBLKS`).
 2. ~~**LINKER `G91`/`L12`**~~ done (`WORDHEAP`/`INTRLINK`).
-3. **LINKER `G29`→`HOSTSLOT`** (comment-backed) or **GETCMD `GC*`** from FINDINGS 225–227.
-4. **LINKER/LIBRARY/LIBMAP** leftovers only if an ancestor body turns up.
-5. **ASSMBLER / natives** as dedicated naming campaigns, not drive-by renames.
+3. ~~**LINKER `G29`→`HOSTSLOT`**~~ done.
+4. **GETCMD `GC*`** from FINDINGS 225–227 English names.
+5. **LINKER/LIBRARY/LIBMAP** leftovers only if an ancestor body turns up.
+6. **ASSMBLER / natives** as dedicated naming campaigns, not drive-by renames.
 
 ## Counts snapshot (unique IDs, 2026-09-16)
 

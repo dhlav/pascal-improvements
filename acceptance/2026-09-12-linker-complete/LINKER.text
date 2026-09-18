@@ -257,7 +257,7 @@ VAR
   HOSTSP: SEGP;
   NEXTBASELC: LCRANGE;
   SEGINFO: ARRAY [SEGRANGE] OF SEGP;
-  G29: SEGINDEX;        { host segment's slot, MAXSEG1 if none }
+  HOSTSLOT: SEGINDEX;        { host segment's slot, MAXSEG1 if none }
   MAPNAME: STRING[39];
   CODE: CODEFILE;
   FLIPPED: BOOLEAN;     { segment tables are byte-flipped }
@@ -673,7 +673,7 @@ PROCEDURE PHASE1;
   BEGIN
     L5 := FALSE;
     L4 := FALSE;
-    G29 := MAXSEG1;
+    HOSTSLOT := MAXSEG1;
     WITH HOSTFILE^.SEGTBL DO
       FOR S := 0 TO MAXSEG DO
         IF (SEGKIND[S] = LINKED)
@@ -698,14 +698,14 @@ PROCEDURE PHASE1;
                            ELSE
                              BEGIN
                                HOSTSP := SP;
-                               G29 := S;
+                               HOSTSLOT := S;
                                L5 := TRUE
                              END;
 
               SEPRTSEG:  IF SEGMISC[S].SEGNUM = MASTERSEG THEN
                            BEGIN
                              SP^.NEXT := NIL;
-                             G29 := S;
+                             HOSTSLOT := S;
                              L5 := TRUE
                            END
                          ELSE
@@ -1065,9 +1065,9 @@ BEGIN { PHASE2 }
       READLINKINFO(SP, REFLITYPES+[CONSTDEF, GLOBDEF, SEPPROC, SEPFUNC]);
       SP := SP^.NEXT
     END;
-  IF G29 <> MAXSEG1 THEN
-    IF SEGINFO[G29]^.SEGKIND = SEPRTSEG THEN
-      BUILDPLACES(SEGINFO[G29]);
+  IF HOSTSLOT <> MAXSEG1 THEN
+    IF SEGINFO[HOSTSLOT]^.SEGKIND = SEPRTSEG THEN
+      BUILDPLACES(SEGINFO[HOSTSLOT]);
   SP := SEPLIST;
   WHILE SP <> NIL DO
     BEGIN
@@ -2190,7 +2190,7 @@ BEGIN { PHASE3 }
           IF HOSTSP <> NIL THEN
             WRITELN(MAP, HOSTSP^.SRCFILE^.SEGTBL.SEGNAME[HOSTSP^.SRCSEG])
           ELSE
-            IF G29 = MAXSEG1 THEN
+            IF HOSTSLOT = MAXSEG1 THEN
               WRITELN(MAP, 'intrinsic codefile')
             ELSE
               WRITELN(MAP, 'assembly host');
@@ -2209,7 +2209,7 @@ BEGIN { PHASE3 }
       LINKSEGMENT;
   IF HOSTSP <> NIL THEN
     BEGIN
-      S := G29;
+      S := HOSTSLOT;
       LINKSEGMENT
     END;
   IF FLIPPED THEN
