@@ -46,7 +46,7 @@ FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
 | `TURTLEGR.TEXT` | **0 `Lxxxx` left** (all role-renamed) | Klebsch asm is stubs; unique role names |
 | `LONGINTS.TEXT` | **0 `Lxxxx` left** (109 renamed) | Klebsch stub; role-ish unique names |
 | `ASMFORMAT` / `BOOTII` / `BOOTPD` | **0 `Lxxxx` left** | absolute labels → `F*`/`B*`/`P*` |
-| `128K.APPLE` interp | ~800 `L*` | John Brooks 1.4 (external) — still open |
+| `128K.APPLE` interp | ~800 `L*` | **PARKED** — John Brooks material coming later; do not rename now |
 
 ### Tier E — leave alone
 
@@ -67,7 +67,8 @@ FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
 6. ~~**ASSMBLER `G*`**~~ done (all 112 renamed).
 7. ~~**Natives TURTLEGR/LONGINTS/ASMFORMAT/BOOT***~~ done (all `Lxxxx` cleared).
 8. ~~**LIBMAP `L85` / LIBRARY `M2`**~~ done.
-9. **`128K.APPLE` interp ~800 `L*`** — large remaining mine (Brooks 1.4).
+9. ~~**`128K.APPLE` interp ~800 `L*`**~~ **PARKED** (Brooks later). Outside
+   interp, placeholder mines are effectively finished.
 
 ## Counts snapshot (unique IDs, 2026-09-16)
 
