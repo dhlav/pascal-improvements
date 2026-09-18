@@ -16,12 +16,14 @@
 - Clarity scan: `docs/CLARITY-SCAN.md`; FILER `OTHERWISE` unknown command
 - TURTLEGR: **all `Lxxxx` renamed** to unique role names
 - LONGINTS: **all 109 `Lxxxx` renamed** (`POP2LI`, `ZRESULT`, …)
+- LIBMAP `MAPIX`, LIBRARY `SEGIX`
+- ASMFORMAT/BOOTII/BOOTPD: absolute `Lxxxx` → `F*`/`B*`/`P*`
 - Docs: `RENAMES.md`, `PLACEHOLDERS.md`, `CONTINUE.md`, `CLARITY-SCAN.md`
 
 ## Next
 
-Loop indices (`LIBMAP L85`, `LIBRARY M2`), or other natives
-(`ASMFORMAT`/`BOOT*`), or more clarity work.
+**`128K.APPLE` interpreter** ~800 `L*` labels (John Brooks 1.4 candidate),
+or more clarity / behavior improvements.
 
 ## Remember
 

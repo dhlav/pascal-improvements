@@ -12,10 +12,14 @@
   The ancestor is UCSD's I.5 LibMap (Robert Hofkin, September
   1978), reference_source/ucsd_15. Its procedure tree and most
   of its bodies survive. I.5's names are used wherever the
-  binary confirms the role. What Apple added has no name to
-  borrow and carries a placeholder: LM<n> for procedure n, L<n>
-  for local word n. The byte-sex routines and the 1.3
-  dictionary types are the linker's own (LINKER.text).
+  binary confirms the role. The byte-sex routines, BYTESWAP,
+  TABLEFLIPPED and FLIPTABLE, are UCSD's II.0 revision's
+  ("Revised to handle byte-flipped files", in
+  github.com/dhlav/ucsd-psystem-os, libmap/), with their locals
+  and READLINKINFO's TENTRY and I (finding 293). What Apple
+  added has no name to borrow and carries a placeholder: L<n>
+  for local word n. The 1.3 dictionary types are the linker's
+  own (LINKER.text).
 
   The four globals Apple added are named from Apple's own
   compile. The tail of the shipped file's last block holds
@@ -195,34 +199,34 @@ procedure IDSEARCH(var IDREC, ID);
 
 { Swap the two bytes of a word. }
 
-procedure LM3(var x: integer);
-  var b, a: swaprec;
+procedure byteswap(var word: integer);
+  var temp1, temp2: swaprec;
 begin
-  b.integ := x;
-  a.lowbyte := b.highbyte;
-  a.highbyte := b.lowbyte;
-  x := a.integ
+  temp1.integ := word;
+  temp2.lowbyte := temp1.highbyte;
+  temp2.highbyte := temp1.lowbyte;
+  word := temp2.integ
 end;
 
 { TRUE if any segment address has a high byte, which a
   dictionary in this machine's byte order cannot. }
 
-function LM4(var segtbl: I5segtbl): boolean;
+function tableflipped(var table: I5segtbl): boolean;
   label 1;
-  var L4: segrange;
-      L5: 0..1;          { index of a word's high byte }
-      L6: wordrec;
+  var s: segrange;
+      highbyte: 0..1;    { index of a word's high byte }
+      int: wordrec;
 begin
-  LM4 := FALSE;
-  L6.integ := 1;
-  L5 := ord(L6.bytes[0] = 1);
-  for L4 := 0 to MAXSEG do
-    with segtbl.diskinfo[L4] do
+  tableflipped := FALSE;
+  int.integ := 1;
+  highbyte := ord(int.bytes[0] = 1);
+  for s := 0 to MAXSEG do
+    with table.diskinfo[s] do
       begin
-        L6.integ := codeaddr;
-        if L6.bytes[L5] <> 0 then
+        int.integ := codeaddr;
+        if int.bytes[highbyte] <> 0 then
           begin
-            LM4 := TRUE;
+            tableflipped := TRUE;
             goto 1
           end
       end;
@@ -231,25 +235,25 @@ end;
 
 { Byte-swap a whole segment dictionary. }
 
-procedure LM5(var segtbl: I5segtbl);
+procedure fliptable(var table: I5segtbl);
   var s: segrange;
-      x: wordrec;
+      int: wordrec;
 begin
   for s := 0 to MAXSEG do
-    with segtbl do
+    with table do
       begin
         with diskinfo[s] do
           begin
-            LM3(codeaddr);
-            LM3(codeleng)
+            byteswap(codeaddr);
+            byteswap(codeleng)
           end;
-        x.kind := segkind[s];
-        LM3(x.integ);
-        segkind[s] := x.kind;
-        LM3(textstart[s]);
-        x.misc := seginfo[s];
-        LM3(x.integ);
-        seginfo[s] := x.misc
+        int.kind := segkind[s];
+        byteswap(int.integ);
+        segkind[s] := int.kind;
+        byteswap(textstart[s]);
+        int.misc := seginfo[s];
+        byteswap(int.integ);
+        seginfo[s] := int.misc
       end
 end;
 
@@ -289,8 +293,8 @@ procedure phase2;
           nointerface: boolean;
           buf: array [0..31] of
                  array [0..7] of integer;
-          L270: array [0..7] of integer;
-          L278: integer;
+          tentry: array [0..7] of integer;
+          i: integer;
 
       function copyinterface (start: integer): boolean;
         const IMPLMTSY = 52;
@@ -444,10 +448,10 @@ procedure phase2;
              getentry(entry);
              if FLIPPED then
                begin
-                 moveleft (entry, L270, 16);
-                 for L278 := 4 to 7 do
-                   LM3 (L270[L278]);
-                 moveleft (L270, entry, 16)
+                 moveleft (entry, tentry, 16);
+                 for i := 4 to 7 do
+                   byteswap (tentry[i]);
+                 moveleft (tentry, entry, 16)
                end;
              with entry do
                if litype <> EOFMARK then
@@ -521,7 +525,7 @@ end { phase2 } ;
     s: segindex;
     CH: char;
     libtitle, maptitle: string;
-    L85: integer;
+    MAPIX: integer;
   begin
 1:
     FLIPPED := false;
@@ -551,9 +555,9 @@ end { phase2 } ;
         goto 1;
       end;
 
-    if LM4 (segtbl) then
+    if tableflipped (segtbl) then
       begin
-        LM5 (segtbl);
+        fliptable (segtbl);
         FLIPPED := true
       end;
 
@@ -597,9 +601,9 @@ end { phase2 } ;
          else
            if maptitle[length(maptitle)] <> ':' then
              begin
-               for L85 := 1 to length(maptitle) do
-                 if maptitle[L85] in ['a'..'z'] then
-                   maptitle[L85] := chr(ord(maptitle[L85])-32);
+               for MAPIX := 1 to length(maptitle) do
+                 if maptitle[MAPIX] in ['a'..'z'] then
+                   maptitle[MAPIX] := chr(ord(maptitle[MAPIX])-32);
                if (pos('.TEXT', maptitle) <> length(maptitle)-4) or
                   (pos('.TEXT', maptitle) = 0) then
                  insert ('.TEXT', maptitle, length(maptitle)+1)

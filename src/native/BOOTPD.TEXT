@@ -4,12 +4,13 @@
 ; writes to block 0 of such a disk. It shares its
 ; first 76 bytes with the Disk II boot and calls the
 ; slot's own driver through a JSR whose address it
-; patches in at run time (L095B+1).
+; patches in at run time (P095B+1).
 ;
 ; Reconstructed from FORMATTER.DATA (finding 275).
 ; MAKEBOOT copies this codefile's block 1 whole.
 ;
-; What is ours: every label (L<address>) and comment.
+; What is ours: every label and comment. Former L<addr>
+; labels renamed on the improvements fork (P0800, ...).
 ;---------------------------------------------------
 
         .ABSOLUTE
@@ -17,26 +18,26 @@
         .ORG    0800
         .BYTE 01
         CPX  #70
-        BCS  L0809
+        BCS  P0809
         CPX  #40
-        BCS  L0842
-L0809   LDA  0C088,X
-        JSR  L0820
+        BCS  P0842
+P0809   LDA  0C088,X
+        JSR  P0820
         LDX  #00
-L0811   LDA  L0825,X
+P0811   LDA  P0825,X
         ORA  #80
         JSR  0FBFD
         INX
         CPX  #1D
-        BNE  L0811
-L081E   BEQ  L081E
-L0820   LDA  #0A
+        BNE  P0811
+P081E   BEQ  P081E
+P0820   LDA  #0A
         JMP  0FC24
-L0825   .BYTE 4D,55,53,54,20,42,4F,4F
+P0825   .BYTE 4D,55,53,54,20,42,4F,4F
         .BYTE 54,20,46,52,4F,4D,20,53
         .BYTE 4C,4F,54,20,34,2C,20,35
         .BYTE 20,4F,52,20,36
-L0842   TXA
+P0842   TXA
         STA  43
         LSR  A
         LSR  A
@@ -44,13 +45,13 @@ L0842   TXA
         LSR  A
         ORA  #0C0
         STA  15
-        STA  L095B+2
+        STA  P095B+2
         LDA  #00
         STA  0478
         STA  14
         LDA  #0A
         STA  0E
-L085B   LDA  #80
+P085B   LDA  #80
         STA  13
         STA  11
         LDA  #00
@@ -60,36 +61,36 @@ L085B   LDA  #80
         STA  0A
         LDA  #04
         STA  02
-        JSR  L0940
+        JSR  P0940
         LDX  #4E
-L0874   LDY  #06
-L0876   LDA  @10,Y
-        CMP  L092D,Y
-        BEQ  L08A8
+P0874   LDY  #06
+P0876   LDA  @10,Y
+        CMP  P092D,Y
+        BEQ  P08A8
         CLC
         LDA  10
         ADC  #1A
         STA  10
-        BCC  L0888
+        BCC  P0888
         INC  11
-L0888   DEX
-        BNE  L0874
+P0888   DEX
+        BNE  P0874
         DEC  0E
-        BNE  L085B
-        JSR  L0820
+        BNE  P085B
+        JSR  P0820
         LDX  43
         LDA  0C088,X
         LDX  #00
-L0899   LDA  L091E,X
+P0899   LDA  P091E,X
         ORA  #80
         JSR  0FBFD
         INX
         CPX  #15
-        BNE  L0899
-L08A6   BEQ  L08A6
-L08A8   INY
+        BNE  P0899
+P08A6   BEQ  P08A6
+P08A8   INY
         CPY  #13
-        BNE  L0876
+        BNE  P0876
         LDA  0C083
         LDA  0C083
         LDA  #0D0
@@ -102,7 +103,7 @@ L08A8   INY
         STA  0B
         LDA  #18
         STA  02
-        JSR  L0940
+        JSR  P0940
         LDA  0C08B
         LDA  #0D0
         STA  13
@@ -117,14 +118,14 @@ L08A8   INY
         STA  0B
         LDA  #08
         STA  02
-        JSR  L0940
+        JSR  P0940
         LDA  43
         CMP  #50
-        BEQ  L08F5
-        BCC  L0909
-L08EF   LDA  0C080
+        BEQ  P08F5
+        BCC  P0909
+P08EF   LDA  0C080
         JMP  @0FFF8
-L08F5   LDX  #00
+P08F5   LDX  #00
         STX  0FEC4
         INX
         STX  0FEC6
@@ -132,8 +133,8 @@ L08F5   LDX  #00
         STX  0FEB6
         INX
         STX  0FEB8
-        JMP  L08EF
-L0909   LDX  #00
+        JMP  P08EF
+P0909   LDX  #00
         STX  0FEC0
         INX
         STX  0FEC2
@@ -141,18 +142,18 @@ L0909   LDX  #00
         STX  0FEB6
         INX
         STX  0FEB8
-        JMP  L08EF
-L091E   .BYTE 4E,4F,20,46,49,4C,45,20
+        JMP  P08EF
+P091E   .BYTE 4E,4F,20,46,49,4C,45,20
         .BYTE 53,59,53,54,45,4D,2E
-L092D   .BYTE 41,50,50,4C,45,20,0C,53
+P092D   .BYTE 41,50,50,4C,45,20,0C,53
         .BYTE 59,53,54,45,4D,2E,41,50
         .BYTE 50,4C,45
-L0940   LDA  #01
+P0940   LDA  #01
         STA  42
         LDY  #0FF
         LDA  @14,Y
-        STA  L095B+1
-L094B   LDA  #00
+        STA  P095B+1
+P094B   LDA  #00
         STA  44
         LDA  13
         STA  45
@@ -160,18 +161,18 @@ L094B   LDA  #00
         STA  46
         LDA  0B
         STA  47
-L095B   JSR  0000
-        BCC  L0963
-        JMP  L085B
-L0963   DEC  02
-        BEQ  L0973
+P095B   JSR  0000
+        BCC  P0963
+        JMP  P085B
+P0963   DEC  02
+        BEQ  P0973
         INC  13
         INC  13
         INC  0A
-        BNE  L094B
+        BNE  P094B
         INC  0B
-        BNE  L094B
-L0973   RTS
+        BNE  P094B
+P0973   RTS
         .BYTE 20,43,4F,50,59,52,49,47
         .BYTE 48,54,20,41,50,50,4C,45
         .BYTE 20,43,4F,4D,50,55,54,45

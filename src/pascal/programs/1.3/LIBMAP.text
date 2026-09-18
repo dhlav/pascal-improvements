@@ -525,7 +525,7 @@ end { phase2 } ;
     s: segindex;
     CH: char;
     libtitle, maptitle: string;
-    L85: integer;
+    MAPIX: integer;
   begin
 1:
     FLIPPED := false;
@@ -601,9 +601,9 @@ end { phase2 } ;
          else
            if maptitle[length(maptitle)] <> ':' then
              begin
-               for L85 := 1 to length(maptitle) do
-                 if maptitle[L85] in ['a'..'z'] then
-                   maptitle[L85] := chr(ord(maptitle[L85])-32);
+               for MAPIX := 1 to length(maptitle) do
+                 if maptitle[MAPIX] in ['a'..'z'] then
+                   maptitle[MAPIX] := chr(ord(maptitle[MAPIX])-32);
                if (pos('.TEXT', maptitle) <> length(maptitle)-4) or
                   (pos('.TEXT', maptitle) = 0) then
                  insert ('.TEXT', maptitle, length(maptitle)+1)

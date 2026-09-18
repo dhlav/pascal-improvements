@@ -307,7 +307,7 @@ END;
 PROCEDURE LINKCODE;
   LABEL 1;
   VAR NBLOCKS: INTEGER;
-      M2: INTEGER;
+      SEGIX: INTEGER;
       OUTFULL: BOOLEAN;      { set by LINKIT when the output is full }
 
   PROCEDURE LINKIT(SSEG, DSEG: INTEGER);
@@ -581,9 +581,9 @@ BEGIN { LINKCODE }
           BEGIN
             PL := 'Copying all slots...';
             PROMPT(WINDOW);
-            FOR M2 := 0 TO MAXSEG DO
+            FOR SEGIX := 0 TO MAXSEG DO
               BEGIN
-                LINKIT(M2,M2);
+                LINKIT(SEGIX,SEGIX);
                 IF OUTFULL THEN
                   GOTO 1
               END
@@ -591,18 +591,18 @@ BEGIN { LINKCODE }
         ELSE
           IF CCH = '?' THEN
             BEGIN
-              FOR M2 := 0 TO MAXSEG DO
-                IF INTBL.SEGDSC[M2].CODELENG > 0 THEN
+              FOR SEGIX := 0 TO MAXSEG DO
+                IF INTBL.SEGDSC[SEGIX].CODELENG > 0 THEN
                   BEGIN
                     PL := 'Copy slot ';
                     PROMPT(WINDOW);
-                    WRITE(M2);
+                    WRITE(SEGIX);
                     WRITE('? ');
                     READ(INPUT,CCH);
                     WRITELN(OUTPUT);
                     IF CCH IN ['Y','y'] THEN
                       BEGIN
-                        LINKIT(M2,M2);
+                        LINKIT(SEGIX,SEGIX);
                         IF OUTFULL THEN
                           GOTO 1
                       END

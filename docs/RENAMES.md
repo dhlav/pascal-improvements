@@ -291,3 +291,22 @@ Examples: `RETJMP`, `ERR13`/`ERR6`, `POP2LI`, `AJTRIM`, `CMPVEC`,
 `ZRESULT`, `TAKEB`, `POW2`, `DDVGO`, `TNCOVF`, `STRTYA`.
 
 **No `Lxxxx` labels remain** in `LONGINTS.TEXT`.
+
+## 2026-09-17 — LIBMAP / LIBRARY loop indices
+
+| File | Old | New | Role |
+|------|-----|-----|------|
+| `LIBMAP.text` | `L85` | `MAPIX` | upshift index over `maptitle` |
+| `LIBRARY.text` | `M2` | `SEGIX` | `FOR` segment index in link loops |
+
+## 2026-09-17 — ASMFORMAT / BOOTII / BOOTPD absolute labels
+
+These files use **absolute** `L<addr>` labels (not proc-relative). Renamed:
+
+| File | Scheme | Examples |
+|------|--------|----------|
+| `ASMFORMAT.TEXT` | role EQUs + `F<addr>` | `DELAY`, `FORMGO`, `ERR2B`, `F3D50`, … (102) |
+| `BOOTII.TEXT` | `B<addr>` | `B0800`, … (70) |
+| `BOOTPD.TEXT` | `P<addr>` | `P0800`, … (23) |
+
+**No `Lxxxx` labels remain** under `src/native/`.

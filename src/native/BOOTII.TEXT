@@ -13,34 +13,35 @@
 ; FILLCHAR of BUFLIMIT = 1023 bytes), so it holds
 ; whatever memory held: 0BB in Apple's, 0DB here.
 ;
-; What is ours: every label (L<address>) and comment.
+; What is ours: every label and comment. Former L<addr>
+; labels renamed on the improvements fork (B0800, ...).
 ;---------------------------------------------------
 
         .ABSOLUTE
         .PROC   BOOT
         .ORG    0800
-L0800   .BYTE 01
+B0800   .BYTE 01
         CPX  #70
-        BCS  L0809
+        BCS  B0809
         CPX  #40
-        BCS  L0842
-L0809   LDA  0C088,X
-        JSR  L0820
+        BCS  B0842
+B0809   LDA  0C088,X
+        JSR  B0820
         LDX  #00
-L0811   LDA  L0825,X
+B0811   LDA  B0825,X
         ORA  #80
         JSR  0FBFD
         INX
         CPX  #1D
-        BNE  L0811
-L081E   BEQ  L081E
-L0820   LDA  #0A
+        BNE  B0811
+B081E   BEQ  B081E
+B0820   LDA  #0A
         JMP  0FC24
-L0825   .BYTE 4D,55,53,54,20,42,4F,4F
+B0825   .BYTE 4D,55,53,54,20,42,4F,4F
         .BYTE 54,20,46,52,4F,4D,20,53
         .BYTE 4C,4F,54,20,34,2C,20,35
         .BYTE 20,4F,52,20,36
-L0842   TXA
+B0842   TXA
         STA  43
         LSR  A
         LSR  A
@@ -50,18 +51,18 @@ L0842   TXA
         STA  0D
         LDA  #5C
         STA  0C
-        LDA  L0800
+        LDA  B0800
         CMP  #06
-        BCS  L0862
+        BCS  B0862
         ADC  #02
-        STA  L0800
+        STA  B0800
         INC  3D
         JMP  @000C
-L0862   LDA  #00
+B0862   LDA  #00
         STA  0478
         LDA  #0A
         STA  0E
-L086B   LDA  #80
+B086B   LDA  #80
         STA  3F
         STA  11
         LDA  #00
@@ -71,36 +72,36 @@ L086B   LDA  #80
         LDA  #02
         STA  0F
         LDA  #00
-        JSR  L094C
+        JSR  B094C
         LDX  #4E
-L0884   LDY  #06
-L0886   LDA  @10,Y
-        CMP  L0939,Y
-        BEQ  L08B8
+B0884   LDY  #06
+B0886   LDA  @10,Y
+        CMP  B0939,Y
+        BEQ  B08B8
         CLC
         LDA  10
         ADC  #1A
         STA  10
-        BCC  L0898
+        BCC  B0898
         INC  11
-L0898   DEX
-        BNE  L0884
+B0898   DEX
+        BNE  B0884
         DEC  0E
-        BNE  L086B
-        JSR  L0820
+        BNE  B086B
+        JSR  B0820
         LDX  43
         LDA  0C088,X
         LDX  #00
-L08A9   LDA  L092A,X
+B08A9   LDA  B092A,X
         ORA  #80
         JSR  0FBFD
         INX
         CPX  #15
-        BNE  L08A9
-L08B6   BEQ  L08B6
-L08B8   INY
+        BNE  B08A9
+B08B6   BEQ  B08B6
+B08B8   INY
         CPY  #13
-        BNE  L0886
+        BNE  B0886
         LDA  0C081
         LDA  0C081
         LDA  #0D0
@@ -112,7 +113,7 @@ L08B8   INY
         STA  0F
         INY
         LDA  @10,Y
-        JSR  L094C
+        JSR  B094C
         LDA  0C089
         LDA  #0D0
         STA  3F
@@ -126,14 +127,14 @@ L08B8   INY
         INY
         LDA  @10,Y
         ADC  #00
-        JSR  L094C
+        JSR  B094C
         LDA  43
         CMP  #50
-        BEQ  L0901
-        BCC  L0915
-L08FB   LDA  0C080
+        BEQ  B0901
+        BCC  B0915
+B08FB   LDA  0C080
         JMP  @0FFF8
-L0901   LDX  #00
+B0901   LDX  #00
         STX  0FEC4
         INX
         STX  0FEC6
@@ -141,8 +142,8 @@ L0901   LDX  #00
         STX  0FEB6
         INX
         STX  0FEB8
-        JMP  L08FB
-L0915   LDX  #00
+        JMP  B08FB
+B0915   LDX  #00
         STX  0FEC0
         INX
         STX  0FEC2
@@ -150,13 +151,13 @@ L0915   LDX  #00
         STX  0FEB6
         INX
         STX  0FEB8
-        JMP  L08FB
-L092A   .BYTE 4E,4F,20,46,49,4C,45,20
+        JMP  B08FB
+B092A   .BYTE 4E,4F,20,46,49,4C,45,20
         .BYTE 53,59,53,54,45,4D,2E
-L0939   .BYTE 41,50,50,4C,45,20,0C,53
+B0939   .BYTE 41,50,50,4C,45,20,0C,53
         .BYTE 59,53,54,45,4D,2E,41,50
         .BYTE 50,4C,45
-L094C   LSR  A
+B094C   LSR  A
         PHP
         LDA  0F
         AND  #07
@@ -170,52 +171,52 @@ L094C   LSR  A
         STA  0F0
         LDA  #00
         STA  3E
-        JMP  L0978
-L0964   LDX  02
-        BEQ  L098A
+        JMP  B0978
+B0964   LDX  02
+        BEQ  B098A
         DEC  02
         INC  3F
         INC  00
         LDA  00
         EOR  #10
-        BNE  L0978
+        BNE  B0978
         STA  00
         INC  0F0
-L0978   LDY  00
-        LDA  L098B,Y
+B0978   LDY  00
+        LDA  B098B,Y
         STA  0F1
         LDX  #00
         CPX  02
-        BEQ  L098A
-        JSR  L099B
-        BCC  L0964
-L098A   RTS
-L098B   .BYTE 00,02,04,06,08,0A,0C,0E
+        BEQ  B098A
+        JSR  B099B
+        BCC  B0964
+B098A   RTS
+B098B   .BYTE 00,02,04,06,08,0A,0C,0E
         .BYTE 01,03,05,07,09,0B,0D,0F
-L099B   LDX  43
-L099D   LDA  0F0
+B099B   LDX  43
+B099D   LDA  0F0
         ASL  A
         ASL  0478
-        JSR  L0AA3
+        JSR  B0AA3
         LSR  0478
-L09A9   JSR  L0A47
-        BCS  L09A9
+B09A9   JSR  B0A47
+        BCS  B09A9
         LDY  2E
         STY  0478
         CPY  0F0
-        BNE  L099D
+        BNE  B099D
         LDA  2D
         CMP  0F1
-        BNE  L09A9
-        JSR  L09DF
-        BCS  L09A9
-        JSR  L09C7
+        BNE  B09A9
+        JSR  B09DF
+        BCS  B09A9
+        JSR  B09C7
         CLC
         RTS
-L09C7   LDY  #00
-L09C9   LDX  #56
-L09CB   DEX
-        BMI  L09C9
+B09C7   LDY  #00
+B09C9   LDX  #56
+B09CB   DEX
+        BMI  B09C9
         LDA  0200,Y
         LSR  0300,X
         ROL  A
@@ -223,141 +224,141 @@ L09CB   DEX
         ROL  A
         STA  @3E,Y
         INY
-        BNE  L09CB
+        BNE  B09CB
         RTS
-L09DF   LDY  #20
-L09E1   DEY
-        BEQ  L0A45
-L09E4   LDA  0C08C,X
-        BPL  L09E4
-L09E9   EOR  #0D5
-        BNE  L09E1
+B09DF   LDY  #20
+B09E1   DEY
+        BEQ  B0A45
+B09E4   LDA  0C08C,X
+        BPL  B09E4
+B09E9   EOR  #0D5
+        BNE  B09E1
         NOP
-L09EE   LDA  0C08C,X
-        BPL  L09EE
+B09EE   LDA  0C08C,X
+        BPL  B09EE
         CMP  #0AA
-        BNE  L09E9
+        BNE  B09E9
         LDY  #56
-L09F9   LDA  0C08C,X
-        BPL  L09F9
+B09F9   LDA  0C08C,X
+        BPL  B09F9
         CMP  #0AD
-        BNE  L09E9
+        BNE  B09E9
         LDA  #00
-L0A04   DEY
+B0A04   DEY
         STY  26
-L0A07   LDY  0C08C,X
-        BPL  L0A07
+B0A07   LDY  0C08C,X
+        BPL  B0A07
         EOR  02D6,Y
         LDY  26
         STA  0300,Y
-        BNE  L0A04
-L0A16   STY  26
-L0A18   LDY  0C08C,X
-        BPL  L0A18
+        BNE  B0A04
+B0A16   STY  26
+B0A18   LDY  0C08C,X
+        BPL  B0A18
         EOR  02D6,Y
         LDY  26
         STA  0200,Y
         INY
-        BNE  L0A16
-L0A28   LDY  0C08C,X
-        BPL  L0A28
+        BNE  B0A16
+B0A28   LDY  0C08C,X
+        BPL  B0A28
         CMP  02D6,Y
-        BNE  L0A45
-L0A32   LDA  0C08C,X
-        BPL  L0A32
+        BNE  B0A45
+B0A32   LDA  0C08C,X
+        BPL  B0A32
         CMP  #0DE
-        BNE  L0A45
+        BNE  B0A45
         NOP
-L0A3C   LDA  0C08C,X
-        BPL  L0A3C
+B0A3C   LDA  0C08C,X
+        BPL  B0A3C
         CMP  #0AA
-        BEQ  L0AA1
-L0A45   SEC
+        BEQ  B0AA1
+B0A45   SEC
         RTS
-L0A47   LDY  #0FC
+B0A47   LDY  #0FC
         STY  26
-L0A4B   INY
-        BNE  L0A52
+B0A4B   INY
+        BNE  B0A52
         INC  26
-        BEQ  L0A45
-L0A52   LDA  0C08C,X
-        BPL  L0A52
-L0A57   CMP  #0D5
-        BNE  L0A4B
+        BEQ  B0A45
+B0A52   LDA  0C08C,X
+        BPL  B0A52
+B0A57   CMP  #0D5
+        BNE  B0A4B
         NOP
-L0A5C   LDA  0C08C,X
-        BPL  L0A5C
+B0A5C   LDA  0C08C,X
+        BPL  B0A5C
         CMP  #0AA
-        BNE  L0A57
+        BNE  B0A57
         LDY  #03
-L0A67   LDA  0C08C,X
-        BPL  L0A67
+B0A67   LDA  0C08C,X
+        BPL  B0A67
         CMP  #96
-        BNE  L0A57
+        BNE  B0A57
         LDA  #00
-L0A72   STA  27
-L0A74   LDA  0C08C,X
-        BPL  L0A74
+B0A72   STA  27
+B0A74   LDA  0C08C,X
+        BPL  B0A74
         ROL  A
         STA  26
-L0A7C   LDA  0C08C,X
-        BPL  L0A7C
+B0A7C   LDA  0C08C,X
+        BPL  B0A7C
         AND  26
         STA  002C,Y
         EOR  27
         DEY
-        BPL  L0A72
+        BPL  B0A72
         TAY
-        BNE  L0A45
-L0A8E   LDA  0C08C,X
-        BPL  L0A8E
+        BNE  B0A45
+B0A8E   LDA  0C08C,X
+        BPL  B0A8E
         CMP  #0DE
-        BNE  L0A45
+        BNE  B0A45
         NOP
-L0A98   LDA  0C08C,X
-        BPL  L0A98
+B0A98   LDA  0C08C,X
+        BPL  B0A98
         CMP  #0AA
-        BNE  L0A45
-L0AA1   CLC
+        BNE  B0A45
+B0AA1   CLC
         RTS
-L0AA3   STX  2B
+B0AA3   STX  2B
         STA  2A
         CMP  0478
-        BEQ  L0AF4
+        BEQ  B0AF4
         LDA  #00
         STA  26
-L0AB0   LDA  0478
+B0AB0   LDA  0478
         STA  27
         SEC
         SBC  2A
-        BEQ  L0AF1
-        BCS  L0AC3
+        BEQ  B0AF1
+        BCS  B0AC3
         EOR  #0FF
         INC  0478
-        BCC  L0AC8
-L0AC3   ADC  #0FE
+        BCC  B0AC8
+B0AC3   ADC  #0FE
         DEC  0478
-L0AC8   CMP  26
-        BCC  L0ACE
+B0AC8   CMP  26
+        BCC  B0ACE
         LDA  26
-L0ACE   CMP  #0C
-        BCS  L0AD3
+B0ACE   CMP  #0C
+        BCS  B0AD3
         TAY
-L0AD3   JSR  L0AF4
-        LDA  L0B15,Y
-        JSR  L0B04
+B0AD3   JSR  B0AF4
+        LDA  B0B15,Y
+        JSR  B0B04
         LDA  27
         AND  #03
         ASL  A
         ORA  2B
         TAX
         LDA  0C080,X
-        LDA  L0B21,Y
-        JSR  L0B04
+        LDA  B0B21,Y
+        JSR  B0B04
         INC  26
-        BNE  L0AB0
-L0AF1   JSR  L0B04
-L0AF4   LDA  0478
+        BNE  B0AB0
+B0AF1   JSR  B0B04
+B0AF4   LDA  0478
         AND  #03
         ASL  A
         ORA  2B
@@ -366,19 +367,19 @@ L0AF4   LDA  0478
         LDX  2B
         RTS
         .BYTE 0EA
-L0B04   LDX  #11
-L0B06   DEX
-        BNE  L0B06
+B0B04   LDX  #11
+B0B06   DEX
+        BNE  B0B06
         INC  46
-        BNE  L0B0F
+        BNE  B0B0F
         INC  47
-L0B0F   SEC
+B0B0F   SEC
         SBC  #01
-        BNE  L0B04
+        BNE  B0B04
         RTS
-L0B15   .BYTE 01,30,28,24,20,1E,1D,1C
+B0B15   .BYTE 01,30,28,24,20,1E,1D,1C
         .BYTE 1C,1C,1C,1C
-L0B21   .BYTE 70,2C,26,22,1F,1E,1D,1C
+B0B21   .BYTE 70,2C,26,22,1F,1E,1D,1C
         .BYTE 1C,1C,1C,1C,20,43,4F,50
         .BYTE 59,52,49,47,48,54,20,41
         .BYTE 50,50,4C,45,20,43,4F,4D

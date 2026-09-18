@@ -34,9 +34,9 @@ FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
 | File | IDs | Status |
 |------|-----|--------|
 | `LINKER.text` | — | LK*/L45 renamed 2026-09-17 |
-| `LIBRARY.text` | `M2` | loop index only; `G131`/`LB*`/`M3` renamed |
-| `LIBMAP.text` | `L85` | loop index for upshift |
-| `FILER.text` | — | FL56/L12/L14/L29 renamed 2026-09-17 |
+| `LIBRARY.text` | — | `M2`→`SEGIX`; earlier G/LB renames done |
+| `LIBMAP.text` | — | `L85`→`MAPIX` |
+| `FILER.text` | — | FL56/L12/L14/L29 renamed; OTHERWISE added |
 
 ### Tier D — large ancestor mines (separate projects)
 
@@ -45,8 +45,8 @@ FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
 | `ASSMBLER.text` | **0 `G*` left** (all 112 renamed 2026-09-17) | see `docs/RENAMES.md` |
 | `TURTLEGR.TEXT` | **0 `Lxxxx` left** (all role-renamed) | Klebsch asm is stubs; unique role names |
 | `LONGINTS.TEXT` | **0 `Lxxxx` left** (109 renamed) | Klebsch stub; role-ish unique names |
-| `ASMFORMAT` / `BOOTII` / `BOOTPD` | dozens of `L*` | native / boot |
-| `128K.APPLE` interp | ~800 `L*` | John Brooks 1.4 (external) |
+| `ASMFORMAT` / `BOOTII` / `BOOTPD` | **0 `Lxxxx` left** | absolute labels → `F*`/`B*`/`P*` |
+| `128K.APPLE` interp | ~800 `L*` | John Brooks 1.4 (external) — still open |
 
 ### Tier E — leave alone
 
@@ -65,8 +65,9 @@ FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
 4. ~~**GETCMD `GC*`**~~ done (role-based names; see RENAMES.md).
 5. ~~**LINKER/LIBRARY/FILER leftovers**~~ done (comment-backed batch).
 6. ~~**ASSMBLER `G*`**~~ done (all 112 renamed).
-7. **Natives** (TURTLEGR/LONGINTS/…) as separate campaigns.
-8. Optional: LIBMAP `L85` / LIBRARY `M2` (loop indices — low value).
+7. ~~**Natives TURTLEGR/LONGINTS/ASMFORMAT/BOOT***~~ done (all `Lxxxx` cleared).
+8. ~~**LIBMAP `L85` / LIBRARY `M2`**~~ done.
+9. **`128K.APPLE` interp ~800 `L*`** — large remaining mine (Brooks 1.4).
 
 ## Counts snapshot (unique IDs, 2026-09-16)
 
