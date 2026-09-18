@@ -163,3 +163,26 @@ FINDINGS **262** / **263c** and ASSMBLER comments. **~68 unique `G*` remain.**
 | `G1608` | `SRCWIN` | source window buffer |
 | `G2136` | `EMITBUF` | code emit buffer |
 | `G2147` | `PATCHBUF` | patch / alternate code buffer |
+
+## 2026-09-17 — ASSMBLER third G* batch (16 ids)
+
+Tables, files, and clear control flags. **~52 unique `G*` remain.**
+
+| Old | New | Basis |
+|-----|-----|-------|
+| `G966` | `SYMTAB` | primary hash buckets of `ASMRECP` |
+| `G838` | `SYMSAVE` | swap copy of `SYMTAB` |
+| `G691` | `LOCLTAB` | local-label `LOCREC` table |
+| `G73` | `LISTFILE` | listing `INTERACTIVE` file |
+| `G1095` | `SRCFILE` | source text file |
+| `G1135` | `LIFILE` | `%LINKER.INFO` `FILE OF REC8` |
+| `G590` | `INFONAME` | linker-info pathname |
+| `G447` | `LISTTTL` | listing page title |
+| `G488` | `LINECOPY` | blank template copied into `LINEBUF` |
+| `G2120` | `HEXDIGS` | `'0123456789ABCDEF'` |
+| `G1575` | `KEYCODES` | keyword → token-code table |
+| `G69` | `NAMEHIT` | symbol-name search found |
+| `G36` | `ERRCNT` | error count |
+| `G12` | `HASLIST` | `LISTNAME <> ''` / listing enabled |
+| `G657` | `FREEFIVE` | free list of `FIVEP` reloc nodes |
+| `G628` | `NEWREF` | newly allocated `REFP` on reloc chain |

@@ -42,7 +42,7 @@ FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
 
 | Area | Scale | Ancestor |
 |------|-------|----------|
-| `ASSMBLER.text` | **~68 unique `G*` left** (44 renamed across two batches) | UCSD I.5; see RENAMES.md |
+| `ASSMBLER.text` | **~52 unique `G*` left** (60 renamed across three batches) | UCSD I.5; see RENAMES.md |
 | `TURTLEGR.TEXT` | ~54 `Lnnnn` labels | UCSD turtle_graphics mirror (unmined) |
 | `LONGINTS.TEXT` | ~49 `Lnnnn` | pascalio / longint native |
 | `ASMFORMAT` / `BOOTII` / `BOOTPD` | dozens of `L*` | native / boot |
