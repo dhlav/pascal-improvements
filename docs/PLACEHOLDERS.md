@@ -44,7 +44,7 @@ FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
 |------|-------|----------|
 | `ASSMBLER.text` | **0 `G*` left** (all 112 renamed 2026-09-17) | see `docs/RENAMES.md` |
 | `TURTLEGR.TEXT` | **0 `Lxxxx` left** (all role-renamed) | Klebsch asm is stubs; unique role names |
-| `LONGINTS.TEXT` | ~49 `Lnnnn` | pascalio / longint native |
+| `LONGINTS.TEXT` | **0 `Lxxxx` left** (109 renamed) | Klebsch stub; role-ish unique names |
 | `ASMFORMAT` / `BOOTII` / `BOOTPD` | dozens of `L*` | native / boot |
 | `128K.APPLE` interp | ~800 `L*` | John Brooks 1.4 (external) |
 

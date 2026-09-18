@@ -280,3 +280,14 @@ aliased to HIRES `STOREXY` and are now `FILLCNT`/`FILLY`.
 | DRAWBLOCK | `DB_VP`, `DB_RTS`, `DB_WIDE`, `DB_J1`/`DB_J2`, `DB_MOD1`/`DB_MOD2`, … |
 
 **No `Lxxxx` labels remain** in `TURTLEGR.TEXT`.
+
+## 2026-09-17 — LONGINTS DECOPS: all 109 Lxxxx renamed
+
+Klebsch `long_integer/main.asm.text` is a stub. Internal branches renamed
+to unique ≤8-char names by section (RETURN/DECLEN/errors/POP2LI setup,
+DAJ, DECCMP shared add/sub helpers, DAD/DSB/DMP/DDV/DCV/DCVT/DTNC/DSTR).
+
+Examples: `RETJMP`, `ERR13`/`ERR6`, `POP2LI`, `AJTRIM`, `CMPVEC`,
+`ZRESULT`, `TAKEB`, `POW2`, `DDVGO`, `TNCOVF`, `STRTYA`.
+
+**No `Lxxxx` labels remain** in `LONGINTS.TEXT`.

@@ -15,11 +15,13 @@
 - ASSMBLER: **all 112 `G*` renamed** (no `G*` left in ASSMBLER.text)
 - Clarity scan: `docs/CLARITY-SCAN.md`; FILER `OTHERWISE` unknown command
 - TURTLEGR: **all `Lxxxx` renamed** to unique role names
+- LONGINTS: **all 109 `Lxxxx` renamed** (`POP2LI`, `ZRESULT`, …)
 - Docs: `RENAMES.md`, `PLACEHOLDERS.md`, `CONTINUE.md`, `CLARITY-SCAN.md`
 
 ## Next
 
-**LONGINTS** native `L*` naming, or loop indices (`L85`/`M2`).
+Loop indices (`LIBMAP L85`, `LIBRARY M2`), or other natives
+(`ASMFORMAT`/`BOOT*`), or more clarity work.
 
 ## Remember
 
