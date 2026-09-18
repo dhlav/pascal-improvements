@@ -331,8 +331,8 @@ TYPE
     of seven. The shape is read off four procedures and none of it is
     guessed. Words 0..3 are an eight-character name -- `TLA.37` compares
     them against a local with `EQU BYTE,8`. Word 5 is a FIVEP: `TLA.14`
-    and `.15` both do `CURFIVE^.F4 := LOCLTAB[G624].LREFS` and then
-    `LOCLTAB[G624].LREFS := CURFIVE`, which is a push onto the chain ASSEMBLE.5
+    and `.15` both do `CURFIVE^.F4 := LOCLTAB[LOCLCUR].LREFS` and then
+    `LOCLTAB[LOCLCUR].LREFS := CURFIVE`, which is a push onto the chain ASSEMBLE.5
     walks. Word 6 carries the same class ordinals ASMREC's A5 does --
     `ASSEMBLE.6` and `TLA.18` compare it with 36 and write 35 -- and
     word 4 takes LOCCTR, the location counter. The NAMES are ours. }
@@ -454,68 +454,68 @@ TYPE
 VAR
   CURSYM       : ASMRECP;                                   {    3    1w touched }
   LEXTOKEN : INTEGER;                                   {    4    1w touched }
-  G5       : INTEGER;                                   {    5    1w touched }
+  CODEIX       : INTEGER;                                   {    5    1w touched }
   SPCLSTIX       : INTEGER;                                   {    6    1w touched }
   MACBPOS       : INTEGER;                                   {    7    1w touched }
   LINEPOS       : INTEGER;                                   {    8    1w touched }
-  G9       : INTEGER;                                   {    9    1w touched }
+  CODEBLK       : INTEGER;                                   {    9    1w touched }
   CURROP      : OPREC;                                     {   10    1w bounded }
   ASMCH      : INTEGER;                                   {   11    1w touched }
   HASLIST      : BOOLEAN;                                   {   12    1w touched }
   CURFIVE      : FIVEP;                                     {   13    1w touched }
   EXPRVAL      : INTEGER;                                   {   14    1w touched }
   EXPRCLS      : INTEGER;                                   {   15    1w touched }
-  G16      : INTEGER;                                   {   16    1w touched }
-  G17      : INTEGER;                                   {   17    1w touched }
-  G18      : INTEGER;                                   {   18    1w touched }
-  G19      : INTEGER;                                   {   19    1w touched }
-  G20      : INTEGER;                                   {   20    1w touched }
-  G21      : INTEGER;                                   {   21    1w touched }
+  WINEND      : INTEGER;                                   {   16    1w touched }
+  MACFREE      : INTEGER;                                   {   17    1w touched }
+  MINMEM      : INTEGER;                                   {   18    1w touched }
+  SAVLC      : INTEGER;                                   {   19    1w touched }
+  CODEORG      : INTEGER;                                   {   20    1w touched }
+  SYMSIZE      : INTEGER;                                   {   21    1w touched }
   LOCCTR      : INTEGER;                                   {   22    1w touched }
-  G23      : INTEGER;                                   {   23    1w touched }
-  G24      : INTEGER;                                   {   24    1w touched }
-  G25      : INTEGER;                                   {   25    1w touched }
-  G26      : INTEGER;                                   {   26    1w touched }
+  PROCIDX      : INTEGER;                                   {   23    1w touched }
+  LIEND      : INTEGER;                                   {   24    1w touched }
+  LIPOS      : INTEGER;                                   {   25    1w touched }
+  SAVMACL      : INTEGER;                                   {   26    1w touched }
   MACLEVEL      : INTEGER;                                   {   27    1w touched }
   MACPPOS      : INTEGER;                                   {   28    1w touched }
   NUMVAL      : INTEGER;                                   {   29    1w touched }
-  G30      : INTEGER;                                   {   30    1w gap }
-  G31      : INTEGER;                                   {   31    1w touched }
-  G32      : INTEGER;                                   {   32    1w touched }
-  G33      : INTEGER;                                   {   33    1w touched }
-  G34      : INTEGER;                                   {   34    1w touched }
-  G35      : INTEGER;                                   {   35    1w touched }
+  GAP30      : INTEGER;                                   {   30    1w gap }
+  FLAGCNT      : INTEGER;                                   {   31    1w touched }
+  LISTLINE      : INTEGER;                                   {   32    1w touched }
+  LINECNT      : INTEGER;                                   {   33    1w touched }
+  PAGENUM      : INTEGER;                                   {   34    1w touched }
+  TOTCODE      : INTEGER;                                   {   35    1w touched }
   ERRCNT      : INTEGER;                                   {   36    1w touched }
   ERRCOL      : INTEGER;                                   {   37    1w touched }
   SAVBLK      : INTEGER;                                   {   38    1w touched }
   FILEBLK      : INTEGER;                                   {   39    1w touched }
-  G40      : INTEGER;                                   {   40    1w touched }
+  READBLKS      : INTEGER;                                   {   40    1w touched }
   SRCPOS      : INTEGER;                                   {   41    1w touched }
   LOCLBASE      : INTEGER;                                   {   42    1w touched }
   LOCLCUR      : INTEGER;                                   {   43    1w touched }
   LOCLTOP      : INTEGER;                                   {   44    1w touched }
-  G45      : INTEGER;                                   {   45    1w touched }
-  G46      : INTEGER;                                   {   46    1w touched }
-  G47      : INTEGER;                                   {   47    1w touched }
-  G48      : INTEGER;                                   {   48    1w touched }
-  G49      : INTEGER;                                   {   49    1w touched }
-  G50      : INTEGER;                                   {   50    1w touched }
-  G51      : INTEGER;                                   {   51    1w touched }
+  RELCNT4      : INTEGER;                                   {   45    1w touched }
+  RELCNT3      : INTEGER;                                   {   46    1w touched }
+  RELCNT2      : INTEGER;                                   {   47    1w touched }
+  RELCNT1      : INTEGER;                                   {   48    1w touched }
+  SEGBASE      : INTEGER;                                   {   49    1w touched }
+  MAXCBLK      : INTEGER;                                   {   50    1w touched }
+  MAXEMIT      : INTEGER;                                   {   51    1w touched }
   EMITMODE      : INTEGER;                                   {   52    1w touched }
-  G53      : INTEGER;                                   {   53    1w touched }
-  G54      : INTEGER;                                   {   54    1w touched }
-  G55      : INTEGER;                                   {   55    1w touched }
-  G56      : BOOLEAN;                                   {   56    1w tested }
-  G57      : BOOLEAN;                                   {   57    1w touched }
+  PAGEOFF      : INTEGER;                                   {   53    1w touched }
+  PAGEBASE      : INTEGER;                                   {   54    1w touched }
+  MACFLAG      : INTEGER;                                   {   55    1w touched }
+  LISTON      : BOOLEAN;                                   {   56    1w tested }
+  BIGEND      : BOOLEAN;                                   {   57    1w touched }
   INMACDEF      : BOOLEAN;                                   {   58    1w tested }
   EXPRADV      : BOOLEAN;                                   {   59    1w tested }
   NAMEDSRC      : BOOLEAN;                                   {   60    1w tested }
-  G61      : INTEGER;                                   {   61    1w touched }
+  UNUSED61      : INTEGER;                                   {   61    1w touched }
   ADVANCE      : BOOLEAN;                                   {   62    1w tested }
-  G63      : BOOLEAN;                                   {   63    1w touched }
+  ABSSTART      : BOOLEAN;                                   {   63    1w touched }
   DOSYMDMP      : BOOLEAN;                                   {   64    1w touched }
   FOLDCAS      : BOOLEAN;                                   {   65    1w tested }
-  G66      : BOOLEAN;                                   {   66    1w tested }
+  HDRDONE      : BOOLEAN;                                   {   66    1w tested }
   DLEZERO      : BOOLEAN;                                   {   67    1w tested }
   NOPRINT      : BOOLEAN;                                   {   68    1w touched }
   NAMEHIT      : BOOLEAN;                                   {   69    1w touched }
@@ -523,33 +523,33 @@ VAR
   MACBUFP      : MACP;                                      {   71    1w touched }
   SRCBUF      : CODEP;                                     {   72    1w touched }
   LISTFILE      : INTERACTIVE;                               {   73  301w file }
-  G374     : STRING[30];                                {  374   16w bounded }
-  G390     : STRING[30];                                {  390   16w bounded }
+  INCTITLE     : STRING[30];                                {  374   16w bounded }
+  CURFILE     : STRING[30];                                {  390   16w bounded }
   STRCONST     : STRING[80];                                {  406   41w bounded }
   LISTTTL     : STRING[80];                                {  447   41w bounded }
   LINECOPY     : PACKED ARRAY [0..101] OF CHAR;             {  488   51w measured }
   LINEBUF     : PACKED ARRAY [0..101] OF CHAR;            {  539   51w measured }
   INFONAME     : STRING[15];                                {  590    8w bounded }
-  G598     : SIXREC;                                    {  598    6w measured }
-  G604     : ARRAY [0..17] OF INTEGER;                  {  604   18w gap }
+  SIXSTATE     : SIXREC;                                    {  598    6w measured }
+  GAP604     : ARRAY [0..17] OF INTEGER;                  {  604   18w gap }
   RELOCATE     : SIXREC;                                    {  622    6w measured }
   NEWREF     : REFP;                                      {  628    1w touched }
-  G629     : SEVEN;                                     {  629    7w bounded }
-  G636     : SEVEN;                                     {  636    7w bounded }
-  G643     : SEVEN;                                     {  643    7w bounded }
-  G650     : SEVEN;                                     {  650    7w bounded }
+  RELTAB4     : SEVEN;                                     {  629    7w bounded }
+  RELTAB3     : SEVEN;                                     {  636    7w bounded }
+  RELTAB2     : SEVEN;                                     {  643    7w bounded }
+  RELTAB1     : SEVEN;                                     {  650    7w bounded }
   FREEFIVE     : FIVEP;                                     {  657    1w touched }
-  G658     : INTEGER;                                   {  658    1w touched }
+  DEFCLASS     : INTEGER;                                   {  658    1w touched }
   CHSOURCE     : INTEGER;                                   {  659    1w touched }
-  G660     : INTEGER;                                   {  660    1w touched }
+  EXTMODE     : INTEGER;                                   {  660    1w touched }
   { Pointers to the per-macro text buffers. ASSEMBLE.33 reads byte 0 of
     each as a BOOLEAN; TLA.36 stores ASMREC.A6 into them. CODEP is the
     same shape (pointer to a packed char array) and nothing exact typed
     this slot as INTEGER. }
   MACBUFS     : ARRAY [0..5] OF MACP;                      {  661    6w bounded }
-  G667     : ARRAY [0..5] OF INTEGER;                   {  667    6w bounded }
+  MACBSAVE     : ARRAY [0..5] OF INTEGER;                   {  667    6w bounded }
   LOCLLVLS     : ARRAY [0..5] OF INTEGER;                   {  673    6w bounded }
-  G679     : ARRAY [0..5] OF INTEGER;                   {  679    6w bounded }
+  MACPSAVE     : ARRAY [0..5] OF INTEGER;                   {  679    6w bounded }
   SPECSTK     : ARRAY [0..5] OF INTEGER;                   {  685    6w bounded }
   LOCLTAB     : ARRAY [0..20] OF LOCREC;                   {  691  147w bounded }
   SYMSAVE     : ARRAY [0..127] OF ASMRECP;                 {  838  128w measured }
@@ -561,13 +561,13 @@ VAR
   KEYCODES    : ARRAY [0..32] OF INTEGER;                  { 1575   33w bounded }
   SRCWIN    : PACKED ARRAY [0..BUFLIMIT] OF CHAR;        { 1608  512w measured }
   HEXDIGS    : PACKED ARRAY [0..15] OF CHAR;              { 2120    8w measured }
-  G2128    : ARRAY [0..7] OF INTEGER;                   { 2128    8w gap }
+  GAP2128    : ARRAY [0..7] OF INTEGER;                   { 2128    8w gap }
   EMITBUF    : PACKED ARRAY [0..CODESIZE] OF CHAR;        { 2136   11w measured }
   PATCHBUF    : PACKED ARRAY [0..CODESIZE] OF CHAR;        { 2147   11w measured }
-  G2158    : ASMRECP;                                   { 2158    1w touched }
-  G2159    : PACKED ARRAY [0..7] OF CHAR;               { 2159    4w measured }
-  G2163    : PACKED ARRAY [0..7] OF CHAR;               { 2163    4w measured }
-  G2167    : ARRAY [0..50] OF INTEGER;                  { 2167   51w bounded }
+  HEAPMARK    : ASMRECP;                                   { 2158    1w touched }
+  SEGNAME    : PACKED ARRAY [0..7] OF CHAR;               { 2159    4w measured }
+  ERRNAME    : PACKED ARRAY [0..7] OF CHAR;               { 2163    4w measured }
+  ERRSIZES    : ARRAY [0..50] OF INTEGER;                  { 2167   51w bounded }
 
 
 { TLA's twenty-one lex-1 procedures, forward-declared in one block.
@@ -742,7 +742,7 @@ VAR
 
     { Endian detector for PROCEND.2's byte-swap path. Stores 1 in a
       word and reads byte 1: on a big-endian host that byte is 1 and
-      G57 comes out TRUE; on the Apple II (little-endian) it is 0.
+      BIGEND comes out TRUE; on the Apple II (little-endian) it is 0.
       Apple's own bytes are `LLA | SLDC 1 | LDB`, which is a packed-array
       index, not BYTEPAIR's bitfield LDP -- so the overlay is a
       PACKED ARRAY OF CHAR, not the LO/HI form. }
@@ -755,7 +755,7 @@ VAR
            END;
     BEGIN
       N.WHOLE := 1;
-      G57 := N.BYTES[1] = CHR(1)
+      BIGEND := N.BYTES[1] = CHR(1)
     END;
 
     PROCEDURE I4;                             { .4  0/18 }
@@ -829,14 +829,14 @@ VAR
       UNTIL EOF(OPCFILE) OR (OPCFILE^.ONAME[1] = CHR(0));
       CLOSE(OPCFILE);
       (*$I+*)
-      G61 := 0;
-      G658 := 36;
+      UNUSED61 := 0;
+      DEFCLASS := 36;
       FILEBLK := 2;
       ADVANCE := TRUE;
       MACLEVEL := 0;
       CHSOURCE := 2;
       SRCPOS := 1024;
-      G16 := 0;
+      WINEND := 0;
       LEXTOKEN := 38;
       LOCLTOP := 0;
       LOCLBASE := 0;
@@ -895,17 +895,17 @@ VAR
     I3;
     FOR I := 0 TO CODESIZE DO EMITBUF[I] := ' ';
     PATCHBUF := EMITBUF;
-    G5 := 0;
+    CODEIX := 0;
     HEXDIGS := '0123456789ABCDEF';
-    G53 := 0;
-    G31 := 0;
-    G18 := 32767;
-    G33 := 0;
+    PAGEOFF := 0;
+    FLAGCNT := 0;
+    MINMEM := 32767;
+    LINECNT := 0;
     SPCLSTIX := -1;
     ERRCNT := 0;
-    G32 := 0;
-    G374 := '';
-    G390 := G374;
+    LISTLINE := 0;
+    INCTITLE := '';
+    CURFILE := INCTITLE;
     HASLIST := FALSE;
     DOSYMDMP := FALSE;
     REPEAT
@@ -941,44 +941,44 @@ VAR
     UNTIL OK;
     HASLIST := LISTNAME <> '';
     DOSYMDMP := HASLIST;
-    IF HASLIST THEN G17 := 0
-    ELSE G17 := -1;
-    G56 := TRUE;
-    G55 := 1;
-    G63 := TRUE;
+    IF HASLIST THEN MACFREE := 0
+    ELSE MACFREE := -1;
+    LISTON := TRUE;
+    MACFLAG := 1;
+    ABSSTART := TRUE;
     (*$I+*)
     FOR I := 1 TO 5 DO WRITELN;
     WRITELN('6502', ' Assembler ', '[1.3]');
-    G598.W0 := 4;
-    G598.W2 := 0;
-    G598.W5 := NIL;
-    G598.W4 := 36;
-    G598.W3 := 0;
-    RELOCATE := G598;
-    G598.W1 := FALSE;
-    MARK(G2158);
+    SIXSTATE.W0 := 4;
+    SIXSTATE.W2 := 0;
+    SIXSTATE.W5 := NIL;
+    SIXSTATE.W4 := 36;
+    SIXSTATE.W3 := 0;
+    RELOCATE := SIXSTATE;
+    SIXSTATE.W1 := FALSE;
+    MARK(HEAPMARK);
     EXPRADV := TRUE;
     FOLDCAS := TRUE;
     INMACDEF := FALSE;
     NAMEDSRC := FALSE;
     DEFGATE := FALSE;
-    G66 := FALSE;
+    HDRDONE := FALSE;
     LOCCTR := 0;
-    G20 := 0;
-    G19 := 0;
-    G21 := 0;
-    G23 := -1;
-    G2159 := '        ';
-    G34 := 0;
+    CODEORG := 0;
+    SAVLC := 0;
+    SYMSIZE := 0;
+    PROCIDX := -1;
+    SEGNAME := '        ';
+    PAGENUM := 0;
     LISTTTL := ' ';
     IF HASLIST THEN
       BEGIN
-        WRITELN(LISTFILE, 'PAGE - ', G34:3);
-        G34 := G34 + 1
+        WRITELN(LISTFILE, 'PAGE - ', PAGENUM:3);
+        PAGENUM := PAGENUM + 1
       END;
     (*$I-*)
     REWRITE(LIFILE, INFONAME);
-    G25 := 0;
+    LIPOS := 0;
     IF IORESULT <> 0 THEN
       BEGIN
         IORES := IORESULT;
@@ -993,7 +993,7 @@ VAR
     NEW(CURSYM, 1);
     I4;
     T8;
-    G660 := 1
+    EXTMODE := 1
   END;
 
   { IOCHECK back on before the next segment. INITIALIZE leaves it off --
@@ -1092,8 +1092,8 @@ VAR
          OR ((COUNT MOD COLSWIDE = 0) AND NOPRINT) THEN
         BEGIN
           WRITELN(LISTFILE);
-          G32 := G32 + 1;
-          IF G32 MOD PAGESIZE = 0 THEN T9
+          LISTLINE := LISTLINE + 1;
+          IF LISTLINE MOD PAGESIZE = 0 THEN T9
         END
       ELSE WRITE(LISTFILE, '|  ');
       IF X1^.RIGHT <> NIL THEN S3(X1^.RIGHT)
@@ -1135,7 +1135,7 @@ VAR
     WRITELN(LISTFILE, 'PB - Public       PV - Private   CS - Consts');
     WRITELN(LISTFILE);
     WRITELN(LISTFILE);
-    G32 := G32 + 5;
+    LISTLINE := LISTLINE + 5;
     COUNT := 0;
     IF WORDBITS = 8 THEN
       BEGIN
@@ -1152,7 +1152,7 @@ VAR
     IF ROOT^.RIGHT <> NIL THEN S3(ROOT^.RIGHT);
     LISTTTL := SAVETITLE;
     WRITELN(LISTFILE);
-    G32 := G32 + 1;
+    LISTLINE := LISTLINE + 1;
     T9;
     RELEASE(MARKP)
   END;
@@ -1188,10 +1188,10 @@ VAR
       VAR
         I: INTEGER;
     BEGIN
-      IF G57 <> FALSE THEN
+      IF BIGEND <> FALSE THEN
         FOR I := X2 TO 7 DO X1[I] := T3(X1[I]);
       PUT(PROCFILE);
-      G25 := G25 + 1
+      LIPOS := LIPOS + 1
     END;
 
     PROCEDURE E3;                             { .3  0/0 }
@@ -1207,43 +1207,43 @@ VAR
           N: INTEGER;
       BEGIN
         (*$I-*)
-        IF X1 < G54 THEN
+        IF X1 < PAGEBASE THEN
           BEGIN
-            N := EMITMODE DIV 512 - G9 + 1;
+            N := EMITMODE DIV 512 - CODEBLK + 1;
             IF N > 2 THEN N := 2;
-            IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, N, G9) < N THEN
+            IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, N, CODEBLK) < N THEN
               T2(54);
-            IF G9 + N > G50 THEN G50 := G9 + N;
-            G9 := X1 DIV 512;
+            IF CODEBLK + N > MAXCBLK THEN MAXCBLK := CODEBLK + N;
+            CODEBLK := X1 DIV 512;
             IF IORESULT = 0 THEN
-              IF BLOCKREAD(USERINFO.CODEFIBP^, SRCBUF^, 2, G9) = 0 THEN ;
-            G54 := G9 * 512;
-            G53 := X1 MOD 512
+              IF BLOCKREAD(USERINFO.CODEFIBP^, SRCBUF^, 2, CODEBLK) = 0 THEN ;
+            PAGEBASE := CODEBLK * 512;
+            PAGEOFF := X1 MOD 512
           END
         ELSE
-          IF X1 > G54 + 1023 THEN
+          IF X1 > PAGEBASE + 1023 THEN
             BEGIN
-              N := EMITMODE DIV 512 - G9 + 1;
+              N := EMITMODE DIV 512 - CODEBLK + 1;
               IF N > 2 THEN N := 2;
-              IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, N, G9) < N THEN
+              IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, N, CODEBLK) < N THEN
                 T2(54);
-              IF G9 + N > G50 THEN G50 := G9 + N;
-              G9 := X1 DIV 512;
-              IF G9 >= G50 THEN
+              IF CODEBLK + N > MAXCBLK THEN MAXCBLK := CODEBLK + N;
+              CODEBLK := X1 DIV 512;
+              IF CODEBLK >= MAXCBLK THEN
                 BEGIN
                   IF IORESULT = 0 THEN
-                    IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, G9 - G50,
-                                  G50) < G9 - G50 THEN T2(54);
-                  G50 := G9
+                    IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, CODEBLK - MAXCBLK,
+                                  MAXCBLK) < CODEBLK - MAXCBLK THEN T2(54);
+                  MAXCBLK := CODEBLK
                 END
               ELSE
                 IF IORESULT = 0 THEN
-                  IF BLOCKREAD(USERINFO.CODEFIBP^, SRCBUF^, 2, G9) = 0
+                  IF BLOCKREAD(USERINFO.CODEFIBP^, SRCBUF^, 2, CODEBLK) = 0
                     THEN ;
-              G54 := G9 * 512;
-              G53 := X1 MOD 512
+              PAGEBASE := CODEBLK * 512;
+              PAGEOFF := X1 MOD 512
             END
-          ELSE G53 := X1 - G54;
+          ELSE PAGEOFF := X1 - PAGEBASE;
         (*$I+*)
         T5(TRUE)
       END;
@@ -1261,12 +1261,12 @@ VAR
             J: INTEGER;
         BEGIN
           N := 0;
-          IF G63 THEN
+          IF ABSSTART THEN
             BEGIN
-              IF G25 <> G24 THEN
+              IF LIPOS <> LIEND THEN
                 BEGIN
-                  SEEK(PROCFILE, G25);
-                  FOR I := G25 + 1 TO G24 DO
+                  SEEK(PROCFILE, LIPOS);
+                  FOR I := LIPOS + 1 TO LIEND DO
                     BEGIN
                       GET(PROCFILE);
                       IF PROCFILE^.KEY0 = X1 THEN
@@ -1289,10 +1289,10 @@ VAR
         END;
 
       BEGIN
-        E6(4, G629);
-        E6(1, G650);
-        E6(2, G643);
-        E6(3, G636)
+        E6(4, RELTAB4);
+        E6(1, RELTAB1);
+        E6(2, RELTAB2);
+        E6(3, RELTAB3)
       END;
 
       PROCEDURE E7;                           { .7  0/4 }
@@ -1302,7 +1302,7 @@ VAR
         VAR
           I: INTEGER;
       BEGIN
-        IF G24 <> 0 THEN SEEK(PROCFILE, G25);
+        IF LIEND <> 0 THEN SEEK(PROCFILE, LIPOS);
         FOR I := 0 TO 127 DO
           BEGIN
             CURSYM := SYMTAB[I];
@@ -1316,7 +1316,7 @@ VAR
                           WRITELN(LISTFILE);
                           WRITE(LISTFILE, '>>>>>');
                           WRITE(LISTFILE, CURSYM^.ANAME);
-                          G32 := G32 + 1
+                          LISTLINE := LISTLINE + 1
                         END;
                       IF NOT (NOPRINT AND HASLIST) THEN
                         BEGIN
@@ -1407,53 +1407,53 @@ VAR
       BEGIN
         RESET(PROCFILE, INFONAME);
         MARK(MARKP);
-        IF G24 <> G25 THEN SEEK(PROCFILE, G25);
-        FOR I := G25 + 1 TO G24 DO
+        IF LIEND <> LIPOS THEN SEEK(PROCFILE, LIPOS);
+        FOR I := LIPOS + 1 TO LIEND DO
           BEGIN
             GET(PROCFILE);
             IF PROCFILE^.KEY1 = 0 THEN
               BEGIN
                 INFO := PROCFILE^.INFO;
                 E4(INFO.F3);
-                IF ((INFO.F3 - G54) < 1023) OR INFO.FLAG THEN
-                  T4(INFO, INFO.F3 - G54)
+                IF ((INFO.F3 - PAGEBASE) < 1023) OR INFO.FLAG THEN
+                  T4(INFO, INFO.F3 - PAGEBASE)
                 ELSE
                   BEGIN
                     B.WHOLE := INFO.F1;
                     IF FALSE THEN B.WHOLE := T3(B.WHOLE);
-                    SRCBUF^[INFO.F3 - G54] := CHR(B.LO);
+                    SRCBUF^[INFO.F3 - PAGEBASE] := CHR(B.LO);
                     E4(INFO.F3 + 1);
-                    SRCBUF^[INFO.F3 + 1 - G54] := CHR(B.HI)
+                    SRCBUF^[INFO.F3 + 1 - PAGEBASE] := CHR(B.HI)
                   END
               END
           END
       END;
 
     BEGIN
-      IF G18 > MEMAVAIL THEN G18 := MEMAVAIL;
+      IF MINMEM > MEMAVAIL THEN MINMEM := MEMAVAIL;
       IF DOSYMDMP THEN
-        WRITELN(LISTFILE, 'Current minimum space is ', G18, ' words.');
+        WRITELN(LISTFILE, 'Current minimum space is ', MINMEM, ' words.');
       IF NOT (DOSYMDMP AND NOPRINT) THEN
         BEGIN
           WRITELN;
-          WRITE('Current minimum space is ', G18, ' words.');
+          WRITE('Current minimum space is ', MINMEM, ' words.');
           T8
         END;
       T6;
       CLOSE(LIFILE, LOCK);
       E8;
-      E4(G51);
-      EMITMODE := G54 + G53;
-      IF ODD(G53) THEN T12(0);
-      RELOCATE := G598;
+      E4(MAXEMIT);
+      EMITMODE := PAGEBASE + PAGEOFF;
+      IF ODD(PAGEOFF) THEN T12(0);
+      RELOCATE := SIXSTATE;
       E5;
-      T15(EMITMODE - G49);
+      T15(EMITMODE - SEGBASE);
       T15(0);
       E7;
-      G2167[ERRCNT] := EMITMODE - G49;
-      G35 := G35 + EMITMODE - G49;
+      ERRSIZES[ERRCNT] := EMITMODE - SEGBASE;
+      TOTCODE := TOTCODE + EMITMODE - SEGBASE;
       SYMTAB := SYMSAVE;
-      RELEASE(G2158)
+      RELEASE(HEAPMARK)
     END;
 
     PROCEDURE E9;                             { .9  0/4 }
@@ -1477,14 +1477,14 @@ VAR
                 ' words left');
           T8
         END;
-      G54 := 512;
+      PAGEBASE := 512;
       EMITMODE := 512;
-      G51 := 512;
-      G9 := 1;
-      G50 := 1;
-      G53 := 0;
-      G35 := 0;
-      FILLCHAR(G2167, 102, CHR(0));
+      MAXEMIT := 512;
+      CODEBLK := 1;
+      MAXCBLK := 1;
+      PAGEOFF := 0;
+      TOTCODE := 0;
+      FILLCHAR(ERRSIZES, 102, CHR(0));
       { WORKCODE, not WORKSYM. `WORKSYM, WORKCODE: ^ PHYLE` is one
         clause, so the LAST name takes the LOWER offset and WORKCODE is
         the word 8 Apple loads -- which is also the file an assembler
@@ -1528,35 +1528,35 @@ VAR
         FOR L3 := ERRCNT DOWNTO 1 DO
           BEGIN
             T15(L2);
-            L2 := L2 + G2167[L3] + 2
+            L2 := L2 + ERRSIZES[L3] + 2
           END;
         T12(1);
         T12(ERRCNT);
-        G35 := L2;
-        L3 := (G53 + 511) DIV 512;
-        IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, L3, G9) < L3 THEN T2(54);
-        G9 := G9 + L3;
+        TOTCODE := L2;
+        L3 := (PAGEOFF + 511) DIV 512;
+        IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, L3, CODEBLK) < L3 THEN T2(54);
+        CODEBLK := CODEBLK + L3;
         FILLCHAR(PROCFILE^.BYTES, 16, CHR(0));
         PROCFILE^.LNAME := '        ';
         E2(PROCFILE^.ALLREFS, 4);
         CLOSE(PROCFILE, LOCK);
         RESET(INFILE, INFONAME);
-        L3 := (G25 * 16 + 511) DIV 512;
+        L3 := (LIPOS * 16 + 511) DIV 512;
         IF IORESULT = 0 THEN
           IF BLOCKREAD(INFILE, SRCBUF^, L3) = 0 THEN ;
-        FILLCHAR(SRCBUF^[G25 * 16], 512, CHR(0));
+        FILLCHAR(SRCBUF^[LIPOS * 16], 512, CHR(0));
         IF IORESULT = 0 THEN
-          IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, L3, G9) < L3 THEN
+          IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, L3, CODEBLK) < L3 THEN
             T2(54);
         FILLCHAR(DIRBUF, 512, CHR(0));
-        IF FALSE THEN L4.WHOLE := T3(G35)
-        ELSE L4.WHOLE := G35;
+        IF FALSE THEN L4.WHOLE := T3(TOTCODE)
+        ELSE L4.WHOLE := TOTCODE;
         DIRBUF[6] := CHR(L4.LO);
         DIRBUF[7] := CHR(L4.HI);
         FILLCHAR(DIRBUF[64], 128, ' ');
         VERSION := '[1.3]';
         MOVELEFT(VERSION[1], DIRBUF[500], 11);
-        FOR L3 := 72 TO 79 DO DIRBUF[L3] := G2163[L3 - 72];
+        FOR L3 := 72 TO 79 DO DIRBUF[L3] := ERRNAME[L3 - 72];
         IF FALSE THEN
           BEGIN
             DIRBUF[5] := CHR(1);
@@ -1576,8 +1576,8 @@ VAR
         IF DOSYMDMP AND NOT NOPRINT THEN
           BEGIN
             WRITELN(LISTFILE);
-            WRITELN(LISTFILE, 'Assembly complete:', G33:10, ' lines');
-            WRITELN(LISTFILE, G31:6, '   Errors flagged on this Assembly');
+            WRITELN(LISTFILE, 'Assembly complete:', LINECNT:10, ' lines');
+            WRITELN(LISTFILE, FLAGCNT:6, '   Errors flagged on this Assembly');
             WRITE(LISTFILE, CHR(12));
             CLOSE(LISTFILE, LOCK)
           END;
@@ -1585,12 +1585,12 @@ VAR
         T5(TRUE);
         (*$I+*)
         WRITELN;
-        WRITELN('Assembly complete:', G33:10, ' lines');
-        WRITELN(G31:6, '   Errors flagged on this Assembly')
+        WRITELN('Assembly complete:', LINECNT:10, ' lines');
+        WRITELN(FLAGCNT:6, '   Errors flagged on this Assembly')
       END
     ELSE
       BEGIN
-        MARK(G2158);
+        MARK(HEAPMARK);
         ERRCNT := ERRCNT + 1;
         IF ERRCNT > 50 THEN
           BEGIN
@@ -1599,35 +1599,35 @@ VAR
             EXIT(TLA)
           END;
         LOCCTR := 0;
-        G20 := 0;
-        G19 := 0;
-        FILLCHAR(G650, 14, CHR(0));
-        G48 := 0;
-        FILLCHAR(G643, 14, CHR(0));
-        G47 := 0;
-        FILLCHAR(G636, 14, CHR(0));
-        G46 := 0;
-        FILLCHAR(G629, 14, CHR(0));
-        G45 := 0;
-        G24 := G25;
+        CODEORG := 0;
+        SAVLC := 0;
+        FILLCHAR(RELTAB1, 14, CHR(0));
+        RELCNT1 := 0;
+        FILLCHAR(RELTAB2, 14, CHR(0));
+        RELCNT2 := 0;
+        FILLCHAR(RELTAB3, 14, CHR(0));
+        RELCNT3 := 0;
+        FILLCHAR(RELTAB4, 14, CHR(0));
+        RELCNT4 := 0;
+        LIEND := LIPOS;
         IF ERRCNT > 1 THEN
           BEGIN
             CLOSE(PROCFILE, LOCK);
             RESET(LIFILE, INFONAME);
-            SEEK(LIFILE, G25)
+            SEEK(LIFILE, LIPOS)
           END;
         NEW(CURFIVE);
         CURFIVE^.F4 := NIL;
         FREEFIVE := NIL;
-        G49 := EMITMODE;
-        IF LEXTOKEN = 59 THEN G658 := 1
-        ELSE G658 := 33;
+        SEGBASE := EMITMODE;
+        IF LEXTOKEN = 59 THEN DEFCLASS := 1
+        ELSE DEFCLASS := 33;
         T17;
         IF LEXTOKEN <> 68 THEN T2(3)
         ELSE
           BEGIN
-            IF ERRCNT = 1 THEN G2163 := CURSYM^.ANAME;
-            G2159 := CURSYM^.ANAME;
+            IF ERRCNT = 1 THEN ERRNAME := CURSYM^.ANAME;
+            SEGNAME := CURSYM^.ANAME;
             CURSYM^.A7 := ERRCNT;
             T17;
             IF LEXTOKEN = 14 THEN
@@ -1640,7 +1640,7 @@ VAR
             ELSE CURSYM^.A6 := 0
           END;
         PATCHBUF := EMITBUF;
-        G5 := 0;
+        CODEIX := 0;
         IF HASLIST THEN T9;
         IF LEXTOKEN <> 38 THEN
           BEGIN
@@ -1650,7 +1650,7 @@ VAR
         T10;
         LINEBUF := LINECOPY;
         LINEPOS := -1;
-        G658 := 36
+        DEFCLASS := 36
       END
   END;
 
@@ -1746,8 +1746,8 @@ VAR
       END;
 
     BEGIN
-      G23 := G23 + 1;
-      V1 := G23;
+      PROCIDX := PROCIDX + 1;
+      V1 := PROCIDX;
       IF NOT A3 THEN
         BEGIN
           IF LEXTOKEN <> 38 THEN
@@ -1778,18 +1778,18 @@ VAR
                     T16
                   END;
                 ADVANCE := FALSE;
-                IF BUF = 'IF      ' THEN G23 := G23 + 1
+                IF BUF = 'IF      ' THEN PROCIDX := PROCIDX + 1
                 ELSE IF BUF = 'ENDC    ' THEN
                   BEGIN
-                    IF G23 < 0 THEN
+                    IF PROCIDX < 0 THEN
                       BEGIN
                         T2(7);
                         EXIT(A2)
                       END
-                    ELSE G23 := G23 - 1
+                    ELSE PROCIDX := PROCIDX - 1
                   END;
-                V3 := ((V1 = G23) AND (BUF = 'ELSE    '))
-                      OR ((V1 = G23 + 1) AND (BUF = 'ENDC    '))
+                V3 := ((V1 = PROCIDX) AND (BUF = 'ELSE    '))
+                      OR ((V1 = PROCIDX + 1) AND (BUF = 'ENDC    '))
               END
           UNTIL V3;
           LEXTOKEN := 70;
@@ -1808,7 +1808,7 @@ VAR
         V3: BOOLEAN;
         BUF: PACKED ARRAY [0..7] OF CHAR;
     BEGIN
-      V1 := G23;
+      V1 := PROCIDX;
       T10;
       V3 := FALSE;
       REPEAT
@@ -1837,17 +1837,17 @@ VAR
                 T16
               END;
             ADVANCE := FALSE;
-            IF BUF = 'IF      ' THEN G23 := G23 + 1
+            IF BUF = 'IF      ' THEN PROCIDX := PROCIDX + 1
             ELSE IF BUF = 'ENDC    ' THEN
               BEGIN
-                IF G23 < 0 THEN
+                IF PROCIDX < 0 THEN
                   BEGIN
                     T2(7);
                     EXIT(A4)
                   END
-                ELSE G23 := G23 - 1
+                ELSE PROCIDX := PROCIDX - 1
               END;
-            V3 := (V1 = G23 + 1) AND (BUF = 'ENDC    ')
+            V3 := (V1 = PROCIDX + 1) AND (BUF = 'ENDC    ')
           END
       UNTIL V3;
       T17
@@ -1868,7 +1868,7 @@ VAR
       WHILE X1 <> NIL DO
         BEGIN
           V4 := X1^.F4;
-          V3 := X1^.F3 - G54;
+          V3 := X1^.F3 - PAGEBASE;
           X1^.F1 := X1^.F1 + X2;
           IF ODD(MINUS1) AND ODD(X1^.HIB) THEN
             X1^.F1 := X1^.F1 DIV 2;
@@ -1878,7 +1878,7 @@ VAR
               LIFILE^.KEY1 := 0;
               LIFILE^.INFO := X1^;
               PUT(LIFILE);
-              G24 := G24 + 1
+              LIEND := LIEND + 1
             END;
           X1^.F4 := FREEFIVE;
           FREEFIVE := X1;
@@ -1900,14 +1900,14 @@ VAR
           DEFGATE := TRUE;
           DEFSYM := CURSYM;
           CURSYM^.A6 := LOCCTR;
-          IF (G660 = 0) AND (V2 <> NIL) THEN T2(8);
+          IF (EXTMODE = 0) AND (V2 <> NIL) THEN T2(8);
           IF CURSYM^.A5 = 26 THEN CURSYM^.A5 := 32
           ELSE IF CURSYM^.A5 = 36 THEN
             BEGIN
-              IF G660 = 0 THEN
+              IF EXTMODE = 0 THEN
                 BEGIN
                   CURSYM^.A5 := 34;
-                  CURSYM^.A6 := G21
+                  CURSYM^.A6 := SYMSIZE
                 END
               ELSE CURSYM^.A5 := 35
             END
@@ -1921,7 +1921,7 @@ VAR
       ELSE
         BEGIN
           DEFGATE := FALSE;
-          IF G660 = 0 THEN T2(44)
+          IF EXTMODE = 0 THEN T2(44)
           ELSE IF LOCLTAB[LOCLCUR].LCLASS <> 36 THEN T2(9)
           ELSE
             BEGIN
@@ -2008,7 +2008,7 @@ VAR
             T2(63)
           ELSE IF DEFSYM^.A5 <> 32 THEN
             BEGIN
-              IF G660 = 0 THEN
+              IF EXTMODE = 0 THEN
                 DEFSYM^.A5 := 34
               ELSE IF DEFSYM^.A5 IN [0, 22, 23, 24, 25, 34, 35] THEN
                 DEFSYM^.A5 := EXPRVAL
@@ -2036,7 +2036,7 @@ VAR
         V1: INTEGER;
         BUF: PACKED ARRAY [0..7] OF CHAR;
     BEGIN
-      G658 := 37;
+      DEFCLASS := 37;
       IF CHSOURCE <> 2 THEN T2(61)
       ELSE
         BEGIN
@@ -2049,7 +2049,7 @@ VAR
             T16
           UNTIL ASMCH = 13;
           ADVANCE := FALSE;
-          MACBUFP^[0] := CHR(G55);
+          MACBUFP^[0] := CHR(MACFLAG);
           MACBPOS := 1;
           V1 := 0;
           BUF := '        ';
@@ -2092,7 +2092,7 @@ VAR
               NEW(MACBUFP);
               MACBUFP^[0] := CHR(13)
             END;
-          G658 := 36;
+          DEFCLASS := 36;
           INMACDEF := FALSE
         END;
       T17
@@ -2110,9 +2110,9 @@ VAR
     BEGIN
       IF EXPRESS(TRUE) THEN
         IF T19(TRUE, TRUE, TRUE, 0, 1023) THEN
-          IF G660 = 0 THEN
+          IF EXTMODE = 0 THEN
             BEGIN
-              G21 := G21 + EXPRCLS;
+              SYMSIZE := SYMSIZE + EXPRCLS;
               T17
             END
           ELSE
@@ -2143,10 +2143,10 @@ VAR
     BEGIN
       V1 := 0;
       V2 := 0;
-      IF G660 = 0 THEN
+      IF EXTMODE = 0 THEN
         BEGIN
-          IF FALSE THEN G21 := G21 + 1
-          ELSE G21 := G21 + 2;
+          IF FALSE THEN SYMSIZE := SYMSIZE + 1
+          ELSE SYMSIZE := SYMSIZE + 2;
           T17
         END
       ELSE
@@ -2170,9 +2170,9 @@ VAR
     BEGIN
       IF FALSE THEN T2(14)
       ELSE
-        IF G660 = 0 THEN
+        IF EXTMODE = 0 THEN
           BEGIN
-            G21 := G21 + 1;
+            SYMSIZE := SYMSIZE + 1;
             T17
           END
         ELSE
@@ -2199,12 +2199,12 @@ VAR
     BEGIN
       IF EXPRESS(TRUE) THEN
         IF T19(TRUE, TRUE, FALSE, 0, 32767) THEN
-          IF G660 = 0 THEN G21 := EXPRCLS
+          IF EXTMODE = 0 THEN SYMSIZE := EXPRCLS
           ELSE
-            IF (LOCCTR = 0) AND NOT G63 THEN
+            IF (LOCCTR = 0) AND NOT ABSSTART THEN
               BEGIN
                 LOCCTR := EXPRCLS;
-                G19 := LOCCTR
+                SAVLC := LOCCTR
               END
             ELSE
               IF EXPRCLS < LOCCTR THEN T2(15)
@@ -2228,17 +2228,17 @@ VAR
         V1: ASMRECP;
     BEGIN
       CASE LEXTOKEN OF
-        54: G658 := 29;
-        52: G658 := 28;
-        53: G658 := 30;
-        50: G658 := 31;
-        51: G658 := 26
+        54: DEFCLASS := 29;
+        52: DEFCLASS := 28;
+        53: DEFCLASS := 30;
+        50: DEFCLASS := 31;
+        51: DEFCLASS := 26
       END;
       REPEAT
         T17;
         IF LEXTOKEN <> 68 THEN T2(16)
-        ELSE IF CURSYM^.A5 <> G658 THEN T2(9)
-        ELSE IF G658 = 30 THEN
+        ELSE IF CURSYM^.A5 <> DEFCLASS THEN T2(9)
+        ELSE IF DEFCLASS = 30 THEN
           BEGIN
             V1 := CURSYM;
             T17;
@@ -2253,7 +2253,7 @@ VAR
           END
         ELSE T17
       UNTIL LEXTOKEN <> 14;
-      G658 := 36
+      DEFCLASS := 36
     END;
 
     PROCEDURE A16;                            { .16  0/0 }
@@ -2544,7 +2544,7 @@ VAR
 
     PROCEDURE A32;                            { .32  0/0 }
     BEGIN
-      G17 := -1;
+      MACFREE := -1;
       IF HASLIST THEN
         BEGIN
           T10;
@@ -2555,7 +2555,7 @@ VAR
     END;
 
     { Walks MACBUFS[1..MACLEVEL] until a buffer whose first byte is 0, then
-      records that index in G17 and, on the first visit, runs T9.
+      records that index in MACFREE and, on the first visit, runs T9.
 
       The nesting is the whole of what the jump targets say and nothing
       else does: `T17` is outside `IF DOSYMDMP`, and `HASLIST := TRUE` is outside
@@ -2581,7 +2581,7 @@ VAR
               IF V1 THEN
                 V2 := V2 + 1
             END;
-          G17 := V2 - 1;
+          MACFREE := V2 - 1;
           IF NOT HASLIST THEN T9;
           HASLIST := TRUE
         END;
@@ -2600,7 +2600,7 @@ VAR
       IF (LEXTOKEN = 64) OR (LEXTOKEN = 65) THEN A6;
       { The set is [31, 32, 35..37, 41..45, 49, 55, 56] -- the directives
         that are legal before any code has been emitted. }
-      IF ((G660 = 0)
+      IF ((EXTMODE = 0)
           AND NOT (LEXTOKEN IN [31, 32, 35, 36, 37, 41, 42, 43, 44, 45,
                           49, 55, 56]))
          OR (LEXTOKEN <= 28) OR (LEXTOKEN >= 62)
@@ -2615,17 +2615,17 @@ VAR
           CASE LEXTOKEN OF
             56: A32;
             55: A33;
-            41: BEGIN G55 := 1; T17 END;
-            42: BEGIN G55 := 0; T17 END;
-            43: BEGIN G56 := TRUE; T17 END;
-            44: BEGIN G56 := FALSE; T17 END;
+            41: BEGIN MACFLAG := 1; T17 END;
+            42: BEGIN MACFLAG := 0; T17 END;
+            43: BEGIN LISTON := TRUE; T17 END;
+            44: BEGIN LISTON := FALSE; T17 END;
             45: BEGIN
                   IF ERRCNT > 0 THEN T2(64)
-                  ELSE G63 := FALSE;
+                  ELSE ABSSTART := FALSE;
                   T17
                 END;
-            30: BEGIN G660 := 0; T17 END;
-            31: BEGIN G660 := 1; T17 END;
+            30: BEGIN EXTMODE := 0; T17 END;
+            31: BEGIN EXTMODE := 1; T17 END;
             34: A7;
             29: A8;
             49: A9;
@@ -2641,15 +2641,15 @@ VAR
                 END;
             58: A16;
             59, 60, 61: BEGIN
-                  IF MEMAVAIL < G18 THEN G18 := MEMAVAIL;
+                  IF MEMAVAIL < MINMEM THEN MINMEM := MEMAVAIL;
                   EXIT(ASSEMBLE)
                 END;
             50, 51, 52, 53, 54: A15;
             48: A2;
             40: A4;
             39: BEGIN
-                  IF G23 < 0 THEN T2(7)
-                  ELSE G23 := G23 - 1;
+                  IF PROCIDX < 0 THEN T2(7)
+                  ELSE PROCIDX := PROCIDX - 1;
                   T17
                 END;
             33: A17
@@ -2699,7 +2699,7 @@ VAR
             WRITELN(LISTFILE);
             WRITE(LISTFILE, ERRFILE^);
             WRITELN(LISTFILE);
-            G32 := G32 + 3
+            LISTLINE := LISTLINE + 3
           END;
         IF NOT (NOPRINT AND HASLIST) THEN
           BEGIN
@@ -2746,7 +2746,7 @@ VAR
             V3 := 4
           END
         ELSE V3 := 3;
-        G32 := G32 + V3
+        LISTLINE := LISTLINE + V3
       END;
     IF NOT (NOPRINT AND HASLIST) THEN
       BEGIN
@@ -2782,7 +2782,7 @@ VAR
     VAR
       CH: CHAR;
   BEGIN
-    G31 := G31 + 1;
+    FLAGCNT := FLAGCNT + 1;
     IF MEMAVAIL > 1800 THEN PRINTERROR(X1)
     ELSE T22(X1, FALSE);
     WRITE(CHR(7));
@@ -2822,13 +2822,13 @@ VAR
         EXIT(TLA)
       END;
     T8;
-    IF HASLIST AND (G32 MOD PAGESIZE < 4) THEN T9
+    IF HASLIST AND (LISTLINE MOD PAGESIZE < 4) THEN T9
   END;
 
   { The byte swapper, and it is exactly that: read the word in, write
     its low byte out as the high one and its high byte as the low. Two
     of its four local words are placeholders. Everything that called
-    this -- PROCEND.2's `IF G57 <> FALSE`, INITIALI.4's `IF V3`,
+    this -- PROCEND.2's `IF BIGEND <> FALSE`, INITIALI.4's `IF V3`,
     ASSEMBLE.3's `IF FALSE` -- was reading it right. }
   FUNCTION T3;                                { .3  6/8 }
     VAR
@@ -2869,8 +2869,8 @@ VAR
       ELSE IF X1 THEN T11(V3.F1, X1)
       ELSE T11(T3(V3.F1), X1);
       WRITELN(LISTFILE);
-      G32 := G32 + 1;
-      IF G32 MOD PAGESIZE = 0 THEN T9
+      LISTLINE := LISTLINE + 1;
+      IF LISTLINE MOD PAGESIZE = 0 THEN T9
     END;
 
   BEGIN
@@ -2892,7 +2892,7 @@ VAR
         ELSE
           BEGIN
             SRCBUF^[X2] := CHR(V8.LOWBYTE);
-            IF HASLIST AND G56 THEN T23(TRUE)
+            IF HASLIST AND LISTON THEN T23(TRUE)
           END
       END
     ELSE
@@ -2906,7 +2906,7 @@ VAR
         IF HIBYTEFIRST THEN V8.HWORD := T3(V8.HWORD);
         SRCBUF^[X2] := CHR(V8.LOWBYTE);
         SRCBUF^[X2 + 1] := CHR(V8.HIBYTE);
-        IF HASLIST AND G56 THEN T23(FALSE)
+        IF HASLIST AND LISTON THEN T23(FALSE)
       END
   END;
 
@@ -3001,7 +3001,7 @@ VAR
     IF NOT (HASLIST AND NOPRINT) THEN
       BEGIN
         WRITELN;
-        WRITE('[', MEMAVAIL:5, ']<', G33:4, '>')
+        WRITE('[', MEMAVAIL:5, ']<', LINECNT:4, '>')
       END
   END;
 
@@ -3017,14 +3017,14 @@ VAR
         WRITELN(LISTFILE)
       END
     ELSE WRITE(LISTFILE, CHR(12));
-    WRITE(LISTFILE, 'PAGE - ', G34:3, '  ', G2159, '  FILE:', G390);
+    WRITE(LISTFILE, 'PAGE - ', PAGENUM:3, '  ', SEGNAME, '  FILE:', CURFILE);
     IF HASLIST AND NOPRINT THEN WRITELN(LISTFILE);
     WRITE(LISTFILE, '  ', LISTTTL);
     WRITELN(LISTFILE);
     WRITELN(LISTFILE);
     WRITELN(LISTFILE);
-    G32 := 0;
-    G34 := G34 + 1
+    LISTLINE := 0;
+    PAGENUM := PAGENUM + 1
   END;
 
   { End of a source line: the progress dot on the console, then the
@@ -3038,26 +3038,26 @@ VAR
       V1: INTEGER;
       V2: STRING[102];
   BEGIN
-    G33 := G33 + 1;
+    LINECNT := LINECNT + 1;
     IF NOT (HASLIST AND NOPRINT) THEN
       BEGIN
         WRITE('.');
-        IF G33 MOD 50 = 0 THEN T8
+        IF LINECNT MOD 50 = 0 THEN T8
       END;
-    IF HASLIST AND (ODD(G55) OR (CHSOURCE <> 0)) THEN
+    IF HASLIST AND (ODD(MACFLAG) OR (CHSOURCE <> 0)) THEN
       BEGIN
-        G32 := G32 + 1;
-        IF G32 MOD PAGESIZE = 0 THEN T9;
-        T11(G20, FALSE);
-        IF G5 < CODESIZE - 2 THEN
+        LISTLINE := LISTLINE + 1;
+        IF LISTLINE MOD PAGESIZE = 0 THEN T9;
+        T11(CODEORG, FALSE);
+        IF CODEIX < CODESIZE - 2 THEN
           BEGIN
             { Short column: DLE plus a blank count, which is how the
               listing compresses the run of spaces that would follow. }
-            V1 := CODESIZE - G5 + 1;
-            PATCHBUF[G5] := CHR(16);
-            PATCHBUF[G5 + 1] := CHR(V1 + 32);
-            MOVELEFT(PATCHBUF[0], V2[1], G5 + 2);
-            V2[0] := CHR(G5 + 2);
+            V1 := CODESIZE - CODEIX + 1;
+            PATCHBUF[CODEIX] := CHR(16);
+            PATCHBUF[CODEIX + 1] := CHR(V1 + 32);
+            MOVELEFT(PATCHBUF[0], V2[1], CODEIX + 2);
+            V2[0] := CHR(CODEIX + 2);
             WRITE(LISTFILE, '| ');
             WRITE(LISTFILE, V2)
           END
@@ -3082,10 +3082,10 @@ VAR
             WRITELN(LISTFILE)
           END
       END;
-    IF G660 = 0 THEN G20 := G21
-    ELSE G20 := LOCCTR;
+    IF EXTMODE = 0 THEN CODEORG := SYMSIZE
+    ELSE CODEORG := LOCCTR;
     PATCHBUF := EMITBUF;
-    G5 := 0;
+    CODEIX := 0;
     LINEBUF := LINECOPY;
     LINEPOS := -1
   END;
@@ -3143,42 +3143,42 @@ VAR
     VAR
       V2: WORDSWAP;
   BEGIN
-    IF G53 > BUFLIMIT THEN
+    IF PAGEOFF > BUFLIMIT THEN
       BEGIN
         (*$I-*)
-        IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, 1, G9) = 0 THEN T2(54);
+        IF BLOCKWRITE(USERINFO.CODEFIBP^, SRCBUF^, 1, CODEBLK) = 0 THEN T2(54);
         (*$I+*)
         T5(TRUE);
-        G9 := G9 + 1;
-        IF G9 > G50 THEN G50 := G9;
+        CODEBLK := CODEBLK + 1;
+        IF CODEBLK > MAXCBLK THEN MAXCBLK := CODEBLK;
         MOVELEFT(SRCBUF^[512], SRCBUF^[0], (BUFBLKS - 1) * 512);
-        G53 := G53 - 512;
-        G54 := G54 + 512
+        PAGEOFF := PAGEOFF - 512;
+        PAGEBASE := PAGEBASE + 512
       END;
-    SRCBUF^[G53] := CHR(X1);
-    G53 := G53 + 1;
-    EMITMODE := G54 + G53;
-    IF EMITMODE > G51 THEN G51 := EMITMODE;
+    SRCBUF^[PAGEOFF] := CHR(X1);
+    PAGEOFF := PAGEOFF + 1;
+    EMITMODE := PAGEBASE + PAGEOFF;
+    IF EMITMODE > MAXEMIT THEN MAXEMIT := EMITMODE;
     IF ODD(MINUS1) THEN LOCCTR := LOCCTR + 1;
-    IF HASLIST AND NOT G66 THEN
+    IF HASLIST AND NOT HDRDONE THEN
       BEGIN
         V2.HWORD := X1;
         IF WORDBITS = 16 THEN
-          IF G5 + 2 <= CODESIZE THEN
+          IF CODEIX + 2 <= CODESIZE THEN
             BEGIN
-              PATCHBUF[G5] := HEXDIGS[V2.HEX3];
-              PATCHBUF[G5 + 1] := HEXDIGS[V2.HEX4];
-              PATCHBUF[G5 + 2] := ' ';
-              G5 := G5 + 3
+              PATCHBUF[CODEIX] := HEXDIGS[V2.HEX3];
+              PATCHBUF[CODEIX + 1] := HEXDIGS[V2.HEX4];
+              PATCHBUF[CODEIX + 2] := ' ';
+              CODEIX := CODEIX + 3
             END;
         IF WORDBITS = 8 THEN
-          IF G5 + 3 <= CODESIZE THEN
+          IF CODEIX + 3 <= CODESIZE THEN
             BEGIN
-              PATCHBUF[G5] := CHR(V2.OCT4 + 48);
-              PATCHBUF[G5 + 1] := CHR(V2.OCT5 + 48);
-              PATCHBUF[G5 + 2] := CHR(V2.OCT6 + 48);
-              PATCHBUF[G5 + 3] := ' ';
-              G5 := G5 + 4
+              PATCHBUF[CODEIX] := CHR(V2.OCT4 + 48);
+              PATCHBUF[CODEIX + 1] := CHR(V2.OCT5 + 48);
+              PATCHBUF[CODEIX + 2] := CHR(V2.OCT6 + 48);
+              PATCHBUF[CODEIX + 3] := ' ';
+              CODEIX := CODEIX + 4
             END
       END
   END;
@@ -3206,49 +3206,49 @@ VAR
             X2 := X2 DIV 2 + X2 MOD 2 * 2
           END;
         IF WORDBITS = 16 THEN
-          IF G5 + 4 <= CODESIZE THEN
+          IF CODEIX + 4 <= CODESIZE THEN
             BEGIN
-              FILLCHAR(PATCHBUF[G5], 4, '*');
+              FILLCHAR(PATCHBUF[CODEIX], 4, '*');
               IF X2 < 2 THEN
                 BEGIN
-                  PATCHBUF[G5] := HEXDIGS[V6.HEX1];
-                  PATCHBUF[G5 + 1] := HEXDIGS[V6.HEX2]
+                  PATCHBUF[CODEIX] := HEXDIGS[V6.HEX1];
+                  PATCHBUF[CODEIX + 1] := HEXDIGS[V6.HEX2]
                 END;
               IF X2 MOD 2 <> 1 THEN
                 BEGIN
-                  PATCHBUF[G5 + 2] := HEXDIGS[V6.HEX3];
-                  PATCHBUF[G5 + 3] := HEXDIGS[V6.HEX4]
+                  PATCHBUF[CODEIX + 2] := HEXDIGS[V6.HEX3];
+                  PATCHBUF[CODEIX + 3] := HEXDIGS[V6.HEX4]
                 END;
-              PATCHBUF[G5 + 4] := ' ';
-              G5 := G5 + 5
+              PATCHBUF[CODEIX + 4] := ' ';
+              CODEIX := CODEIX + 5
             END;
         IF WORDBITS = 8 THEN
-          IF G5 + 6 <= CODESIZE THEN
+          IF CODEIX + 6 <= CODESIZE THEN
             BEGIN
-              FILLCHAR(PATCHBUF[G5], 6, '*');
+              FILLCHAR(PATCHBUF[CODEIX], 6, '*');
               IF X2 < 2 THEN
                 BEGIN
-                  PATCHBUF[G5] := CHR(V6.OCT1 + 48);
-                  PATCHBUF[G5 + 1] := CHR(V6.OCT2 + 48);
-                  PATCHBUF[G5 + 2] := CHR(V6.OCT3 + 48)
+                  PATCHBUF[CODEIX] := CHR(V6.OCT1 + 48);
+                  PATCHBUF[CODEIX + 1] := CHR(V6.OCT2 + 48);
+                  PATCHBUF[CODEIX + 2] := CHR(V6.OCT3 + 48)
                 END;
               IF X2 MOD 2 <> 1 THEN
                 BEGIN
-                  PATCHBUF[G5 + 3] := CHR(V6.OCT4 + 48);
-                  PATCHBUF[G5 + 4] := CHR(V6.OCT5 + 48);
-                  PATCHBUF[G5 + 5] := CHR(V6.OCT6 + 48)
+                  PATCHBUF[CODEIX + 3] := CHR(V6.OCT4 + 48);
+                  PATCHBUF[CODEIX + 4] := CHR(V6.OCT5 + 48);
+                  PATCHBUF[CODEIX + 5] := CHR(V6.OCT6 + 48)
                 END;
-              PATCHBUF[G5 + 6] := ' ';
-              G5 := G5 + 7
+              PATCHBUF[CODEIX + 6] := ' ';
+              CODEIX := CODEIX + 7
             END
       END;
     IF NOT X3 THEN
       BEGIN
         IF FALSE THEN LOCCTR := LOCCTR + 1;
-        G66 := TRUE;
+        HDRDONE := TRUE;
         T12(V4.HIBYTE);
         T12(V4.LOWBYTE);
-        G66 := FALSE
+        HDRDONE := FALSE
       END
   END;
 
@@ -3286,14 +3286,14 @@ VAR
     PROCEDURE T25(VAR X1: INTEGER; VAR X2: SEVEN;
                   X3: INTEGER);               { .25  6/0 }
     BEGIN
-      IF G63 AND (RELOCATE.W4 <> 34) THEN
+      IF ABSSTART AND (RELOCATE.W4 <> 34) THEN
         BEGIN
           IF X1 = 7 THEN
             BEGIN
               LIFILE^.KEY0 := X3;
               LIFILE^.REFS := X2;
               PUT(LIFILE);
-              G24 := G24 + 1;
+              LIEND := LIEND + 1;
               FILLCHAR(X2, 14, CHR(0));
               X1 := 0
             END;
@@ -3310,7 +3310,7 @@ VAR
       which is what files the reference. }
     CASE RELOCATE.W0 OF
       4: ;
-      3: T25(G48, G650, 1);
+      3: T25(RELCNT1, RELTAB1, 1);
       0: BEGIN
            IF RELOCATE.W1 THEN
              BEGIN
@@ -3324,10 +3324,10 @@ VAR
                  END
                ELSE NEW(CURFIVE)
              END;
-           T25(G48, G650, 1)
+           T25(RELCNT1, RELTAB1, 1)
          END;
       1: CASE RELOCATE.W5^.A5 OF
-           1, 32, 33, 35: T25(G48, G650, 1);
+           1, 32, 33, 35: T25(RELCNT1, RELTAB1, 1);
            26, 36: BEGIN
                      T24;
                      CURFIVE^.F4 := RELOCATE.W5^.A7P;
@@ -3338,7 +3338,7 @@ VAR
                          FREEFIVE := FREEFIVE^.F4
                        END
                      ELSE NEW(CURFIVE);
-                     T25(G48, G650, 1)
+                     T25(RELCNT1, RELTAB1, 1)
                    END
          END;
       2: BEGIN
@@ -3351,14 +3351,14 @@ VAR
                RELOCATE.W5^.A8 := NEWREF
              END;
            CASE RELOCATE.W5^.A5 OF
-             28, 30: T25(G46, G636, 3);
-             31: T25(G47, G643, 2);
+             28, 30: T25(RELCNT3, RELTAB3, 3);
+             31: T25(RELCNT2, RELTAB2, 2);
              27: ;
            END;
-           IF RELOCATE.W4 = 27 THEN T25(G45, G629, 4)
+           IF RELOCATE.W4 = 27 THEN T25(RELCNT4, RELTAB4, 4)
          END
     END;
-    RELOCATE := G598;
+    RELOCATE := SIXSTATE;
     T13(V2, V4, FALSE)
   END;
 
@@ -3394,13 +3394,13 @@ VAR
           IF (TRUE AND ODD(MINUS1)) OR (ODD(MINUS2) AND FALSE) THEN
             CURFIVE^.F3 := EMITMODE + 1;
           CURFIVE^.FLAG := TRUE;
-          IF RELOCATE.W4 = 35 THEN CURFIVE^.F1 := RELOCATE.W3 - G20
+          IF RELOCATE.W4 = 35 THEN CURFIVE^.F1 := RELOCATE.W3 - CODEORG
         END
       ELSE
         BEGIN
           V8 := 3;
           CURFIVE^.FLAG := FALSE;
-          IF RELOCATE.W4 = 35 THEN CURFIVE^.F1 := X1 - G20
+          IF RELOCATE.W4 = 35 THEN CURFIVE^.F1 := X1 - CODEORG
         END
     END;
 
@@ -3426,12 +3426,12 @@ VAR
     BEGIN
       IF X2 THEN
         BEGIN
-          IF RELOCATE.W4 = 35 THEN V4.HWORD := RELOCATE.W3 - G20
+          IF RELOCATE.W4 = 35 THEN V4.HWORD := RELOCATE.W3 - CODEORG
           ELSE V4.HWORD := RELOCATE.W3;
           T27
         END
       ELSE
-        IF RELOCATE.W4 = 35 THEN V6.HWORD := X1 - G20
+        IF RELOCATE.W4 = 35 THEN V6.HWORD := X1 - CODEORG
     END;
 
   BEGIN
@@ -3487,7 +3487,7 @@ VAR
            T2(21)
          END
     END;
-    RELOCATE := G598;
+    RELOCATE := SIXSTATE;
     T13(V6, V8, FALSE)
   END;
 
@@ -3509,20 +3509,20 @@ VAR
   BEGIN
     LINEBUF := LINECOPY;
     LINEPOS := 0;
-    IF NAMEDSRC THEN G40 := BLOCKREAD(SRCFILE, SRCWIN, 2, FILEBLK)
-    ELSE G40 := BLOCKREAD(USERINFO.SYMFIBP^, SRCWIN, 2, FILEBLK);
+    IF NAMEDSRC THEN READBLKS := BLOCKREAD(SRCFILE, SRCWIN, 2, FILEBLK)
+    ELSE READBLKS := BLOCKREAD(USERINFO.SYMFIBP^, SRCWIN, 2, FILEBLK);
     SRCPOS := 0;
-    FILEBLK := FILEBLK + G40;
-    IF G40 = 0 THEN
+    FILEBLK := FILEBLK + READBLKS;
+    IF READBLKS = 0 THEN
       BEGIN
         IF NAMEDSRC THEN
           BEGIN
             FILEBLK := SAVBLK;
             SRCPOS := ERRCOL;
-            G40 := BLOCKREAD(USERINFO.SYMFIBP^, SRCWIN, 2, FILEBLK - 2);
+            READBLKS := BLOCKREAD(USERINFO.SYMFIBP^, SRCWIN, 2, FILEBLK - 2);
             NAMEDSRC := FALSE;
             CLOSE(SRCFILE);
-            G390 := G374
+            CURFILE := INCTITLE
           END
         ELSE
           BEGIN
@@ -3533,7 +3533,7 @@ VAR
       END;
     T5(TRUE);
     LINEPOS := SCAN(102, = CHR(13), SRCWIN[SRCPOS]);
-    G16 := SCAN(1024, = CHR(0), SRCWIN[0]);
+    WINEND := SCAN(1024, = CHR(0), SRCWIN[0]);
     IF LINEPOS < 102 THEN MOVELEFT(SRCWIN[SRCPOS], LINEBUF, LINEPOS)
     ELSE MOVELEFT(SRCWIN[SRCPOS], LINEBUF, 102)
   END;
@@ -3571,7 +3571,7 @@ VAR
       ELSE
         BEGIN
           V3 := ASMCH - 49;
-          V2 := G667[MACLEVEL - 1];
+          V2 := MACBSAVE[MACLEVEL - 1];
           IF MACLEVEL > 1 THEN
             BEGIN
               MACBUFP := MACBUFS[MACLEVEL - 1];
@@ -3599,7 +3599,7 @@ VAR
           IF (ASMCH <> 13) AND (ASMCH <> 59) THEN
             BEGIN
               CHSOURCE := 1;
-              G679[MACLEVEL] := X1;
+              MACPSAVE[MACLEVEL] := X1;
               MACLEVEL := MACLEVEL - 1;
               MACPPOS := V2
             END;
@@ -3632,7 +3632,7 @@ VAR
            ASMCH := ORD(MACBUFP^[MACBPOS]);
            IF ASMCH = 37 THEN
              BEGIN
-               G26 := MACLEVEL;
+               SAVMACL := MACLEVEL;
                T30(MACBPOS)
              END
            ELSE IF (ASMCH = 32) AND FOLDCAS THEN
@@ -3672,8 +3672,8 @@ VAR
                ELSE V1 := SCAN(-70, <> ' ', SRCWIN[MACPPOS - 1]);
                LINEPOS := LINEPOS + V1;
                MACBUFP := MACBUFS[MACLEVEL];
-               IF MACLEVEL = G26 THEN CHSOURCE := 0
-               ELSE MACPPOS := G679[MACLEVEL];
+               IF MACLEVEL = SAVMACL THEN CHSOURCE := 0
+               ELSE MACPPOS := MACPSAVE[MACLEVEL];
                ADVANCE := FALSE;
                T16
              END
@@ -3699,7 +3699,7 @@ VAR
       2: BEGIN
            IF ADVANCE THEN SRCPOS := SRCPOS + 1
            ELSE ADVANCE := TRUE;
-           IF SRCPOS >= G16 THEN T29;
+           IF SRCPOS >= WINEND THEN T29;
            IF (SRCWIN[SRCPOS] = CHR(16)) AND NOT INMACDEF THEN
              BEGIN
                ASMCH := ORD(SRCWIN[SRCPOS + 1]);
@@ -3752,7 +3752,7 @@ VAR
     No locals at all -- the result word is the only thing it writes. }
   FUNCTION T19;                               { .19  14/0 }
   BEGIN
-    IF X2 AND NOT (EXPRVAL IN [0, 22, 23, 24, 25, 34]) AND G63 THEN
+    IF X2 AND NOT (EXPRVAL IN [0, 22, 23, 24, 25, 34]) AND ABSSTART THEN
       BEGIN
         T2(24);
         T19 := FALSE
@@ -3857,7 +3857,7 @@ VAR
       into one, or a unary operator into its operand. I.5's OPERFOLD
       with Apple's changes: the two early EXITs are one guard, local 6
       decides binary against unary, and an assembly that is not
-      relocatable (neither G63 nor RELOCATE.W1) treats every pair as
+      relocatable (neither ABSSTART nor RELOCATE.W1) treats every pair as
       absolute. Attribute 34 is ABS; 0 and 22..25 are the other absolute
       classes. The arms are in I.5's order, which is physical order.
 
@@ -3884,7 +3884,7 @@ VAR
                 IF LATTRIBUTE IN [0, 22, 23, 24, 25] THEN LATTRIBUTE := 34;
                 IF RATTRIBUTE IN [0, 22, 23, 24, 25] THEN RATTRIBUTE := 34;
                 BOTHABSOLUTE := ((LATTRIBUTE = 34) AND (RATTRIBUTE = 34))
-                                OR NOT (G63 OR RELOCATE.W1);
+                                OR NOT (ABSSTART OR RELOCATE.W1);
                 RVALUE := STK[STKINDEX].VALUE;
                 KLUDGETYPE := STK[STKINDEX - 1].TIPE;
                 WITH STK[STKINDEX - 2] DO
@@ -3950,7 +3950,7 @@ VAR
     token 46 (.INTERP, finding 256a) gets an arm of its own. The IN set
     is exactly the union of the CASE labels. }
   BEGIN
-    RELOCATE := G598;
+    RELOCATE := SIXSTATE;
     STKINDEX := -1;
     REPEAT
       IF EXPRADV THEN T17
@@ -3975,8 +3975,8 @@ VAR
                   IF LCCHAR = '*' THEN
                     BEGIN
                       STKINDEX := STKINDEX + 1;
-                      IF G660 = 0 THEN VALUE := G21
-                      ELSE VALUE := G20;
+                      IF EXTMODE = 0 THEN VALUE := SYMSIZE
+                      ELSE VALUE := CODEORG;
                       RELOCATE.W0 := 3;
                       ATRIB := 35;
                       TIPE := 70;
@@ -3994,10 +3994,10 @@ VAR
                   END;
             27: BEGIN
                   STKINDEX := STKINDEX + 1;
-                  IF G660 = 0 THEN VALUE := G21
-                  ELSE VALUE := G20;
-                  IF RELOCATE = G598 THEN RELOCATE.W0 := 3
-                  ELSE IF RELOCATE.W0 = 3 THEN RELOCATE := G598;
+                  IF EXTMODE = 0 THEN VALUE := SYMSIZE
+                  ELSE VALUE := CODEORG;
+                  IF RELOCATE = SIXSTATE THEN RELOCATE.W0 := 3
+                  ELSE IF RELOCATE.W0 = 3 THEN RELOCATE := SIXSTATE;
                   ATRIB := 35;
                   TIPE := 70;
                   IF STKINDEX > 0 THEN OPERFOLD
@@ -4280,7 +4280,7 @@ VAR
           IF MACLEVEL > 0 THEN
             BEGIN
               MACBUFP := MACBUFS[MACLEVEL];
-              MACBPOS := G667[MACLEVEL];
+              MACBPOS := MACBSAVE[MACLEVEL];
               WHILE MACBUFP^[MACBPOS] <> CHR(13) DO MACBPOS := MACBPOS + 1
             END
           ELSE
@@ -4294,9 +4294,9 @@ VAR
           LINEBUF := LINECOPY;
           LINEPOS := -1;
           T7;
-          IF DOSYMDMP AND NOT HASLIST AND (G17 = MACLEVEL) THEN
+          IF DOSYMDMP AND NOT HASLIST AND (MACFREE = MACLEVEL) THEN
             BEGIN
-              G17 := G17 - 1;
+              MACFREE := MACFREE - 1;
               HASLIST := TRUE;
               IF NOPRINT THEN WRITELN
             END;
@@ -4329,7 +4329,7 @@ VAR
             (*$I+*)
             T5(TRUE);
             MARK(KLUDGEPTR);
-            G390 := ALTNAME;
+            CURFILE := ALTNAME;
             FILEBLK := 2;
             SRCPOS := 1024;
             LEXTOKEN := 38;
@@ -4345,7 +4345,7 @@ VAR
     { An identifier: up to eight letters and digits into ID, hashed with
       I.5's shift-and-XOR, and looked up in the 128-bucket chain at
       SYMTAB. A new name is entered with an ASMREC arm chosen by the
-      attribute G658 says is being declared; a macro name instead pushes
+      attribute DEFCLASS says is being declared; a macro name instead pushes
       a new source level and re-enters LEX from the top, which is why it
       EXITs LEX rather than returning. Apple's differences from I.5: an
       underscore is skipped rather than stored, and the macro push saves
@@ -4389,11 +4389,11 @@ VAR
         ELSE CURSYM := CURSYM^.A4;
       IF NOT NAMEHIT THEN
         BEGIN
-          CASE G658 OF
+          CASE DEFCLASS OF
             37: NEW(CURSYM, 0);
             28, 29, 30, 31:
               BEGIN
-                CASE G658 OF
+                CASE DEFCLASS OF
                   28: NEW(CURSYM, 2);
                   30: NEW(CURSYM, 2);
                   31: NEW(CURSYM, 2);
@@ -4413,7 +4413,7 @@ VAR
               END
           END;
           CURSYM^.ANAME := ID;
-          CURSYM^.A5 := G658;
+          CURSYM^.A5 := DEFCLASS;
           CURSYM^.A4 := SYMTAB[HASHA];
           SYMTAB[HASHA] := CURSYM
         END
@@ -4421,8 +4421,8 @@ VAR
         IF MACLEVEL = 5 THEN T2(34)
         ELSE
           BEGIN
-            IF MACLEVEL > 0 THEN G667[MACLEVEL] := MACBPOS
-            ELSE G667[MACLEVEL] := SRCPOS;
+            IF MACLEVEL > 0 THEN MACBSAVE[MACLEVEL] := MACBPOS
+            ELSE MACBSAVE[MACLEVEL] := SRCPOS;
             WHILE ASMCH <> 13 DO T16;
             T10;
             CHSOURCE := 0;
@@ -4431,8 +4431,8 @@ VAR
             MACLEVEL := MACLEVEL + 1;
             MACBUFS[MACLEVEL] := CURSYM^.A6P;
             MACBUFP := CURSYM^.A6P;
-            IF G17 = MACLEVEL - 1 THEN
-              IF ODD(ORD(MACBUFP^[0])) THEN G17 := MACLEVEL
+            IF MACFREE = MACLEVEL - 1 THEN
+              IF ODD(ORD(MACBUFP^[0])) THEN MACFREE := MACLEVEL
               ELSE
                 BEGIN
                   HASLIST := FALSE;
@@ -4475,7 +4475,7 @@ VAR
       IF V1 THEN
         BEGIN
           LOCLCUR := LOCLLVLS[V4];
-          IF V4 + 1 = G26 THEN V3 := LOCLBASE
+          IF V4 + 1 = SAVMACL THEN V3 := LOCLBASE
           ELSE V3 := LOCLLVLS[V4 + 1]
         END
       ELSE
@@ -4507,7 +4507,7 @@ VAR
               BEGIN
                 MOVERIGHT(LOCLTAB[LOCLCUR], LOCLTAB[LOCLCUR + 1], 14 * (LOCLTOP - LOCLCUR));
                 LOCLBASE := LOCLBASE + 1;
-                FOR I := V4 + 1 TO G26 - 1 DO
+                FOR I := V4 + 1 TO SAVMACL - 1 DO
                   LOCLLVLS[I] := LOCLLVLS[I] + 1
               END;
             WITH LOCLTAB[LOCLCUR] DO

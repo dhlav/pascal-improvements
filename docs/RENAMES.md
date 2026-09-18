@@ -186,3 +186,62 @@ Tables, files, and clear control flags. **~52 unique `G*` remain.**
 | `G12` | `HASLIST` | `LISTNAME <> ''` / listing enabled |
 | `G657` | `FREEFIVE` | free list of `FIVEP` reloc nodes |
 | `G628` | `NEWREF` | newly allocated `REFP` on reloc chain |
+
+## 2026-09-17 — ASSMBLER fourth batch (47 ids) + final gaps (4)
+
+Clears **all** remaining `G*` in `ASSMBLER.text` (112 → 0).
+
+### Counters / positions / flags (selected)
+| Old | New | Role |
+|-----|-----|------|
+| `G5` | `CODEIX` | emit index into code buffer |
+| `G9` | `CODEBLK` | codefile block number for `BLOCKWRITE` |
+| `G16` | `WINEND` | end of live `SRCWIN` data |
+| `G17` | `MACFREE` | free `MACBUFS` slot index |
+| `G18` | `MINMEM` | reported minimum heap words |
+| `G19` | `SAVLC` | saved location counter |
+| `G20` | `CODEORG` | code origin passed to emit helper |
+| `G21` | `SYMSIZE` | accumulated into `CURSYM^.A6` |
+| `G23` | `PROCIDX` | procedure index counter |
+| `G24`/`G25` | `LIEND`/`LIPOS` | linker-info file extent / position |
+| `G26` | `SAVMACL` | saved `MACLEVEL` |
+| `G31` | `FLAGCNT` | “errors flagged” count on listing |
+| `G32` | `LISTLINE` | listing line counter |
+| `G33` | `LINECNT` | source lines assembled |
+| `G34` | `PAGENUM` | listing page number |
+| `G35` | `TOTCODE` | total code size accumulator |
+| `G40` | `READBLKS` | blocks returned by `BLOCKREAD` |
+| `G45`–`G48` | `RELCNT4`–`RELCNT1` | reloc counts paired with `RELTAB*` |
+| `G49` | `SEGBASE` | segment base (`EMITMODE` delta) |
+| `G50` | `MAXCBLK` | high-water code block |
+| `G51` | `MAXEMIT` | high-water `EMITMODE` |
+| `G53`/`G54` | `PAGEOFF`/`PAGEBASE` | within-page offset / page base |
+| `G55` | `MACFLAG` | first byte of macro buffer / mode |
+| `G56` | `LISTON` | listing detail toggle |
+| `G57` | `BIGEND` | endian probe (`BYTES[1]=CHR(1)`) |
+| `G63` | `ABSSTART` | absolute-start / first-segment gate |
+| `G66` | `HDRDONE` | listing header already emitted |
+| `G658` | `DEFCLASS` | default symbol class |
+| `G660` | `EXTMODE` | `.DEF`/`.REF` external mode |
+
+### Tables / strings / heap
+| Old | New | Role |
+|-----|-----|------|
+| `G629`–`G650` | `RELTAB4`–`RELTAB1` | `SEVEN` reloc tables |
+| `G667`/`G679` | `MACBSAVE`/`MACPSAVE` | per-level macro positions |
+| `G374`/`G390` | `INCTITLE`/`CURFILE` | include / current file titles |
+| `G598` | `SIXSTATE` | `SIXREC` reloc/state block |
+| `G2158` | `HEAPMARK` | `MARK`/`RELEASE` pointer |
+| `G2159` | `SEGNAME` | 8-char name on listing banner |
+| `G2163` | `ERRNAME` | first erroring symbol name |
+| `G2167` | `ERRSIZES` | per-error size vector |
+
+### Frame gaps (unused declarations kept for layout)
+| Old | New |
+|-----|-----|
+| `G30` | `GAP30` |
+| `G61` | `UNUSED61` |
+| `G604` | `GAP604` |
+| `G2128` | `GAP2128` |
+
+Stale comment `LOCLTAB[G624]` → `LOCLTAB[LOCLCUR]`.

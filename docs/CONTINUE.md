@@ -12,13 +12,13 @@
 - Linker: `WORDHEAP` / `INTRLINK` / `HOSTSLOT`
 - GETCMD: all `GC*` → role names (`SEGOFENT`, `USELIB`, `AFTERCMP`, …)
 - LINKER/LIBRARY/FILER: `CLOSEINS`/`QUITLINK`/`STRIPDLE`/`CHECKVER`/…
-- ASSMBLER: 60 `G*` renamed (`SYMTAB`, `LISTFILE`, `HASLIST`, …); ~52 left
+- ASSMBLER: **all 112 `G*` renamed** (no `G*` left in ASSMBLER.text)
 - Docs: `RENAMES.md`, `PLACEHOLDERS.md`, `CONTINUE.md`
 
 ## Next
 
-Continue **ASSMBLER `G*`** (flags/SEVEN pools/string temps), or a clarity
-scan / natives.
+**Natives** (TURTLEGR/LONGINTS `L*` labels), or a **clarity scan**
+(TAB/ODD/silent CASE), or low-value loop indices (`L85`/`M2`).
 
 ## Remember
 
