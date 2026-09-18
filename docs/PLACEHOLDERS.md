@@ -21,27 +21,13 @@ Already done on this fork: see `docs/RENAMES.md`.
 | `LINKER.text` | ~~`L12`~~ | ~~linking an intrinsic unit~~ | **done → `INTRLINK`** |
 | `LINKER.text` | ~~`G29`~~ | ~~host segment's slot~~ | **done → `HOSTSLOT`** |
 
-FILER + LINKER comment-backed globals done. Next: GETCMD `GC*` from FINDINGS 225–227.
+FILER + LINKER comment-backed globals done. GETCMD `GC*` renamed 2026-09-17.
 
-### Tier B — FINDINGS map exists; need careful GETCMD.* → English names
+### Tier B — GETCMD GC* (done)
 
-`PASCALSYSTEM.text` still uses `GC05`…`GC24` inside `GETCMD` even where
-FINDINGS already equate them to `GETCMD.N` (esp. **225–227**):
-
-| ID | FINDINGS / comment lead | Notes |
-|----|-------------------------|--------|
-| `GC05` | GETCMD.5 — segment-number / `SEGINFO` reader | Function; exact in binary |
-| `GC07`–`GC18` | GETCMD.11 nested family (lib list / associate path) | Nested; renumber risk if moved |
-| `GC21` | (in GETCMD body region) | Confirm before rename |
-| `GC22`, `GC24` | compile/link finish helpers near `RUNWORKFILE` | Often already described in prose |
-
-**Do not invent** names here: promote only when FINDINGS gives a stable
-English name (e.g. `SYSASSOC` already replaced `GETCMD.3`). Prefer a
-dedicated pass: one helper → one commit → optional OS recompile if you
-want acceptance source synced (offsets unchanged ⇒ bytes should match).
-
-Also leftover locals: `L54`, `L396`, `L696` in PASCALSYSTEM — treat as
-Tier C unless comments pin them.
+All `GC05`…`GC24` → role-based English names (STRONG INFERENCE from
+FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
+`L54`, `L396`, `L696` in PASCALSYSTEM — tier C unless comments pin them.
 
 ### Tier C — listed as “no ancestor” (memory / finding 291–294 leftovers)
 
@@ -85,10 +71,10 @@ Tier C unless comments pin them.
 | File | Placeholders (unique) |
 |------|------------------------|
 | ASSMBLER | ~112 `G*` |
-| PASCALSYSTEM | 16 `GC*` + 3 `L*` |
+| PASCALSYSTEM | 3 `L*` (GC* renamed) |
 | EDITOR | 17 `L*` + `XXX`/`YYY` |
-| LINKER | 2 `G*` + 4 `LK*` + 2 `L*` |
-| FILER | 2 `G*` + 1 `FL*` + 3 `L*` |
+| LINKER | 4 `LK*` + 1 `L*` (G*/L12 renamed) |
+| FILER | 1 `FL*` + 3 `L*` (G361/G362 renamed) |
 | LIBRARY | 1 `G*` + 2 `LB*` |
 | LIBMAP | 1 `L*` |
 | TURTLEGR native | ~54 `L*` |
