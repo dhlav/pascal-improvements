@@ -30,3 +30,12 @@ Rename only; no intended code-byte change (identifiers are not stored in p-code)
 | `G362` | `SRCBLKS` | blocks on the source volume |
 
 Source-only; `probe_filer_whole` still green (byte-identical to shipped).
+
+## 2026-09-17 — LINKER flags
+
+| Old | New | Role |
+|-----|-----|------|
+| `G91` | `WORDHEAP` | heap pointers count words |
+| `L12` | `INTRLINK` | linking an intrinsic unit |
+
+Source-only; `probe_linker_whole` still green (byte-identical to shipped).

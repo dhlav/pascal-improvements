@@ -261,7 +261,7 @@ VAR
   MAPNAME: STRING[39];
   CODE: CODEFILE;
   FLIPPED: BOOLEAN;     { segment tables are byte-flipped }
-  G91: BOOLEAN;         { heap pointers count words }
+  WORDHEAP: BOOLEAN;         { heap pointers count words }
 
 { Close every input file. }
 
@@ -469,7 +469,7 @@ FUNCTION GETCODEP(MEMADDR, OFFSET: INTEGER): CODEP;
              FALSE: (P: CODEP)
          END;
 BEGIN
-  IF G91 THEN
+  IF WORDHEAP THEN
     R.I := MEMADDR+OFFSET DIV 2
   ELSE
     R.I := MEMADDR+OFFSET;
@@ -786,7 +786,7 @@ BEGIN { PHASE1 }
   HIGHBYTE := ORD(INT.BYTES[0] = 1);
   NEW(L1);
   NEW(L1);
-  G91 := ORD(L1)-ORD(HEAPBASE) = 1;
+  WORDHEAP := ORD(L1)-ORD(HEAPBASE) = 1;
   RELEASE(HEAPBASE);
   BUILDFILELIST;
   IF ERRCOUNT > 0 THEN
@@ -1107,7 +1107,7 @@ PROCEDURE PHASE3;
       SEGLENG, NEXTBLK: INTEGER;
       UPROCS, PROCS, ULOCAL, LOCAL, UOTHER, OTHER: WORKP;
       SEPHOST: BOOLEAN;
-      L12: BOOLEAN;         { linking an intrinsic unit }
+      INTRLINK: BOOLEAN;         { linking an intrinsic unit }
       FNAME: STRING[39];
       SEGTBL: SEGDICT;
       FILLER: ARRAY [0..111] OF INTEGER;
@@ -1314,7 +1314,7 @@ PROCEDURE PHASE3;
                             DEFPROC := NIL
                           END;
 
-              CONSTREF:   IF L12 THEN
+              CONSTREF:   IF INTRLINK THEN
                             BEGIN
                               DEFSYM := SYMSRCH(NAME, CONSTDEF,
                                                 SEGINFO[S]^.SYMTAB);
@@ -1328,7 +1328,7 @@ PROCEDURE PHASE3;
                                 DEFSEG := HOSTSP
                               END;
 
-              PUBLREF:    IF L12 THEN
+              PUBLREF:    IF INTRLINK THEN
                             BEGIN
                               DEFSYM := SYMSRCH(NAME, PUBLDEF,
                                                 SEGINFO[S]^.SYMTAB);
@@ -1342,7 +1342,7 @@ PROCEDURE PHASE3;
                                 DEFSEG := HOSTSP
                               END;
 
-              PRIVREF:    IF L12 THEN
+              PRIVREF:    IF INTRLINK THEN
                             BEGIN
                               NEWOFFSET := SEGINFO[S]^.PRIVLC;
                               SEGINFO[S]^.PRIVLC :=
@@ -1831,7 +1831,7 @@ PROCEDURE PHASE3;
             BEGIN
               SEGTBL.SEGMISC[S].MTYPE :=
                 DEFSEG^.SRCFILE^.SEGTBL.SEGMISC[DEFSEG^.SRCSEG].MTYPE;
-              IF L12 THEN
+              IF INTRLINK THEN
                 STOREBYTE(SEGINFO[S]^.DSEGNUM, JTAB, 1)
             END;
           PDP := GETCODEP(ORD(SEGBASE), SEGLENG-2*NEWPROC-2);
@@ -1865,11 +1865,11 @@ PROCEDURE PHASE3;
                           VAL := DEFSYM^.ENTRY.BASEOFFSET;
                         IF FORMAT = WORD THEN
                           BEGIN
-                            IF L12 THEN
+                            IF INTRLINK THEN
                               VAL := (VAL-1)*2
                             ELSE
                               VAL := (VAL-1)*2+MSDELTA;
-                            IF G91 THEN
+                            IF WORDHEAP THEN
                               VAL := VAL DIV 2
                           END
                         ELSE
@@ -1940,11 +1940,11 @@ PROCEDURE PHASE3;
         NBLOCKS: INTEGER;
         JTAB: CODEP;
   BEGIN
-    IF (HOSTSP = SEGINFO[S]) OR L12 THEN
+    IF (HOSTSP = SEGINFO[S]) OR INTRLINK THEN
       BEGIN
         JTAB := GETCODEP(ORD(SEGBASE), SEGLENG-4);
         JTAB := GETCODEP(ORD(JTAB), -FETCHWORD(JTAB, 0)-8);
-        IF L12 THEN
+        IF INTRLINK THEN
           BEGIN
             IF SEGINFO[S]^.DSEGNUM <> 0 THEN
               WITH HOSTFILE^.SEGTBL DO
@@ -1970,7 +1970,7 @@ PROCEDURE PHASE3;
         DISKINFO[S].CODEADDR := NEXTBLK;
         DISKINFO[S].CODELENG := SEGLENG;
         SEGNAME[S] := SRCFILE^.SEGTBL.SEGNAME[SRCSEG];
-        IF L12 THEN
+        IF INTRLINK THEN
           SEGKIND[S] := LINKED_INTRINS
         ELSE
           SEGKIND[S] := LINKED;
@@ -2056,7 +2056,7 @@ PROCEDURE PHASE3;
         SEGTBL.SEGMISC[S].MTYPE := PCODELEAST;
         SEGTBL.SEGMISC[S].VERSION := 6
       END;
-    L12 := HOSTFILE^.SEGTBL.SEGKIND[S] IN [UNLINKED_INTRINS,
+    INTRLINK := HOSTFILE^.SEGTBL.SEGKIND[S] IN [UNLINKED_INTRINS,
                                            LINKED_INTRINS];
     IF TALKATIVE THEN
       WITH SEGINFO[S]^ DO
@@ -2069,7 +2069,7 @@ PROCEDURE PHASE3;
           WRITEMAP;
         IF HOSTFILE^.SEGTBL.SEGKIND[S] <> DATASEG THEN
           BEGIN
-            IF L12 THEN
+            IF INTRLINK THEN
               BEGIN
                 MARK(L4);
                 L1 := HOSTFILE^.SEGTBL.DISKINFO[S].CODEADDR

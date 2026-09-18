@@ -10,9 +10,15 @@
   reference_source/ucsd_15. Its three phases, its record
   layouts and most of its bodies survive into Apple's 1.3
   binary unchanged, and its names are used wherever the binary
-  confirms the role. What Apple added has no name to borrow
-  and carries a placeholder instead: LK<n> for procedure n,
-  G<n> for global word n, L<n> or M<n> for local word n.
+  confirms the role. The II.0 revision of the same linker
+  (March 1979, in github.com/dhlav/ucsd-psystem-os, linker/)
+  adds the byte-flipping and the small-memory procedure copy,
+  and names them: FLIPPED, BYTESWAP, STOREBIG, FLIPTABLE,
+  COPYPROC and their locals, and the FILLER after the output
+  segment table (finding 291). What Apple added past II.0 has
+  no name to borrow and carries a placeholder instead: LK<n>
+  for procedure n, G<n> for global word n, L<n> or M<n> for
+  local word n.
 
   Range checking is on and I/O checking is off: the binary has
   CHK everywhere but in procedures 6 to 10, and not one CSP 0.
@@ -254,8 +260,8 @@ VAR
   G29: SEGINDEX;        { host segment's slot, MAXSEG1 if none }
   MAPNAME: STRING[39];
   CODE: CODEFILE;
-  G90: BOOLEAN;         { segment tables are byte-flipped }
-  G91: BOOLEAN;         { heap pointers count words }
+  FLIPPED: BOOLEAN;     { segment tables are byte-flipped }
+  WORDHEAP: BOOLEAN;         { heap pointers count words }
 
 { Close every input file. }
 
@@ -293,13 +299,13 @@ END { ERROR } ;
 
 { Swap the two bytes of a word. }
 
-PROCEDURE LK5(VAR X: INTEGER);
-  VAR B, A: SWAPREC;
+PROCEDURE BYTESWAP(VAR WORD: INTEGER);
+  VAR TEMP1, TEMP2: SWAPREC;
 BEGIN
-  B.INTEG := X;
-  A.LOWBYTE := B.HIGHBYTE;
-  A.HIGHBYTE := B.LOWBYTE;
-  X := A.INTEG
+  TEMP1.INTEG := WORD;
+  TEMP2.LOWBYTE := TEMP1.HIGHBYTE;
+  TEMP2.HIGHBYTE := TEMP1.LOWBYTE;
+  WORD := TEMP2.INTEG
 END;
 
 (*$R-*)
@@ -313,8 +319,8 @@ FUNCTION FETCHWORD(CP: CODEP; OFFSET: INTEGER): INTEGER;
   VAR I: INTEGER;
 BEGIN
   MOVELEFT(CP^[OFFSET], I, 2);
-  IF G90 THEN
-    LK5(I);
+  IF FLIPPED THEN
+    BYTESWAP(I);
   FETCHWORD := I
 END { FETCHWORD } ;
 
@@ -325,44 +331,44 @@ END { STOREBYTE } ;
 
 PROCEDURE STOREWORD(VAL: INTEGER; CP: CODEP; OFFSET: INTEGER);
 BEGIN
-  IF G90 THEN
-    LK5(VAL);
+  IF FLIPPED THEN
+    BYTESWAP(VAL);
   MOVELEFT(VAL, CP^[OFFSET], 2)
 END { STOREWORD } ;
 
 { A BIG-format reference: high byte first, with the top bit set. }
 
-PROCEDURE LK10(VAL: INTEGER; CP: CODEP; OFFSET: INTEGER);
-  VAR R: SWAPREC;
+PROCEDURE STOREBIG(VAL: INTEGER; CP: CODEP; OFFSET: INTEGER);
+  VAR BIGWORD: SWAPREC;
 BEGIN
-  R.INTEG := VAL;
-  CP^[OFFSET] := R.HIGHBYTE+128;
-  CP^[OFFSET+1] := R.LOWBYTE
+  BIGWORD.INTEG := VAL;
+  CP^[OFFSET] := BIGWORD.HIGHBYTE+128;
+  CP^[OFFSET+1] := BIGWORD.LOWBYTE
 END;
 
 (*$R+*)
 
 { Byte-swap a whole segment dictionary. }
 
-PROCEDURE LK11(VAR SEGTBL: SEGDICT);
+PROCEDURE FLIPTABLE(VAR TABLE: SEGDICT);
   VAR S: SEGRANGE;
-      X: WORDREC;
+      WORD: WORDREC;
 BEGIN
   FOR S := 0 TO MAXSEG DO
-    WITH SEGTBL DO
+    WITH TABLE DO
       BEGIN
         WITH DISKINFO[S] DO
           BEGIN
-            LK5(CODEADDR);
-            LK5(CODELENG)
+            BYTESWAP(CODEADDR);
+            BYTESWAP(CODELENG)
           END;
-        X.KIND := SEGKIND[S];
-        LK5(X.INTEG);
-        SEGKIND[S] := X.KIND;
-        LK5(SEGDATA[S]);
-        X.MISC := SEGMISC[S];
-        LK5(X.INTEG);
-        SEGMISC[S] := X.MISC
+        WORD.KIND := SEGKIND[S];
+        BYTESWAP(WORD.INTEG);
+        SEGKIND[S] := WORD.KIND;
+        BYTESWAP(SEGDATA[S]);
+        WORD.MISC := SEGMISC[S];
+        BYTESWAP(WORD.INTEG);
+        SEGMISC[S] := WORD.MISC
       END
 END;
 
@@ -463,7 +469,7 @@ FUNCTION GETCODEP(MEMADDR, OFFSET: INTEGER): CODEP;
              FALSE: (P: CODEP)
          END;
 BEGIN
-  IF G91 THEN
+  IF WORDHEAP THEN
     R.I := MEMADDR+OFFSET DIV 2
   ELSE
     R.I := MEMADDR+OFFSET;
@@ -481,8 +487,8 @@ END;
 
 PROCEDURE PHASE1;
   VAR L1: ^INTEGER;
-      L2: 0..1;          { index of a word's high byte }
-      L3: WORDREC;
+      HIGHBYTE: 0..1;    { index of a word's high byte }
+      INT: WORDREC;
 
   PROCEDURE BUILDFILELIST;
     VAR I: INTEGER;
@@ -536,14 +542,14 @@ PROCEDURE PHASE1;
               IF KIND = USERHOST THEN
                 FOR S := 0 TO MAXSEG DO
                   BEGIN
-                    L3.KIND := FP^.SEGTBL.SEGKIND[S];
-                    G90 := L3.BYTES[L2] <> 0;
-                    IF G90 THEN
+                    INT.KIND := FP^.SEGTBL.SEGKIND[S];
+                    FLIPPED := INT.BYTES[HIGHBYTE] <> 0;
+                    IF FLIPPED THEN
                       GOTO 1
                   END;
             1:
-              IF G90 THEN
-                LK11(FP^.SEGTBL);
+              IF FLIPPED THEN
+                FLIPTABLE(FP^.SEGTBL);
               S := 0;
               ALLLINKED := TRUE;
               ERRS := ERRCOUNT;
@@ -556,8 +562,8 @@ PROCEDURE PHASE1;
                               LINKED_INTRINS, DATASEG];
               WITH FP^.SEGTBL DO
                 REPEAT
-                  L3.KIND := SEGKIND[S];
-                  IF L3.BYTES[L2] <> 0 THEN
+                  INT.KIND := SEGKIND[S];
+                  IF INT.BYTES[HIGHBYTE] <> 0 THEN
                     BEGIN
                       ERROR('bad byte sex');
                       LK3
@@ -775,12 +781,12 @@ BEGIN { PHASE1 }
   TALKATIVE := NOT USERINFO.SLOWTERM;
   MARK(HEAPBASE);
   UNITWRITE(3, HEAPBASE^, 35);
-  G90 := FALSE;
-  L3.INTEG := 1;
-  L2 := ORD(L3.BYTES[0] = 1);
+  FLIPPED := FALSE;
+  INT.INTEG := 1;
+  HIGHBYTE := ORD(INT.BYTES[0] = 1);
   NEW(L1);
   NEW(L1);
-  G91 := ORD(L1)-ORD(HEAPBASE) = 1;
+  WORDHEAP := ORD(L1)-ORD(HEAPBASE) = 1;
   RELEASE(HEAPBASE);
   BUILDFILELIST;
   IF ERRCOUNT > 0 THEN
@@ -801,13 +807,12 @@ PROCEDURE PHASE2;
   PROCEDURE READLINKINFO(SP: SEGP; OKTYPES: LISET);
     VAR RP, RQ: REFP;
         SYP: SYMP;
-        ERRS, NRECS, NEXTBLK, RECSLEFT: INTEGER;
-        L10: INTEGER;
+        W, ERRS, NRECS, NEXTBLK, RECSLEFT: INTEGER;
         ENTRY, TEMP: LIENTRY;
         BUF: ARRAY [0..31] OF
                ARRAY [0..7] OF INTEGER;
-        L285: ARRAY [0..7] OF INTEGER;
-        L293: BOOLEAN;
+        TENTRY: ARRAY [0..7] OF INTEGER;
+        OKTOADD: BOOLEAN;
 
     PROCEDURE GETENTRY(VAR ENTRY: LIENTRY);
       VAR ERR: BOOLEAN;
@@ -886,14 +891,14 @@ PROCEDURE PHASE2;
           WRITELN('Reading ', SEGNAME[SP^.SRCSEG])
       END;
     REPEAT
-      L293 := TRUE;
+      OKTOADD := TRUE;
       GETENTRY(ENTRY);
-      IF G90 THEN
+      IF FLIPPED THEN
         BEGIN
-          MOVELEFT(ENTRY, L285, 16);
-          FOR L10 := 4 TO 7 DO
-            LK5(L285[L10]);
-          MOVELEFT(L285, ENTRY, 16)
+          MOVELEFT(ENTRY, TENTRY, 16);
+          FOR W := 4 TO 7 DO
+            BYTESWAP(TENTRY[W]);
+          MOVELEFT(TENTRY, ENTRY, 16)
         END;
       ERRS := ERRCOUNT;
       IF ENTRY.LITYPE <> EOFMARK THEN
@@ -911,7 +916,7 @@ PROCEDURE PHASE2;
           DUMPSEPS := FALSE;
       IF ENTRY.LITYPE IN REFLITYPES THEN
         IF ENTRY.NREFS = 0 THEN
-          L293 := FALSE
+          OKTOADD := FALSE
         ELSE
           BEGIN
             NRECS := (ENTRY.NREFS+7) DIV 8;
@@ -920,9 +925,9 @@ PROCEDURE PHASE2;
                 GETENTRY(TEMP);
                 NEW(RP);
                 MOVELEFT(TEMP, RP^.REFS, 16);
-                IF G90 THEN
-                  FOR L10 := 0 TO 7 DO
-                    LK5(RP^.REFS[L10]);
+                IF FLIPPED THEN
+                  FOR W := 0 TO 7 DO
+                    BYTESWAP(RP^.REFS[W]);
                 RP^.NEXT := ENTRY.REFLIST;
                 ENTRY.REFLIST := RP;
                 NRECS := NRECS-1
@@ -952,15 +957,15 @@ PROCEDURE PHASE2;
                 BEGIN
                   IF ENTRY.DATANUM <> 0 THEN
                     WITH HOSTFILE^.SEGTBL DO
-                      FOR L10 := 0 TO MAXSEG DO
-                        IF SEGMISC[L10].SEGNUM = ENTRY.DATANUM THEN
-                          SP^.PRIVLC := DISKINFO[L10].CODELENG DIV 2
+                      FOR W := 0 TO MAXSEG DO
+                        IF SEGMISC[W].SEGNUM = ENTRY.DATANUM THEN
+                          SP^.PRIVLC := DISKINFO[W].CODELENG DIV 2
                                         + 1;
                   SP^.DSEGNUM := ENTRY.DATANUM
                 END
         ELSE
       ELSE
-        IF (ERRS = ERRCOUNT) AND L293 THEN
+        IF (ERRS = ERRCOUNT) AND OKTOADD THEN
           BEGIN
             NEW(SYP);
             SYP^.ENTRY := ENTRY;
@@ -1102,10 +1107,10 @@ PROCEDURE PHASE3;
       SEGLENG, NEXTBLK: INTEGER;
       UPROCS, PROCS, ULOCAL, LOCAL, UOTHER, OTHER: WORKP;
       SEPHOST: BOOLEAN;
-      L12: BOOLEAN;         { linking an intrinsic unit }
+      INTRLINK: BOOLEAN;         { linking an intrinsic unit }
       FNAME: STRING[39];
       SEGTBL: SEGDICT;
-      L289: ARRAY [0..111] OF INTEGER;
+      FILLER: ARRAY [0..111] OF INTEGER;
       MAP: TEXT;
 
   PROCEDURE BUILDWORKLISTS;
@@ -1309,7 +1314,7 @@ PROCEDURE PHASE3;
                             DEFPROC := NIL
                           END;
 
-              CONSTREF:   IF L12 THEN
+              CONSTREF:   IF INTRLINK THEN
                             BEGIN
                               DEFSYM := SYMSRCH(NAME, CONSTDEF,
                                                 SEGINFO[S]^.SYMTAB);
@@ -1323,7 +1328,7 @@ PROCEDURE PHASE3;
                                 DEFSEG := HOSTSP
                               END;
 
-              PUBLREF:    IF L12 THEN
+              PUBLREF:    IF INTRLINK THEN
                             BEGIN
                               DEFSYM := SYMSRCH(NAME, PUBLDEF,
                                                 SEGINFO[S]^.SYMTAB);
@@ -1337,7 +1342,7 @@ PROCEDURE PHASE3;
                                 DEFSEG := HOSTSP
                               END;
 
-              PRIVREF:    IF L12 THEN
+              PRIVREF:    IF INTRLINK THEN
                             BEGIN
                               NEWOFFSET := SEGINFO[S]^.PRIVLC;
                               SEGINFO[S]^.PRIVLC :=
@@ -1709,13 +1714,13 @@ PROCEDURE PHASE3;
         WP: WORKP;
         CURSP: SEGP;
         LHEAP: ^INTEGER;
-        L9: BOOLEAN;        { no room: copy from the disk directly }
+        SMALLMEM: BOOLEAN;  { no room: copy from the disk directly }
 
     PROCEDURE READSEPSEG(SP: SEGP);
       VAR N, NBLOCKS: INTEGER;
     BEGIN
       RELEASE(LHEAP);
-      L9 := FALSE;
+      SMALLMEM := FALSE;
       N := SP^.SRCFILE^.SEGTBL.DISKINFO[SP^.SRCSEG].CODELENG;
       NBLOCKS := (N+511) DIV 512;
       IF MEMAVAIL-100 < NBLOCKS*256 THEN
@@ -1725,8 +1730,8 @@ PROCEDURE PHASE3;
             LK3
           END
         ELSE
-          L9 := TRUE;
-      IF NOT L9 THEN
+          SMALLMEM := TRUE;
+      IF NOT SMALLMEM THEN
         BEGIN
           N := NBLOCKS;
           REPEAT
@@ -1748,46 +1753,46 @@ PROCEDURE PHASE3;
     { Copy one procedure's code straight off the disk, one block
       at a time, when the whole segment does not fit. }
 
-    PROCEDURE LK46(SP: SEGP; SRCBASE: INTEGER; DEST: CODEP;
-                   LENG: ICRANGE);
-      VAR M9, M8, M7, M6, M5: INTEGER;
+    PROCEDURE COPYPROC(SP: SEGP; SRCOFFSET: INTEGER; CP: CODEP;
+                       SIZE: ICRANGE);
+      VAR STARTBLK, LASTBLK, NBLKS, BLK, COPYBYTES: INTEGER;
     BEGIN
       RELEASE(LHEAP);
-      M9 := SRCBASE DIV 512;
-      M7 := (LENG+SRCBASE MOD 512+511) DIV 512;
-      IF MEMAVAIL-100 >= M7*256 THEN
+      STARTBLK := SRCOFFSET DIV 512;
+      NBLKS := (SIZE+SRCOFFSET MOD 512+511) DIV 512;
+      IF MEMAVAIL-100 >= NBLKS*256 THEN
         BEGIN
-          M8 := M9;
-          M5 := LENG
+          LASTBLK := STARTBLK;
+          COPYBYTES := SIZE
         END
       ELSE
         BEGIN
-          M8 := M9+M7-1;
-          M5 := 512-SRCBASE MOD 512;
-          M7 := 1
+          LASTBLK := STARTBLK+NBLKS-1;
+          COPYBYTES := 512-SRCOFFSET MOD 512;
+          NBLKS := 1
         END;
       NEW(SEPBASE);
       WITH SP^, SRCFILE^ DO
-        FOR M6 := M9 TO M8 DO
-          IF BLOCKREAD(CODE^, SEPBASE^, M7,
-                       SEGTBL.DISKINFO[SRCSEG].CODEADDR+M6) <> M7 THEN
+        FOR BLK := STARTBLK TO LASTBLK DO
+          IF BLOCKREAD(CODE^, SEPBASE^, NBLKS,
+                       SEGTBL.DISKINFO[SRCSEG].CODEADDR+BLK) <> NBLKS THEN
             BEGIN
               ERROR('proc read error');
               LK3
             END
           ELSE
-            IF M6 = M9 THEN
+            IF BLK = STARTBLK THEN
               BEGIN
-                MOVELEFT(SEPBASE^[SRCBASE MOD 512], DEST^, M5);
-                DEST := GETCODEP(ORD(DEST), M5)
+                MOVELEFT(SEPBASE^[SRCOFFSET MOD 512], CP^, COPYBYTES);
+                CP := GETCODEP(ORD(CP), COPYBYTES)
               END
             ELSE
-              IF M6 = M8 THEN
-                MOVELEFT(SEPBASE^, DEST^, (SRCBASE+LENG) MOD 512)
+              IF BLK = LASTBLK THEN
+                MOVELEFT(SEPBASE^, CP^, (SRCOFFSET+SIZE) MOD 512)
               ELSE
                 BEGIN
-                  MOVELEFT(SEPBASE^, DEST^, 512);
-                  DEST := GETCODEP(ORD(DEST), 512)
+                  MOVELEFT(SEPBASE^, CP^, 512);
+                  CP := GETCODEP(ORD(CP), 512)
                 END
     END;
 
@@ -1811,8 +1816,8 @@ PROCEDURE PHASE3;
               WRITELN(NAME)
             END;
           CP1 := GETCODEP(ORD(SEGBASE), PLACE^.DESTBASE);
-          IF L9 THEN
-            LK46(DEFSEG, PLACE^.SRCBASE, CP1, PLACE^.LENGTH)
+          IF SMALLMEM THEN
+            COPYPROC(DEFSEG, PLACE^.SRCBASE, CP1, PLACE^.LENGTH)
           ELSE
             BEGIN
               CP0 := GETCODEP(ORD(SEPBASE), PLACE^.SRCBASE);
@@ -1826,7 +1831,7 @@ PROCEDURE PHASE3;
             BEGIN
               SEGTBL.SEGMISC[S].MTYPE :=
                 DEFSEG^.SRCFILE^.SEGTBL.SEGMISC[DEFSEG^.SRCSEG].MTYPE;
-              IF L12 THEN
+              IF INTRLINK THEN
                 STOREBYTE(SEGINFO[S]^.DSEGNUM, JTAB, 1)
             END;
           PDP := GETCODEP(ORD(SEGBASE), SEGLENG-2*NEWPROC-2);
@@ -1860,11 +1865,11 @@ PROCEDURE PHASE3;
                           VAL := DEFSYM^.ENTRY.BASEOFFSET;
                         IF FORMAT = WORD THEN
                           BEGIN
-                            IF L12 THEN
+                            IF INTRLINK THEN
                               VAL := (VAL-1)*2
                             ELSE
                               VAL := (VAL-1)*2+MSDELTA;
-                            IF G91 THEN
+                            IF WORDHEAP THEN
                               VAL := VAL DIV 2
                           END
                         ELSE
@@ -1919,7 +1924,7 @@ PROCEDURE PHASE3;
                     WORD:  STOREWORD(VAL+FETCHWORD(SEGBASE, REF),
                                      SEGBASE, REF);
                     BYTE:  STOREBYTE(VAL, SEGBASE, REF);
-                    BIG:   LK10(VAL, SEGBASE, REF)
+                    BIG:   STOREBIG(VAL, SEGBASE, REF)
                   END;
                 I := I-1
               UNTIL I < 0;
@@ -1935,11 +1940,11 @@ PROCEDURE PHASE3;
         NBLOCKS: INTEGER;
         JTAB: CODEP;
   BEGIN
-    IF (HOSTSP = SEGINFO[S]) OR L12 THEN
+    IF (HOSTSP = SEGINFO[S]) OR INTRLINK THEN
       BEGIN
         JTAB := GETCODEP(ORD(SEGBASE), SEGLENG-4);
         JTAB := GETCODEP(ORD(JTAB), -FETCHWORD(JTAB, 0)-8);
-        IF L12 THEN
+        IF INTRLINK THEN
           BEGIN
             IF SEGINFO[S]^.DSEGNUM <> 0 THEN
               WITH HOSTFILE^.SEGTBL DO
@@ -1965,7 +1970,7 @@ PROCEDURE PHASE3;
         DISKINFO[S].CODEADDR := NEXTBLK;
         DISKINFO[S].CODELENG := SEGLENG;
         SEGNAME[S] := SRCFILE^.SEGTBL.SEGNAME[SRCSEG];
-        IF L12 THEN
+        IF INTRLINK THEN
           SEGKIND[S] := LINKED_INTRINS
         ELSE
           SEGKIND[S] := LINKED;
@@ -2051,7 +2056,7 @@ PROCEDURE PHASE3;
         SEGTBL.SEGMISC[S].MTYPE := PCODELEAST;
         SEGTBL.SEGMISC[S].VERSION := 6
       END;
-    L12 := HOSTFILE^.SEGTBL.SEGKIND[S] IN [UNLINKED_INTRINS,
+    INTRLINK := HOSTFILE^.SEGTBL.SEGKIND[S] IN [UNLINKED_INTRINS,
                                            LINKED_INTRINS];
     IF TALKATIVE THEN
       WITH SEGINFO[S]^ DO
@@ -2064,7 +2069,7 @@ PROCEDURE PHASE3;
           WRITEMAP;
         IF HOSTFILE^.SEGTBL.SEGKIND[S] <> DATASEG THEN
           BEGIN
-            IF L12 THEN
+            IF INTRLINK THEN
               BEGIN
                 MARK(L4);
                 L1 := HOSTFILE^.SEGTBL.DISKINFO[S].CODEADDR
@@ -2164,7 +2169,7 @@ BEGIN { PHASE3 }
     END;
   NEXTBLK := 1;
   FILLCHAR(SEGTBL, SIZEOF(SEGTBL), CHR(0));
-  FILLCHAR(L289, SIZEOF(L289), CHR(0));
+  FILLCHAR(FILLER, SIZEOF(FILLER), CHR(0));
   WITH SEGTBL DO
     FOR S := 0 TO MAXSEG DO
       BEGIN
@@ -2207,8 +2212,8 @@ BEGIN { PHASE3 }
       S := G29;
       LINKSEGMENT
     END;
-  IF G90 THEN
-    LK11(SEGTBL);
+  IF FLIPPED THEN
+    FLIPTABLE(SEGTBL);
   SEGTBL.INTRINSSEGS := HOSTFILE^.SEGTBL.INTRINSSEGS;
   IF BLOCKWRITE(CODE, SEGTBL, 1, 0) <> 1 THEN
     ERROR('Code write error');
