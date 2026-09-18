@@ -76,7 +76,7 @@ Tier C unless comments pin them.
 1. ~~**FILER `G361`/`G362`**~~ done (`DESTBLKS`/`SRCBLKS`).
 2. ~~**LINKER `G91`/`L12`**~~ done (`WORDHEAP`/`INTRLINK`).
 3. ~~**LINKER `G29`→`HOSTSLOT`**~~ done.
-4. **GETCMD `GC*`** from FINDINGS 225–227 English names.
+4. ~~**GETCMD `GC*`**~~ done (role-based names; see RENAMES.md).
 5. **LINKER/LIBRARY/LIBMAP** leftovers only if an ancestor body turns up.
 6. **ASSMBLER / natives** as dedicated naming campaigns, not drive-by renames.
 

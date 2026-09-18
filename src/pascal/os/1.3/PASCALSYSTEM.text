@@ -1816,7 +1816,7 @@ PROGRAM PASCALSYSTEM;
                         FALSE: (W: ARRAY [0..3] OF INTEGER)
                     END;
 
-      { `.13` passes `LDA 1,273` straight into `GC05`'s own `VAR ST`
+      { `.13` passes `LDA 1,273` straight into `SEGOFENT`'s own `VAR ST`
         while `.15` reads the same 273 with `LDB` and `MOVELEFT`: one
         512-byte buffer read both as a segment dictionary and as raw
         text, which is a tagless variant record (finding 227). }
@@ -1893,7 +1893,7 @@ PROGRAM PASCALSYSTEM;
     FUNCTION SYSASSOC(SYS_NAME: SYSFILE;
                       ALLOWLINK: BOOLEAN): BOOLEAN; FORWARD;
     FUNCTION GETYESNO: BOOLEAN; FORWARD;
-    FUNCTION GC05(VAR ST: SEGDICT; SEGIX: INTEGER): INTEGER; FORWARD;
+    FUNCTION SEGOFENT(VAR ST: SEGDICT; SEGIX: INTEGER): INTEGER; FORWARD;
     FUNCTION BADTITLE(TITLE: STRING): BOOLEAN; FORWARD;
     { `GETCMD.4`: reads one character from `GFILES[0]^` (the console
       input file) in a loop until it's `'N'`/`'Y'`/`'n'`/`'y'`, then
@@ -1935,16 +1935,16 @@ PROGRAM PASCALSYSTEM;
       operands name themselves against `SEGINFO`'s own declaration --
       `SLDC 3 | SLDC 13` is a 3-bit field at bit 13, which is
       `VERSION`, and `SLDC 8 | SLDC 0` is `SEGNUM`. }
-    FUNCTION GC05;
+    FUNCTION SEGOFENT;
     BEGIN
       WITH ST.SEGINFO[SEGIX] DO
         IF VERSION < 1 THEN
-          GC05 := SEGIX
+          SEGOFENT := SEGIX
         ELSE
           IF SEGNUM > 63 THEN
-            GC05 := 0
+            SEGOFENT := 0
           ELSE
-            GC05 := SEGNUM
+            SEGOFENT := SEGNUM
     END;
     { `GETCMD.6` = `BADTITLE`: runs `SCANTITLE` purely for its `VAR`
       outputs (the real body's own boolean result is discarded too --
@@ -1992,12 +1992,12 @@ PROGRAM PASCALSYSTEM;
       are `.11` and `.20` below, because each of them has children and
       a `FORWARD` cannot carry them: `.8` is nested *inside* `.7`, and
       a procedure number is claimed where its header is read (finding
-      199). `GC08` inside a segment-level forward block would take
-      number 8 at the wrong depth; inside `GC07`'s own declaration
+      199). `CLRINTR` inside a segment-level forward block would take
+      number 8 at the wrong depth; inside `FIXINTR`'s own declaration
       part it takes the same number at the right one. The nesting is
       read straight out of the binary and is not a guess -- see the
       note above `GETCMD.1`'s body. }
-    PROCEDURE GC07(VAR ST: SEGDICT);
+    PROCEDURE FIXINTR(VAR ST: SEGDICT);
       VAR
         I, VERS: INTEGER;
         ISEGS: SEGSETWORDS;
@@ -2006,7 +2006,7 @@ PROGRAM PASCALSYSTEM;
         frame: `LDA 1,4` is `ISEGS` and `LOD 1,1` is `.7`'s `VAR ST`.
         Nothing about it could be written before `.7`'s `VAR` block
         was, which is the whole argument for doing the nesting first. }
-      PROCEDURE GC08;
+      PROCEDURE CLRINTR;
       BEGIN
         ISEGS.W[2] := 0;
         ISEGS.W[3] := 0;
@@ -2021,18 +2021,18 @@ PROGRAM PASCALSYSTEM;
       images whose words 2 and 3 match. }
     BEGIN
       I := 0;
-      WHILE GC05(ST, I) <> 1 DO
+      WHILE SEGOFENT(ST, I) <> 1 DO
         I := I + 1;
       VERS := ST.SEGINFO[I].VERSION;
       IF VERS = 1 THEN
-        GC08
+        CLRINTR
       ELSE
         IF VERS = 2 THEN
         BEGIN
           ISEGS.S := ST.INTRINSSEGS;
           IF (ISEGS.W[2] = 42) AND
              ((ISEGS.W[3] = 1566) OR (ISEGS.W[3] = 1567)) THEN
-            GC08
+            CLRINTR
         END
     END;
     { `.9`'s second formal is `VAR F: FIB`, not the `F: FIBP` this had.
@@ -2042,8 +2042,8 @@ PROGRAM PASCALSYSTEM;
       passes `LDA 1,612`, the address of its own 290-word local `FIB`,
       which a by-value `FIBP` could not be given at all -- 1.3 has no
       address-of operator (finding 225 note, and the `@` finding). }
-    PROCEDURE GC09(VAR ST: SEGDICT; VAR F: FIB); FORWARD;
-    FUNCTION GC10(VAR ST: SEGDICT; VAR SEGS: SEGSET;
+    PROCEDURE BINDSEGS(VAR ST: SEGDICT; VAR F: FIB); FORWARD;
+    FUNCTION FILLSEGS(VAR ST: SEGDICT; VAR SEGS: SEGSET;
                   KINDS: KINDSET): BOOLEAN; FORWARD;
     { `GETCMD.9` (finding 226): bind every non-empty segment of a
       just-opened codefile into `SYSCOM^.SEGTABLE`, converting each
@@ -2059,7 +2059,7 @@ PROGRAM PASCALSYSTEM;
       `data=9` accounts exactly: `I` and `SEGNO` declared, then the
       four `WITH` pointers, then the `FOR` limit temp, then the two
       `WITH`s opened inside the loop -- allocation follows the text. }
-    PROCEDURE GC09;
+    PROCEDURE BINDSEGS;
       VAR
         SEGNO, I: INTEGER;
     BEGIN
@@ -2068,7 +2068,7 @@ PROGRAM PASCALSYSTEM;
           WITH DISKINFO[I] DO
             IF CODELENG <> 0 THEN
             BEGIN
-              SEGNO := GC05(ST, I);
+              SEGNO := SEGOFENT(ST, I);
               IF SEGNO IN [1, 7..MAX_SEG] THEN
                 WITH SEGTABLE[SEGNO] DO
                 BEGIN
@@ -2086,19 +2086,19 @@ PROGRAM PASCALSYSTEM;
       one of them was of an acceptable `SEGKIND`. `data=3` is one
       declared word: `I`, then the `WITH ST` pointer, then the `FOR`
       limit temp, in that order. }
-    FUNCTION GC10;
+    FUNCTION FILLSEGS;
       VAR
         I: INTEGER;
     BEGIN
       SEGS := [];
-      GC10 := TRUE;
+      FILLSEGS := TRUE;
       WITH ST DO
         FOR I := 0 TO 15 DO
           IF DISKINFO[I].CODELENG <> 0 THEN
             IF SEGKIND[I] IN KINDS THEN
-              SEGS := SEGS + [GC05(ST, I)]
+              SEGS := SEGS + [SEGOFENT(ST, I)]
             ELSE
-              GC10 := FALSE
+              FILLSEGS := FALSE
     END;
     { `GETCMD.11` -- the library-file pass, and the parent of `.12`
       through `.18`. Given the codefile's own title it derives
@@ -2127,7 +2127,7 @@ PROGRAM PASCALSYSTEM;
 
       `BLK` is read two ways by two different children -- as a
       `SEGDICT` by `.13` (which passes `LDA 1,273` straight into
-      `GC05`'s own `VAR ST`) and as 512 plain characters by `.15`
+      `SEGOFENT`'s own `VAR ST`) and as 512 plain characters by `.15`
       (`LDB` and `MOVELEFT` off the same base) -- so it is a tagless
       variant record, the same idiom `SEGSETWORDS` above needed and for
       the same reason (finding 216c/225c).
@@ -2138,7 +2138,7 @@ PROGRAM PASCALSYSTEM;
       against the already-written `FIB`, and 273+96 = 369 lands on
       `SEGDICT.SEGKIND` exactly where finding 205's own field sum puts
       it. }
-    FUNCTION GC11(TITLE: STRING; VAR ST: SEGDICT): BOOLEAN;
+    FUNCTION USELIB(TITLE: STRING; VAR ST: SEGDICT): BOOLEAN;
       VAR
         FVID: VID;
         FTID: TID;
@@ -2158,7 +2158,7 @@ PROGRAM PASCALSYSTEM;
 
       { `GETCMD.12` (finding 225): `params=4` is two words with no
         parameters at all -- a `BOOLEAN` function's result slot -- and
-        `RNP 1` confirms it returns one. `LOD 1,3` is `GC11`'s own
+        `RNP 1` confirms it returns one. `LOD 1,3` is `USELIB`'s own
         `VAR ST`, `INC 144` is `SEGDICT.INTRINSSEGS` (the seven parts
         of `SEGDICT` sum to 256 words and put it at 144, finding 205),
         and `LDA 3,448` is `WHAT_L`, already known to be a four-word
@@ -2166,28 +2166,28 @@ PROGRAM PASCALSYSTEM;
         `FJP` and two separate stores, not a single store of the
         comparison: written as an `IF`/`ELSE`, not as an assignment of
         the Boolean expression. }
-      FUNCTION GC12: BOOLEAN;
+      FUNCTION NEEDLIBS: BOOLEAN;
       BEGIN
         IF ST.INTRINSSEGS <> WHAT_L THEN
-          GC12 := TRUE
+          NEEDLIBS := TRUE
         ELSE
-          GC12 := FALSE
+          NEEDLIBS := FALSE
       END;
 
       { `.13` -- merge one library's dictionary into `WHAT_L`. A
         segment survives only if it is an intrinsic or a data segment,
         nobody has already supplied it, and the host actually asked for
-        it; everything else has its `CODELENG` zeroed so `GC09` will
+        it; everything else has its `CODELENG` zeroed so `BINDSEGS` will
         not enter it in `SEGTABLE`. The three tests are `LAND`ed, not
         an `FJP` chain, so they are one `AND` expression. }
-      PROCEDURE GC13;
+      PROCEDURE MERGELIB;
         VAR
           SNO: INTEGER;
           I: INTEGER;
       BEGIN
         FOR I := 0 TO 15 DO
         BEGIN
-          SNO := GC05(BLK.D, I);
+          SNO := SEGOFENT(BLK.D, I);
           IF (BLK.D.SEGKIND[I] IN [LINKED_INTRINS, DATASEG]) AND
              NOT (SNO IN WHAT_L) AND (SNO IN ST.INTRINSSEGS) THEN
           BEGIN
@@ -2197,7 +2197,7 @@ PROGRAM PASCALSYSTEM;
           ELSE
             BLK.D.DISKINFO[I].CODELENG := 0
         END;
-        GC09(BLK.D, F)
+        BINDSEGS(BLK.D, F)
       END;
 
       { `.14` -- open one named library and merge it. `data=82` is 41
@@ -2205,7 +2205,7 @@ PROGRAM PASCALSYSTEM;
         `STRING` parameter's shadow copy on its own, which is also why
         `LLA 2` is both the parameter as `.14` reads it and the string
         `WRITE` prints back in either warning. }
-      PROCEDURE GC14(LTITLE: STRING);
+      PROCEDURE OPENLIB(LTITLE: STRING);
       BEGIN
         FINIT(F, NIL, -1);
         FOPEN(F, LTITLE, TRUE, NIL);
@@ -2215,7 +2215,7 @@ PROGRAM PASCALSYSTEM;
           GOTLIB := TRUE;
           UNITREAD(F.FUNIT, BLK, 512, F.FHEADER.DFIRSTBLK);
           IF IORESULT = 0 THEN
-            GC13;
+            MERGELIB;
           IF NOT USEDIT THEN
           BEGIN
             WRITE('Warning: ');
@@ -2238,9 +2238,9 @@ PROGRAM PASCALSYSTEM;
         carriage return; `CHR(16)` is a text file's own DLE blank
         compression, whose count byte has to be stepped over as well;
         `$` ends the list. `data=8` is four words -- three variables
-        and the `FOR` limit -- so the two `EXIT(GC15)` paths are the
+        and the `FOR` limit -- so the two `EXIT(SPLITLIB)` paths are the
         real control flow, not a flag. }
-      PROCEDURE GC15;
+      PROCEDURE SPLITLIB;
         VAR
           NAMELEN: INTEGER;
           IX: INTEGER;
@@ -2263,7 +2263,7 @@ PROGRAM PASCALSYSTEM;
             IF BLK.C[IX] = '$' THEN
             BEGIN
               NLIBS := LIBX;
-              EXIT(GC15)
+              EXIT(SPLITLIB)
             END
           END;
           NLIBS := 5
@@ -2284,13 +2284,13 @@ PROGRAM PASCALSYSTEM;
         is set, so the full string compare only runs on a block that
         already looks right -- Apple's own short-circuit, written by
         hand because the compiler does not do it. }
-      PROCEDURE GC16;
+      PROCEDURE LIBKIND;
         VAR S: STRING[14];
 
         { `.17` -- upshift `.16`'s own fourteen characters in place.
           `LDA 1,1` is the parent's `S`, which is what places it three
           levels inside the segment and makes its globals `lex 3`. }
-        PROCEDURE GC17;
+        PROCEDURE TOUPPER;
           VAR I: INTEGER;
         BEGIN
           FOR I := 1 TO 13 DO
@@ -2307,22 +2307,22 @@ PROGRAM PASCALSYSTEM;
           IF IORESULT = 0 THEN
           BEGIN
             MOVELEFT(BLK.C[0], S[1], 14);
-            GC17;
+            TOUPPER;
             IF (S[1] = 'L') AND (S[2] = 'I') THEN
             BEGIN
               S[0] := CHR(14);
               IF S = 'LIBRARY FILES:' THEN
               BEGIN
-                GC15;
+                SPLITLIB;
                 FCLOSE(F, CNORMAL);
-                EXIT(GC16)
+                EXIT(LIBKIND)
               END
             END
           END;
           GOTLIB := TRUE;
           USEDIT := FALSE;
           UNITREAD(F.FUNIT, BLK, 512, F.FHEADER.DFIRSTBLK);
-          GC13
+          MERGELIB
         END;
         FCLOSE(F, CNORMAL)
       END;
@@ -2338,7 +2338,7 @@ PROGRAM PASCALSYSTEM;
         `COPY`s land on the same offset because each is its own
         statement; `GETCMD.22`'s two needed separate slots only
         because both were live inside one statement. }
-      PROCEDURE GC18;
+      PROCEDURE MAKELIB;
         VAR I: INTEGER;
       BEGIN
         IF SCANTITLE(LIBTITLE, FVID, FTID, I, FKIND) THEN ;
@@ -2354,29 +2354,29 @@ PROGRAM PASCALSYSTEM;
 
     BEGIN
       NLIBS := 0;
-      GC11 := FALSE;
+      USELIB := FALSE;
       GOTLIB := FALSE;
       WHAT_L := [];
       LIBTITLE := TITLE;
-      GC18;
-      GC16;
-      IF GC12 AND (NLIBS > 0) THEN
+      MAKELIB;
+      LIBKIND;
+      IF NEEDLIBS AND (NLIBS > 0) THEN
         FOR LX := 1 TO NLIBS DO
-          GC14(LIBLIST[LX]);
-      IF GC12 THEN
+          OPENLIB(LIBLIST[LX]);
+      IF NEEDLIBS THEN
       BEGIN
         SYSLIB := '*SYSTEM.LIBRARY';
-        GC14(SYSLIB)
+        OPENLIB(SYSLIB)
       END;
-      GC11 := TRUE;
+      USELIB := TRUE;
       IF NOT GOTLIB THEN
       BEGIN
         WRITE('Error: Required library files are not present');
-        GC11 := FALSE
+        USELIB := FALSE
       END;
-      IF GC12 AND GOTLIB THEN
+      IF NEEDLIBS AND GOTLIB THEN
       BEGIN
-        GC11 := FALSE;
+        USELIB := FALSE;
         WRITE('Error: These required intrinsic(s) not available:  ');
         NPRINT := 0;
         MISSING := ST.INTRINSSEGS - WHAT_L;
@@ -2505,8 +2505,8 @@ PROGRAM PASCALSYSTEM;
                 GOTO 1
               END;
           IF NOT CHECKVER THEN
-            GC07(SEGTBL);
-          IF NOT GC10(SEGTBL, LSEGS, [LINKED]) THEN
+            FIXINTR(SEGTBL);
+          IF NOT FILLSEGS(SEGTBL, LSEGS, [LINKED]) THEN
           BEGIN
             IF OKTOLINK THEN
             BEGIN
@@ -2533,9 +2533,9 @@ PROGRAM PASCALSYSTEM;
             GOTO 1
           END;
           IF SEGTBL.INTRINSSEGS <> [] THEN
-            IF NOT GC11(TITLE, SEGTBL) THEN
+            IF NOT USELIB(TITLE, SEGTBL) THEN
               GOTO 1;
-          GC09(SEGTBL, USERINFO.CODEFIBP^)
+          BINDSEGS(SEGTBL, USERINFO.CODEFIBP^)
         END;
       ASS_STATUS := FOUND_OK;
       ASSOCIATE := TRUE;
@@ -2652,7 +2652,7 @@ PROGRAM PASCALSYSTEM;
         WHICH: SYSFILE;
         IOERR: INTEGER;
         OK: BOOLEAN;
-      PROCEDURE GC21;
+      PROCEDURE TRIMLEAD;
       BEGIN
         IX := 1 + SCAN(LENGTH(SRCTITLE), <>' ', SRCTITLE[1]);
         DELETE(SRCTITLE, 1, IX - 1)
@@ -2681,7 +2681,7 @@ PROGRAM PASCALSYSTEM;
           WRITE(' what textfile (<ret> to exit) ? ');
           READ(SRCTITLE);
           READLN;
-          GC21;
+          TRIMLEAD;
           IF SRCTITLE = '' THEN
             GOTO 1
           ELSE
@@ -2722,7 +2722,7 @@ PROGRAM PASCALSYSTEM;
             IF SRCTITLE <> '' THEN
               IF SRCTITLE[1] = CHR(16) THEN
                 DELETE(SRCTITLE, 1, 2);
-            GC21;
+            TRIMLEAD;
             IF SRCTITLE <> '' THEN
               IF SRCTITLE[1] = CHR(27) THEN
                 GOTO 1
@@ -2767,9 +2767,9 @@ PROGRAM PASCALSYSTEM;
         FCLOSE(SWAPFIB^, CNORMAL)
       END
     END;
-    PROCEDURE GC22; FORWARD;
+    PROCEDURE AFTERCMP; FORWARD;
     PROCEDURE EXECOPNERR(KIND: INTEGER); FORWARD;
-    PROCEDURE GC24; FORWARD;
+    PROCEDURE NEWEXBUF; FORWARD;
     PROCEDURE XECUTE(FROMCHAIN: BOOLEAN); FORWARD;
     PROCEDURE SWAPMENU; FORWARD;
     PROCEDURE NEWEXEC; FORWARD;
@@ -2800,7 +2800,7 @@ PROGRAM PASCALSYSTEM;
       in the body touches it -- the third time this file has produced
       one, after `PROMPT` (finding 217) and `INITSYSCOM`'s word 282
       (finding 223c). }
-    PROCEDURE GC22;
+    PROCEDURE AFTERCMP;
       VAR
         UNUSED3: INTEGER;
     BEGIN
@@ -2876,7 +2876,7 @@ PROGRAM PASCALSYSTEM;
       its own (see its declaration). `MARK` after `NEW`, not before:
       the buffer is allocated below the mark so a later `RELEASE`
       keeps it. }
-    PROCEDURE GC24;
+    PROCEDURE NEWEXBUF;
     BEGIN
       EXEC_IN_CH := ' ';
       EXEC_MARK := EMPTYHEAP;
@@ -2959,7 +2959,7 @@ PROGRAM PASCALSYSTEM;
               RESET(EXEC_FILE, S);
               IF IORESULT = 0 THEN
               BEGIN
-                GC24;
+                NEWEXBUF;
                 R_EXEC_FLG := TRUE;
                 EXEC_BLK := TRUE;
                 EXECREADBLK;
@@ -3143,7 +3143,7 @@ PROGRAM PASCALSYSTEM;
           WRITE('New terminator:');
           READ(EXEC_TERM)
         END;
-        GC24;
+        NEWEXBUF;
         W_EXEC_FLG := TRUE;
         FILLCHAR(EXBUFPTR^, 512, CHR(0));
         EXEC_BLK := FALSE;
@@ -3220,7 +3220,7 @@ PROGRAM PASCALSYSTEM;
         EXIT(GETCMD)
       END;
     IF LASTST IN [COMPONLY, COMPANDGO, COMPDEBUG] THEN
-      GC22;
+      AFTERCMP;
     IF LASTST IN [LINKANDGO, LINKDEBUG] THEN
       RUNWORKFILE(FALSE);
     IF SYSCOM^.MISCINFO.USERKIND = AQUIZ THEN

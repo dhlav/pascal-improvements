@@ -10,11 +10,13 @@
 - OS: `CANTSTRETCH` / `MAINLOOP`
 - Filer: `DESTBLKS` / `SRCBLKS`
 - Linker: `WORDHEAP` / `INTRLINK` / `HOSTSLOT`
+- GETCMD: all `GC*` → role names (`SEGOFENT`, `USELIB`, `AFTERCMP`, …)
 - Docs: `RENAMES.md`, `PLACEHOLDERS.md`, `CONTINUE.md`
 
 ## Next
 
-See **`docs/PLACEHOLDERS.md`**: GETCMD **`GC*`** renames from FINDINGS 225–227.
+See **`docs/PLACEHOLDERS.md`**: LINKER/LIBRARY/LIBMAP leftover `LK*`/`LB*`
+(only with ancestor evidence), or start the ASSMBLER `G*` naming mine.
 
 ## Remember
 

@@ -47,3 +47,27 @@ Source-only; `probe_linker_whole` still green (byte-identical to shipped).
 | `G29` | `HOSTSLOT` | host segment's slot (`MAXSEG1` if none) |
 
 (`HOSTSEG` collides with an existing name.) Source-only; linker probe still green.
+
+## 2026-09-17 — GETCMD GC* helpers (STRONG INFERENCE names)
+
+English names invented from FINDINGS **225–228** role prose (not recovered
+UCSD identifiers). Source-only; `probe_os_exact` still green.
+
+| Old | New | Role (FINDINGS) |
+|-----|-----|-----------------|
+| `GC05` | `SEGOFENT` | segment number of dictionary entry `.5` |
+| `GC07` | `FIXINTR` | sanitize `INTRINSSEGS` by host `VERSION` `.7` |
+| `GC08` | `CLRINTR` | clear high half of `INTRINSSEGS` `.8` |
+| `GC09` | `BINDSEGS` | bind codefile segs into `SEGTABLE` `.9` |
+| `GC10` | `FILLSEGS` | fill `SEGS` set from dictionary `.10` |
+| `GC11` | `USELIB` | open `.LIB` / merge into `WHAT_L` `.11` |
+| `GC12` | `NEEDLIBS` | `INTRINSSEGS <> WHAT_L` `.12` |
+| `GC13` | `MERGELIB` | merge one library dict into `WHAT_L` `.13` |
+| `GC14` | `OPENLIB` | open one library title `.14` |
+| `GC15` | `SPLITLIB` | split `LIBRARY FILES:` list `.15` |
+| `GC16` | `LIBKIND` | library codefile vs text list `.16` |
+| `GC17` | `TOUPPER` | upshift fourteen characters `.17` |
+| `GC18` | `MAKELIB` | build `vol:name.LIB` title `.18` |
+| `GC21` | `TRIMLEAD` | strip leading spaces from compile title `.21` |
+| `GC22` | `AFTERCMP` | after-compile cleanup / run `.22` |
+| `GC24` | `NEWEXBUF` | allocate EXEC write buffer `.24` |
