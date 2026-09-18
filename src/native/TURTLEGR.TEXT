@@ -26,9 +26,9 @@
 ;     binary has a segment-relative relocation for
 ;     each, which is a .DEF/.REF pair and nothing
 ;     else (finding 98a);
-;   * labels written L<nnnn> are the offset of the
-;     label from the start of its procedure, and are
-;     placeholders: nothing about them is recovered.
+;   * labels that were L<nnnn> (proc-relative offsets)
+;     are renamed on the improvements fork to role
+;     names where the branch is clear; HIRES is done.
 ;
 ; Zero page. A native procedure runs inside the
 ; interpreter and everything below $50 is free while
@@ -76,47 +76,47 @@ TURTLE  .EQU 0BB        ; TURTLEREC, from the Pascal half
 SETPAGE LDY  #00E
         LDA  @TURTLE,Y
         CMP  #002
-        BEQ  L000C
+        BEQ  PAGE2
         LDA  #020
-        BNE  L000E
-L000C   LDA  #040
-L000E   STA  PAGE
+        BNE  STOREP
+PAGE2   LDA  #040
+STOREP   STA  PAGE
         RTS
 SETPEN  JSR  SETPAGE
         LDY  #00C
         LDA  @TURTLE,Y
         TAY
         CPY  #00D
-        BCS  L004A
+        BCS  PENNONE
         LDX  #000
         STX  01E
         STX  01D
         CPY  #005
-        BCC  L0030
+        BCC  PENLT5
         INC  01D
         LDA  COLORS-005,Y
         STA  01F
         CLC
         RTS
-L0030   CPY  #003
-        BNE  L003C
+PENLT5   CPY  #003
+        BNE  PENCK3
         LDX  #07F
         STX  01E
-L0038   STX  01F
+PENPUT   STX  01F
         CLC
         RTS
-L003C   BCC  L0040
-        BCS  L004A
-L0040   CPY  #001
-        BNE  L0048
+PENCK3   BCC  PENW1
+        BCS  PENNONE
+PENW1   CPY  #001
+        BNE  PENFALL
         LDX  #07F
-L0046   BNE  L0038
-L0048   BCS  L0038
-L004A   SEC
+PENJMP   BNE  PENPUT
+PENFALL   BCS  PENPUT
+PENNONE   SEC
         RTS
 ;       ---- data
 COLORS  .BYTE 000,02A,055,07F,080,0AA,0D5,0FF
-L0054   STA  011
+STOREXY   STA  011
         STX  00F
         STY  010
 HPOSN   PHA
@@ -142,122 +142,122 @@ HPOSN   PHA
         STA  SCRN+1
         TXA
         CPY  #000
-        BEQ  L0085
+        BEQ  BITMOD
         LDY  #023
         ADC  #004
-L0084   INY
-L0085   SBC  #007
-        BCS  L0084
+BITCNT   INY
+BITMOD   SBC  #007
+        BCS  BITCNT
         STY  00D
         TAX
-        LDA  L0182,X
+        LDA  BITTAB,X
         STA  MASK
         TYA
         LSR  A
         LDA  01F
         STA  002
-        BCC  L009C
-        JMP  L00E0
-L009C   RTS
-PLOT    JSR  L0054
-L00A0   BIT  01E
+        BCC  HPEXIT
+        JMP  COLADJ
+HPEXIT   RTS
+PLOT    JSR  STOREXY
+PLOTLP   BIT  01E
         LDA  002
         EOR  @SCRN,Y
         AND  MASK
-        BNE  L00AC
+        BNE  PLOTNZ
         INC  00E
-L00AC   BVC  L00B2
+PLOTNZ   BVC  PLOTWR
         LDA  MASK
         AND  #07F
-L00B2   EOR  @SCRN,Y
+PLOTWR   EOR  @SCRN,Y
         STA  @SCRN,Y
         LDA  01D
-        BEQ  L00C6
+        BEQ  PLDONE
         EOR  #0FF
         STA  01D
-        BPL  L00C9
+        BPL  RSHIFT
         JSR  RIGHT
-        JMP  L00A0
-L00C6   RTS
-L00C7   BPL  RIGHT
-L00C9   LDA  MASK
+        JMP  PLOTLP
+PLDONE   RTS
+TORIGHT   BPL  RIGHT
+RSHIFT   LDA  MASK
         LSR  A
-        BCS  L00D3
+        BCS  COLDEC
         EOR  #0C0
-L00D0   STA  MASK
+MASKOK   STA  MASK
         RTS
-L00D3   DEY
-        BPL  L00D8
+COLDEC   DEY
+        BPL  COLRST
         LDY  #027
-L00D8   LDA  #0C0
-L00DA   STA  MASK
+COLRST   LDA  #0C0
+PUTMASK   STA  MASK
         STY  00D
         LDA  002
-L00E0   ASL  A
+COLADJ   ASL  A
         CMP  #0C0
-        BPL  L00EB
+        BPL  ADJRTS
         LDA  002
         EOR  #07F
         STA  002
-L00EB   RTS
+ADJRTS   RTS
 RIGHT   LDA  MASK
         ASL  A
         EOR  #080
-        BMI  L00D0
+        BMI  MASKOK
         LDA  #081
         INY
         CPY  #028
-        BCC  L00DA
+        BCC  PUTMASK
         LDY  #000
-        BCS  L00DA
-L00FE   BMI  L012F
+        BCS  PUTMASK
+LINEDN   BMI  LINEUP
         CLC
         LDA  SCRN+1
-        BIT  L0283
-        BNE  L012A
+        BIT  ROWMSK1
+        BNE  ROWFC
         ASL  SCRN
-        BCS  L0126
-        BIT  L0282
-        BEQ  L0116
+        BCS  ROW1F
+        BIT  ROWMSK0
+        BEQ  ROWADD
         ADC  #01F
         SEC
-        BCS  L0128
-L0116   ADC  #023
+        BCS  RORROW
+ROWADD   ADC  #023
         PHA
         LDA  SCRN
         ADC  #0B0
-        BCS  L0121
+        BCS  SAVROW
         ADC  #0F0
-L0121   STA  SCRN
+SAVROW   STA  SCRN
         PLA
-        BCS  L0128
-L0126   ADC  #01F
-L0128   ROR  SCRN
-L012A   ADC  #0FC
-L012C   STA  SCRN+1
+        BCS  RORROW
+ROW1F   ADC  #01F
+RORROW   ROR  SCRN
+ROWFC   ADC  #0FC
+SETSCRH   STA  SCRN+1
         RTS
-L012F   CLC
+LINEUP   CLC
         LDA  SCRN+1
-L0132   ADC  #004
-        BIT  L0283
-        BNE  L012C
+ADD4   ADC  #004
+        BIT  ROWMSK1
+        BNE  SETSCRH
         ASL  SCRN
-        BCC  L0155
+        BCC  ADDE0
         ADC  #0E0
         CLC
-        BIT  L0132+001
-        BEQ  L0157
+        BIT  ADD4+001
+        BEQ  RORSC2
         LDA  SCRN
         ADC  #050
         EOR  #0F0
-        BEQ  L014F
+        BEQ  SAVSCR
         EOR  #0F0
-L014F   STA  SCRN
+SAVSCR   STA  SCRN
         LDA  PAGE
-        BCC  L0157
-L0155   ADC  #0E0
-L0157   ROR  SCRN
-        BCC  L012C
+        BCC  RORSC2
+ADDE0   ADC  #0E0
+RORSC2   ROR  SCRN
+        BCC  SETSCRH
 LINE    PHA
         SEC
         SBC  00F
@@ -279,9 +279,9 @@ L0171   STA  009
         STA  00A
         PLA
         CPY  011
-        BNE  L0182
+        BNE  BITTAB
         JMP  L0213
-L0182   STA  00F
+BITTAB   STA  00F
         STX  010
         TYA
         SEC
@@ -321,14 +321,14 @@ L01B3   LDA  00A
         ADC  009
         STA  00B
         LDA  00C
-        JSR  L00FE
+        JSR  LINEDN
         LDA  01D
         BEQ  L01D6
-        JSR  L00A0
+        JSR  PLOTLP
 L01D6   LDA  00C
         ASL  A
-        JSR  L00C7
-        JSR  L00A0
+        JSR  TORIGHT
+        JSR  PLOTLP
         DEX
         BNE  L01B3
         DEC  003
@@ -347,13 +347,13 @@ L01ED   LDA  00A
         STA  00A
         LDA  00C
         ASL  A
-        JSR  L00C7
+        JSR  TORIGHT
         LDA  01D
         BEQ  L0207
-        JSR  L00A0
+        JSR  PLOTLP
 L0207   LDA  00C
-        JSR  L00FE
-        JSR  L00A0
+        JSR  LINEDN
+        JSR  PLOTLP
         DEX
         BNE  L01ED
 L0212   RTS
@@ -373,9 +373,9 @@ L0213   STX  RTN
         BEQ  L026C
         STY  012
         BNE  L0237
-L0234   JSR  L00A0
+L0234   JSR  PLOTLP
 L0237   BIT  00C
-        JSR  L00C7
+        JSR  TORIGHT
         CPY  012
         BEQ  L0234
         CPY  013
@@ -386,7 +386,7 @@ L0244   LDA  002
         LDA  #07F
         EOR  @SCRN,Y
 L024E   STA  @SCRN,Y
-        JSR  L00E0
+        JSR  COLADJ
         BIT  00C
         BPL  L0260
         DEY
@@ -399,18 +399,18 @@ L0260   INY
         BNE  L0244
         LDA  #081
 L0267   STA  MASK
-L0269   JSR  L00A0
+L0269   JSR  PLOTLP
 L026C   LDA  MASK
         CMP  014
         BEQ  L027A
         BIT  00C
-        JSR  L00C7
+        JSR  TORIGHT
         JMP  L0269
 L027A   RTS
 ;       ---- data
         .BYTE 081,082,084,088,090,0A0,0C0
-L0282   .BYTE 003
-L0283   .BYTE 01C
+ROWMSK0   .BYTE 003
+ROWMSK1   .BYTE 01C
 
 ;---------------------------------------------------
 ; Clip a line to the viewport.
@@ -533,7 +533,7 @@ L00BE   LDA  01A
         ORA  015
         AND  #00F
         BNE  L00C8
-L00C6   CLC
+PLDONE   CLC
         RTS
 L00C8   LDA  015
         AND  01A
@@ -558,7 +558,7 @@ L00D2   LDA  015
         JMP  L00BE
 L00F5   LDA  01A
         AND  #00F
-        BEQ  L00C6
+        BEQ  PLDONE
         LDX  #000
         LDY  #014
         JSR  L0195
@@ -570,7 +570,7 @@ L00F5   LDA  01A
         LDX  #014
         LDY  #00A
         JSR  L0195
-        JMP  L00C6
+        JMP  PLDONE
 L0118   LDA  MASK
         EOR  00B
         AND  MASK
@@ -842,7 +842,7 @@ L0025   SEC
         LDA  026
         SBC  024
         ADC  #000
-        STA  L0054
+        STA  STOREXY
         LDA  #0BF
         SEC
         SBC  026
@@ -856,10 +856,10 @@ L0037   LDA  L0055
         LDX  023
         JSR  LINE
         INC  L0055
-        DEC  L0054
+        DEC  STOREXY
         BNE  L0037
 L0053   RTS
-L0054   BRK
+STOREXY   BRK
 L0055   BRK
 
 ;---------------------------------------------------

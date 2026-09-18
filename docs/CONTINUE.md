@@ -14,12 +14,13 @@
 - LINKER/LIBRARY/FILER: `CLOSEINS`/`QUITLINK`/`STRIPDLE`/`CHECKVER`/…
 - ASSMBLER: **all 112 `G*` renamed** (no `G*` left in ASSMBLER.text)
 - Clarity scan: `docs/CLARITY-SCAN.md`; FILER `OTHERWISE` unknown command
+- TURTLEGR: HIRES 40 `Lxxxx` → role names (`PAGE2`, `PLOTLP`, …)
 - Docs: `RENAMES.md`, `PLACEHOLDERS.md`, `CONTINUE.md`, `CLARITY-SCAN.md`
 
 ## Next
 
-**Natives** (TURTLEGR/LONGINTS `L*` labels), or low-value loop indices
-(`L85`/`M2`), or more menu `OTHERWISE` hardening where useful.
+Continue **TURTLEGR** `Lxxxx` (CLIP/MOVE/FILLIT/…), or **LONGINTS**, or
+loop indices (`L85`/`M2`).
 
 ## Remember
 

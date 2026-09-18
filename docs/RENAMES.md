@@ -245,3 +245,21 @@ Clears **all** remaining `G*` in `ASSMBLER.text` (112 → 0).
 | `G2128` | `GAP2128` |
 
 Stale comment `LOCLTAB[G624]` → `LOCLTAB[LOCLCUR]`.
+
+## 2026-09-17 — TURTLEGR HIRES L* → role names
+
+UCSD `host/klebsch/turtle_graphics/main.asm.text` is stubs only (no local
+labels). Renames are **STRONG INFERENCE** from branch structure in the
+reconstructed Apple source. **40 labels** in `.PROC HIRES` renamed;
+~81 `Lxxxx` remain in CLIP/MOVEABS/MOVEREL/FILLIT/SCREENBIT/DRAWBLOCK.
+
+| Old | New | Role |
+|-----|-----|------|
+| `L000C`/`L000E` | `PAGE2`/`STOREP` | SETPAGE page-2 / store PAGE |
+| `L0030`…`L004A` | `PENLT5`…`PENNONE` | SETPEN colour arms / none |
+| `L0054` | `STOREXY` | save A,X,Y before HPOSN |
+| `L0084`/`L0085` | `BITCNT`/`BITMOD` | bit-position loop |
+| `L00A0`…`L00EB` | `PLOTLP`…`ADJRTS` | PLOT/RIGHT pixel path |
+| `L00FE`…`L0157` | `LINEDN`…`RORSC2` | LINE row stepping |
+| `L0182` | `BITTAB` | bit-mask table |
+| `L0282`/`L0283` | `ROWMSK0`/`ROWMSK1` | row-step BIT masks |
