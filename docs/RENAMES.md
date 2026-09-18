@@ -263,3 +263,20 @@ reconstructed Apple source. **40 labels** in `.PROC HIRES` renamed;
 | `L00FE`…`L0157` | `LINEDN`…`RORSC2` | LINE row stepping |
 | `L0182` | `BITTAB` | bit-mask table |
 | `L0282`/`L0283` | `ROWMSK0`/`ROWMSK1` | row-step BIT masks |
+
+## 2026-09-17 — TURTLEGR: remaining procs (all Lxxxx cleared)
+
+Per-procedure offsets reused the same `Lxxxx` spellings across `.PROC`s, so
+names must be **file-unique**. FILLIT’s trailing data bytes were briefly
+aliased to HIRES `STOREXY` and are now `FILLCNT`/`FILLY`.
+
+| Area | Examples |
+|------|----------|
+| HIRES LINE remainder | `LNST09`…`LINERTS`, `BITTAB` already done |
+| CLIP / CLIPXY | `CLIPOK`, `CPYVP`, `CLPLOOP`, `OUTCODE`, `MOV5`, Cohen–Sutherland outcode arms |
+| MOVEABS / MOVEREL | `MA_COPY`, `MA_PUT`, `MA_DRAW`, `MR_COPY` |
+| FILLIT | `FI_VP`, `VPADJ`, `FILLP`, `FILLCNT`, `FILLY` |
+| SCREENBIT | `SB_ON` |
+| DRAWBLOCK | `DB_VP`, `DB_RTS`, `DB_WIDE`, `DB_J1`/`DB_J2`, `DB_MOD1`/`DB_MOD2`, … |
+
+**No `Lxxxx` labels remain** in `TURTLEGR.TEXT`.

@@ -27,8 +27,8 @@
 ;     each, which is a .DEF/.REF pair and nothing
 ;     else (finding 98a);
 ;   * labels that were L<nnnn> (proc-relative offsets)
-;     are renamed on the improvements fork to role
-;     names where the branch is clear; HIRES is done.
+;     are renamed on the improvements fork to unique
+;     role names (all Lxxxx cleared).
 ;
 ; Zero page. A native procedure runs inside the
 ; interpreter and everything below $50 is free while
@@ -265,14 +265,14 @@ LINE    PHA
         TXA
         SBC  010
         STA  00C
-        BCS  L0171
+        BCS  LNST09
         PLA
         EOR  #0FF
         ADC  #001
         PHA
         LDA  #000
         SBC  00C
-L0171   STA  009
+LNST09   STA  009
         STA  00B
         PLA
         STA  008
@@ -280,41 +280,41 @@ L0171   STA  009
         PLA
         CPY  011
         BNE  BITTAB
-        JMP  L0213
+        JMP  SAVRTN
 BITTAB   STA  00F
         STX  010
         TYA
         SEC
         SBC  011
-        BCS  L0190
+        BCS  LNST07
         EOR  #0FF
         ADC  #001
-L0190   STA  007
+LNST07   STA  007
         STY  011
         ROR  00C
         LDY  00D
         LDA  009
-        BNE  L01A4
+        BNE  LNST03
         LDA  007
         CMP  008
-        BCS  L01E7
+        BCS  LNTAX2
         LDA  009
-L01A4   STA  003
+LNST03   STA  003
         LSR  A
         STA  00B
         LDA  008
-        BNE  L01AF
+        BNE  LNTAX
         STA  003
-L01AF   TAX
+LNTAX   TAX
         ROR  A
         STA  00A
-L01B3   LDA  00A
+LNLD0A   LDA  00A
         SEC
         SBC  007
         STA  00A
-        BCS  L01D6
+        BCS  LNLD0C
         DEC  00B
-        BPL  L01D6
+        BPL  LNLD0C
         ADC  008
         STA  00A
         LDA  00B
@@ -323,41 +323,41 @@ L01B3   LDA  00A
         LDA  00C
         JSR  LINEDN
         LDA  01D
-        BEQ  L01D6
+        BEQ  LNLD0C
         JSR  PLOTLP
-L01D6   LDA  00C
+LNLD0C   LDA  00C
         ASL  A
         JSR  TORIGHT
         JSR  PLOTLP
         DEX
-        BNE  L01B3
+        BNE  LNLD0A
         DEC  003
-        BPL  L01B3
+        BPL  LNLD0A
         RTS
-L01E7   TAX
-        BEQ  L0212
+LNTAX2   TAX
+        BEQ  LNRTS
         LSR  A
         STA  00A
-L01ED   LDA  00A
+LNLD0A2   LDA  00A
         SEC
         SBC  008
         STA  00A
-        BCS  L0207
+        BCS  LNLD0C2
         ADC  007
         STA  00A
         LDA  00C
         ASL  A
         JSR  TORIGHT
         LDA  01D
-        BEQ  L0207
+        BEQ  LNLD0C2
         JSR  PLOTLP
-L0207   LDA  00C
+LNLD0C2   LDA  00C
         JSR  LINEDN
         JSR  PLOTLP
         DEX
-        BNE  L01ED
-L0212   RTS
-L0213   STX  RTN
+        BNE  LNLD0A2
+LNRTS   RTS
+SAVRTN   STX  RTN
         TAX
         LDY  RTN
         LDA  011
@@ -370,43 +370,43 @@ L0213   STX  RTN
         LDA  011
         JSR  HPOSN
         CPY  013
-        BEQ  L026C
+        BEQ  LDMASK
         STY  012
-        BNE  L0237
-L0234   JSR  PLOTLP
-L0237   BIT  00C
+        BNE  BIT0C
+DOPLOT   JSR  PLOTLP
+BIT0C   BIT  00C
         JSR  TORIGHT
         CPY  012
-        BEQ  L0234
+        BEQ  DOPLOT
         CPY  013
-        BEQ  L0269
-L0244   LDA  002
+        BEQ  DOPLOT2
+LDCOL   LDA  002
         BIT  01E
-        BVC  L024E
+        BVC  STSCRN
         LDA  #07F
         EOR  @SCRN,Y
-L024E   STA  @SCRN,Y
+STSCRN   STA  @SCRN,Y
         JSR  COLADJ
         BIT  00C
-        BPL  L0260
+        BPL  NXTPIX
         DEY
         CPY  013
-        BNE  L0244
+        BNE  LDCOL
         LDA  #0C0
-        BNE  L0267
-L0260   INY
+        BNE  STMASK
+NXTPIX   INY
         CPY  013
-        BNE  L0244
+        BNE  LDCOL
         LDA  #081
-L0267   STA  MASK
-L0269   JSR  PLOTLP
-L026C   LDA  MASK
+STMASK   STA  MASK
+DOPLOT2   JSR  PLOTLP
+LDMASK   LDA  MASK
         CMP  014
-        BEQ  L027A
+        BEQ  LINERTS
         BIT  00C
         JSR  TORIGHT
-        JMP  L0269
-L027A   RTS
+        JMP  DOPLOT2
+LINERTS   RTS
 ;       ---- data
         .BYTE 081,082,084,088,090,0A0,0C0
 ROWMSK0   .BYTE 003
@@ -475,9 +475,9 @@ ROWMSK1   .BYTE 01C
         JSR  CLIPXY
         LDA  #000
         PHA
-        BCS  L0058
+        BCS  CLIPOK
         LDA  #001
-L0058   PHA
+CLIPOK   PHA
         LDA  031
         PHA
         LDA  030
@@ -508,70 +508,70 @@ L0058   PHA
         STA  @02E,Y
         RTS
 CLIPXY  LDY  #000
-L0092   LDA  @TURTLE,Y
+CPYVP   LDA  @TURTLE,Y
         STA  00020,Y
         INY
         CPY  #008
-        BNE  L0092
+        BNE  CPYVP
         LDY  #00C
         LDA  @TURTLE,Y
         CMP  #005
-        BCC  L00B0
+        BCC  CLPPEN
         LDA  022
         SBC  #001
         STA  022
         LDA  023
         SBC  #000
         STA  023
-L00B0   LDY  #00F
-        JSR  L01A5
+CLPPEN   LDY  #00F
+        JSR  OUTCODE
         STA  015
         LDY  #014
-        JSR  L01A5
+        JSR  OUTCODE
         STA  01A
-L00BE   LDA  01A
+CLPLOOP   LDA  01A
         ORA  015
         AND  #00F
-        BNE  L00C8
-PLDONE   CLC
+        BNE  CLPOUT
+CLIPIN  CLC
         RTS
-L00C8   LDA  015
+CLPOUT   LDA  015
         AND  01A
         AND  #00F
-        BEQ  L00D2
+        BEQ  CLP1
         SEC
-L00D1   RTS
-L00D2   LDA  015
+CLPRTS   RTS
+CLP1   LDA  015
         AND  #00F
-        BEQ  L00F5
+        BEQ  CLP2
         LDX  #000
         LDY  #00F
-        JSR  L0195
+        JSR  MOV5
         LDX  #005
         LDY  #014
-        JSR  L0195
-        JSR  L0118
-        BCS  L00D1
+        JSR  MOV5
+        JSR  CLPMASK
+        BCS  CLPRTS
         LDX  #00F
         LDY  #00A
-        JSR  L0195
-        JMP  L00BE
-L00F5   LDA  01A
+        JSR  MOV5
+        JMP  CLPLOOP
+CLP2   LDA  01A
         AND  #00F
-        BEQ  PLDONE
+        BEQ  CLIPIN
         LDX  #000
         LDY  #014
-        JSR  L0195
+        JSR  MOV5
         LDX  #005
         LDY  #00F
-        JSR  L0195
-        JSR  L0118
-        BCS  L00D1
+        JSR  MOV5
+        JSR  CLPMASK
+        BCS  CLPRTS
         LDX  #014
         LDY  #00A
-        JSR  L0195
-        JMP  PLDONE
-L0118   LDA  MASK
+        JSR  MOV5
+        JMP  CLIPIN
+CLPMASK   LDA  MASK
         EOR  00B
         AND  MASK
         ASL  A
@@ -580,28 +580,28 @@ L0118   LDA  MASK
         ASL  A
         STA  RTN
         AND  00B
-        BEQ  L0139
+        BEQ  CLPST
         LDA  00B
         AND  #00F
-        BNE  L0137
+        BNE  CLPSEC
         LDY  #005
         LDX  #00A
-        JSR  L0195
+        JSR  MOV5
         CLC
         RTS
-L0137   SEC
+CLPSEC   SEC
         RTS
-L0139   STA  01B
+CLPST   STA  01B
         STA  01C
-L013D   ROL  01B
+CLPROL   ROL  01B
         LDA  002
         ADC  007
         STA  00C
         LDA  003
         ADC  008
-        BVS  L014D
+        BVS  CLPROR
         CMP  #080
-L014D   ROR  A
+CLPROR   ROR  A
         STA  00D
         ROR  00C
         ROR  01B
@@ -611,89 +611,89 @@ L014D   ROR  A
         STA  00E
         LDA  SCRN+1
         ADC  00A
-        BVS  L0164
+        BVS  CLPROR2
         CMP  #080
-L0164   ROR  A
+CLPROR2   ROR  A
         STA  00F
         ROR  00E
         ROR  01C
         LDY  #00A
-        JSR  L01A5
+        JSR  OUTCODE
         STA  010
         AND  MASK
         AND  #00F
-        BEQ  L0187
+        BEQ  CLPCHK
         LDX  #000
-        JSR  L0195
+        JSR  MOV5
         LDA  MASK
         AND  00B
         AND  #00F
-        BEQ  L013D
-L0185   CLC
+        BEQ  CLPROL
+CLPOK2   CLC
         RTS
-L0187   LDA  010
+CLPCHK   LDA  010
         AND  RTN
-        BNE  L0185
+        BNE  CLPOK2
         LDX  #005
-        JSR  L0195
-        JMP  L013D
-L0195   LDA  #005
+        JSR  MOV5
+        JMP  CLPROL
+MOV5   LDA  #005
         STA  RTN+1
-L0199   LDA  00002,Y
+MOV5LP   LDA  00002,Y
         STA  002,X
         INX
         INY
         DEC  RTN+1
-        BNE  L0199
+        BNE  MOV5LP
         RTS
-L01A5   LDA  #000
+OUTCODE   LDA  #000
         LDX  SCRN+1,Y
-        BMI  L01D3
+        BMI  OCLEFT
         CPX  025
-        BCC  L01D3
-        BNE  L01BB
+        BCC  OCLEFT
+        BNE  OCXHI
         LDX  SCRN,Y
         CPX  024
-        BCC  L01D3
-        BNE  L01BB
+        BCC  OCLEFT
+        BNE  OCXHI
         ORA  #040
-L01BB   LDX  SCRN+1,Y
+OCXHI   LDX  SCRN+1,Y
         CPX  027
-        BCC  L01D5
-        BNE  L01CF
+        BCC  OCY
+        BNE  OCRIGHT
         LDX  SCRN,Y
         CPX  026
-        BCC  L01D5
-        BNE  L01CF
+        BCC  OCY
+        BNE  OCRIGHT
         ORA  #080
-        BNE  L01D5
-L01CF   ORA  #008
-        BNE  L01D5
-L01D3   ORA  #004
-L01D5   LDX  003,Y
-        BMI  L01FF
+        BNE  OCY
+OCRIGHT   ORA  #008
+        BNE  OCY
+OCLEFT   ORA  #004
+OCY   LDX  003,Y
+        BMI  OCLOW
         CPX  021
-        BCC  L01FF
-        BNE  L01E9
+        BCC  OCLOW
+        BNE  OCYHI
         LDX  002,Y
         CPX  020
-        BCC  L01FF
-        BNE  L01E9
+        BCC  OCLOW
+        BNE  OCYHI
         ORA  #010
-L01E9   LDX  003,Y
+OCYHI   LDX  003,Y
         CPX  023
-        BCC  L0201
-        BNE  L01F9
+        BCC  OCRTS
+        BNE  OCBOT
         LDX  002,Y
         CPX  022
-        BCC  L0201
-        BEQ  L01FC
-L01F9   ORA  #002
+        BCC  OCRTS
+        BEQ  OCTOP
+OCBOT   ORA  #002
         RTS
-L01FC   ORA  #020
+OCTOP   ORA  #020
         RTS
-L01FF   ORA  #001
-L0201   RTS
+OCLOW   ORA  #001
+OCRTS   RTS
 
 ;---------------------------------------------------
 ; PROCEDURE MOVEABS(X,Y: INTEGER)
@@ -715,11 +715,11 @@ L0201   RTS
         .DEF PUTPOS
         .REF SETPEN,PLOT,LINE,CLIPXY
         LDY  #008
-L0002   LDA  @TURTLE,Y
+MA_COPY   LDA  @TURTLE,Y
         STA  00009,Y
         INY
         CPY  #00C
-        BNE  L0002
+        BNE  MA_COPY
         PLA
         STA  RTN
         PLA
@@ -737,19 +737,19 @@ L0002   LDA  @TURTLE,Y
         LDA  RTN
         PHA
 PUTPOS  LDY  #008
-L0026   LDA  0000E,Y
+MA_PUT   LDA  0000E,Y
         STA  @TURTLE,Y
         INY
         CPY  #00C
-        BNE  L0026
+        BNE  MA_PUT
         LDY  #00C
         LDA  @TURTLE,Y
-        BNE  L0037
-L0036   RTS
-L0037   JSR  CLIPXY
-        BCS  L0036
+        BNE  MA_DRAW
+MA_RTS   RTS
+MA_DRAW   JSR  CLIPXY
+        BCS  MA_RTS
         JSR  SETPEN
-        BCS  L0036
+        BCS  MA_RTS
         LDA  016
         PHA
         LDA  017
@@ -784,11 +784,11 @@ L0037   JSR  CLIPXY
         PLA
         STA  RTN+1
         LDY  #008
-L0008   LDA  @TURTLE,Y
+MR_COPY   LDA  @TURTLE,Y
         STA  00009,Y
         INY
         CPY  #00C
-        BNE  L0008
+        BNE  MR_COPY
         CLC
         PLA
         ADC  013
@@ -821,46 +821,46 @@ L0008   LDA  @TURTLE,Y
         .PROC FILLIT,0
         .REF SETPEN,PLOT,LINE
         LDY  #000
-L0002   LDA  @TURTLE,Y
+FI_VP   LDA  @TURTLE,Y
         STA  00020,Y
         INY
         CPY  #008
-        BNE  L0002
+        BNE  FI_VP
         JSR  SETPEN
-        BCS  L0053
+        BCS  FILLX
         LDY  #00C
         LDA  @TURTLE,Y
         CMP  #005
-        BCC  L0025
+        BCC  VPADJ
         LDA  022
         SBC  #001
         STA  022
         LDA  023
         SBC  #000
         STA  023
-L0025   SEC
+VPADJ   SEC
         LDA  026
         SBC  024
         ADC  #000
-        STA  STOREXY
+        STA  FILLCNT
         LDA  #0BF
         SEC
         SBC  026
-        STA  L0055
-L0037   LDA  L0055
+        STA  FILLY
+FILLP   LDA  FILLY
         LDX  020
         LDY  021
         JSR  PLOT
-        LDY  L0055
+        LDY  FILLY
         LDA  022
         LDX  023
         JSR  LINE
-        INC  L0055
-        DEC  STOREXY
-        BNE  L0037
-L0053   RTS
-STOREXY   BRK
-L0055   BRK
+        INC  FILLY
+        DEC  FILLCNT
+        BNE  FILLP
+FILLX   RTS
+FILLCNT .BYTE 000
+FILLY   .BYTE 000
 
 ;---------------------------------------------------
 ; FUNCTION SCREENBIT(X,Y: INTEGER): BOOLEAN
@@ -895,9 +895,9 @@ L0055   BRK
         LDA  @SCRN,Y
         AND  #07F
         AND  MASK
-        BEQ  L002A
+        BEQ  SB_ON
         LDA  #001
-L002A   PHA
+SB_ON   PHA
         LDA  RTN+1
         PHA
         LDA  RTN
@@ -965,39 +965,39 @@ L002A   PHA
         PHA
         JSR  SETPAGE
         LDY  #000
-L0047   LDA  @TURTLE,Y
+DB_VP   LDA  @TURTLE,Y
         STA  00020,Y
         INY
         CPY  #008
-        BNE  L0047
+        BNE  DB_VP
         LDY  003
-        LDA  L0219,Y
-        STA  L01F4+001
-        LDA  L0229,Y
-        STA  L01F6+001
+        LDA  DB_MOD1,Y
+        STA  DB_J1+001
+        LDA  DB_MOD2,Y
+        STA  DB_J2+001
         LDA  023
         CMP  00A
-        BCC  L006D
-        BNE  L006E
+        BCC  DB_RTS
+        BNE  DB_OK
         LDA  022
         CMP  009
-        BCS  L006E
-L006D   RTS
-L006E   LDA  027
+        BCS  DB_OK
+DB_RTS   RTS
+DB_OK   LDA  027
         CMP  00C
-        BCC  L006D
-        BNE  L007C
+        BCC  DB_RTS
+        BNE  DB_CLIP
         LDA  026
         CMP  00B
-        BCC  L006D
-L007C   SEC
+        BCC  DB_RTS
+DB_CLIP   SEC
         LDA  020
         SBC  009
         STA  01A
         LDA  021
         SBC  00A
         STA  01B
-        BMI  L00B0
+        BMI  DB_WIDE
         CLC
         LDA  014
         ADC  01A
@@ -1012,13 +1012,13 @@ L007C   SEC
         LDA  011
         SBC  01B
         STA  011
-        BPL  L00A8
+        BPL  DB_ADJ
         RTS
-L00A8   LDA  020
+DB_ADJ   LDA  020
         STA  009
         LDA  021
         STA  00A
-L00B0   CLC
+DB_WIDE  CLC
         LDA  009
         ADC  010
         STA  01A
@@ -1032,7 +1032,7 @@ L00B0   CLC
         LDA  01B
         SBC  023
         STA  01B
-        BMI  L00DB
+        BMI  DB_Y1
         SEC
         LDA  010
         SBC  01A
@@ -1041,14 +1041,14 @@ L00B0   CLC
         SBC  01B
         STA  011
         INC  010
-L00DB   SEC
+DB_Y1   SEC
         LDA  024
         SBC  00B
         STA  01A
         LDA  025
         SBC  00C
         STA  01B
-        BMI  L010F
+        BMI  DB_X2
         CLC
         LDA  012
         ADC  01A
@@ -1063,13 +1063,13 @@ L00DB   SEC
         LDA  00F
         SBC  01B
         STA  00F
-        BPL  L0107
+        BPL  DB_X1
         RTS
-L0107   LDA  024
+DB_X1   LDA  024
         STA  00B
         LDA  025
         STA  00C
-L010F   CLC
+DB_X2   CLC
         LDA  00B
         ADC  00E
         STA  01A
@@ -1083,10 +1083,10 @@ L010F   CLC
         LDA  01B
         SBC  027
         STA  01B
-        BMI  L0140
+        BMI  DB_INIT
         LDA  #000
         CMP  01A
-        BEQ  L0140
+        BEQ  DB_INIT
         SEC
         LDA  00E
         SBC  01A
@@ -1095,7 +1095,7 @@ L010F   CLC
         SBC  01B
         STA  00F
         INC  00E
-L0140   CLC
+DB_INIT   CLC
         LDA  014
         ADC  010
         STA  02A
@@ -1136,8 +1136,8 @@ L0140   CLC
         SBC  00E
         STA  029
         LDA  012
-        BEQ  L019F
-L018B   CLC
+        BEQ  DB_COL
+DB_ROW   CLC
         LDA  018
         ADC  016
         STA  018
@@ -1145,42 +1145,42 @@ L018B   CLC
         ADC  017
         STA  019
         DEC  012
-        BEQ  L019F
-        JMP  L018B
-L019F   LDX  009
+        BEQ  DB_COL
+        JMP  DB_ROW
+DB_COL   LDX  009
         LDY  00A
         LDA  00B
         CMP  029
-        BNE  L01AA
+        BNE  DB_HP
         RTS
-L01AA   JSR  HPOSN
+DB_HP   JSR  HPOSN
         LDY  01E
         STY  028
         LDA  @018,Y
         LDX  #000
-L01B5   CPX  01C
-        BEQ  L01BD
+DB_CX   CPX  01C
+        BEQ  DB_ST7
         LSR  A
         INX
-        BNE  L01B5
-L01BD   STA  007
-L01BF   CPX  01D
-        BNE  L01C9
+        BNE  DB_CX
+DB_ST7   STA  007
+DB_CY   CPX  01D
+        BNE  DB_LSR
         LDA  028
         CMP  01F
-        BEQ  L01E0
-L01C9   LSR  007
-        JSR  L01F2
+        BEQ  DB_CLC
+DB_LSR   LSR  007
+        JSR  DB_LDY
         INX
         CPX  #008
-        BNE  L01BF
+        BNE  DB_CY
         LDX  #000
         INC  028
         LDY  028
         LDA  @018,Y
         STA  007
-        JMP  L01BF
-L01E0   CLC
+        JMP  DB_CY
+DB_CLC   CLC
         LDA  018
         ADC  016
         STA  018
@@ -1188,16 +1188,16 @@ L01E0   CLC
         ADC  017
         STA  019
         DEC  00B
-        JMP  L019F
-L01F2   LDY  00D
-L01F4   BCS  L01F8
-L01F6   BCC  L0203
-L01F8   LDA  MASK
+        JMP  DB_COL
+DB_LDY   LDY  00D
+DB_J1   BCS  DB_M1
+DB_J2   BCC  DB_M2
+DB_M1   LDA  MASK
         AND  #07F
         ORA  @SCRN,Y
         STA  @SCRN,Y
         JMP  RIGHT
-L0203   LDA  MASK
+DB_M2   LDA  MASK
         EOR  #07F
         AND  @SCRN,Y
         STA  @SCRN,Y
@@ -1208,9 +1208,9 @@ L0203   LDA  MASK
         STA  @SCRN,Y
         JMP  RIGHT
 ;       ---- data
-L0219   .BYTE 00D,00D,018,018,00D,00D,018,018
+DB_MOD1   .BYTE 00D,00D,018,018,00D,00D,018,018
         .BYTE 020,020,002,002,020,020,002,002
-L0229   .BYTE 00B,016,00B,016,01E,000,01E,000
+DB_MOD2   .BYTE 00B,016,00B,016,01E,000,01E,000
         .BYTE 00B,016,00B,016,01E,000,01E,000
         .BYTE 000
 
