@@ -6,17 +6,22 @@
   is segment 1, finished by the Librarian itself, which leaves
   slot 0 of the shipped file blank (finding 267).
 
-  The ancestor is UCSD's I.5 Librarian, reference_source/ucsd_15.
+  The ancestor is UCSD's I.5 Librarian, reference_source/ucsd_15,
+  by way of its II.0 revision (Gary Dismukes, March 1979, in
+  github.com/dhlav/ucsd-psystem-os, librarian/), which added the
+  byte-flipped dictionaries: FIRSTFILE, FLIPPED, BYTESWAP,
+  TABLEFLIPPED and FLIPTABLE are its names (finding 292).
   Apple moved NEWLINKER's body into LIBRARIAN, made its two
   dictionaries global records rather than heap blocks, gave
   LINKIT its slots as parameters, and replaced COPYINTERFACE.
-  I.5's names are used wherever the binary confirms the role.
-  What Apple added has no name to borrow and carries a
-  placeholder: LB<n> for procedure n, G<n> for global word n,
+  The ancestors' names are used wherever the binary confirms
+  the role. What Apple added has no name to borrow and carries
+  a placeholder: LB<n> for procedure n, G<n> for global word n,
   L<n> or M<n> for local word n.
 
-  The byte-sex routines are the linker's own (LK5 and LK11 in
-  LINKER.text), and so are the dictionary types they need.
+  The byte-sex routines are the linker's own (BYTESWAP and
+  FLIPTABLE in LINKER.text), and so are the dictionary types
+  they need.
 
   (*$U-*) leaves range and I/O checking off, and the binary has
   no CHK and no CSP 0 anywhere. }
@@ -137,44 +142,44 @@ TYPE
 VAR NBLOCKS,OUTBLOCK,RSLT: INTEGER;
     DSEG,SSEG: SEGRANGE;
     PL,TITLE,NTITLE: STRING;
-    G131: STRING[79];           { the notice as typed }
+    NOTICEIN: STRING[79];           { the notice as typed }
     BUF: BLOCK0P;
     CODE,INFILE: FILE;
     CODETABLE,INTBL: BLOCK0;
-    G765,G764: BOOLEAN;         { G765: no slot copied yet;
-                                  G764: dictionaries are byte-flipped }
+    FIRSTFILE,FLIPPED: BOOLEAN; { no slot copied yet;
+                                  dictionaries are byte-flipped }
     CCH: CHAR;
 
 { Swap the two bytes of a word. }
 
-PROCEDURE LB2(VAR X: INTEGER);
-  VAR L3, L2: SWAPREC;
+PROCEDURE BYTESWAP(VAR WORD: INTEGER);
+  VAR TEMP1, TEMP2: SWAPREC;
 BEGIN
-  L3.INTEG := X;
-  L2.LOWBYTE := L3.HIGHBYTE;
-  L2.HIGHBYTE := L3.LOWBYTE;
-  X := L2.INTEG
+  TEMP1.INTEG := WORD;
+  TEMP2.LOWBYTE := TEMP1.HIGHBYTE;
+  TEMP2.HIGHBYTE := TEMP1.LOWBYTE;
+  WORD := TEMP2.INTEG
 END;
 
 { TRUE if any segment address has a high byte, which a
   dictionary in this machine's byte order cannot. }
 
-FUNCTION LB3(VAR SEGTBL: BLOCK0): BOOLEAN;
+FUNCTION TABLEFLIPPED(VAR TABLE: BLOCK0): BOOLEAN;
   LABEL 1;
-  VAR L4: INTEGER;
-      L5: 0..1;          { index of a word's high byte }
-      L6: WORDREC;
+  VAR S: INTEGER;
+      HIGHBYTE: 0..1;    { index of a word's high byte }
+      INT: WORDREC;
 BEGIN
-  LB3 := FALSE;
-  L6.INTEG := 1;
-  L5 := ORD(L6.BYTES[0] = 1);
-  FOR L4 := 0 TO MAXSEG DO
-    WITH SEGTBL.SEGDSC[L4] DO
+  TABLEFLIPPED := FALSE;
+  INT.INTEG := 1;
+  HIGHBYTE := ORD(INT.BYTES[0] = 1);
+  FOR S := 0 TO MAXSEG DO
+    WITH TABLE.SEGDSC[S] DO
       BEGIN
-        L6.INTEG := DISKADDR;
-        IF L6.BYTES[L5] <> 0 THEN
+        INT.INTEG := DISKADDR;
+        IF INT.BYTES[HIGHBYTE] <> 0 THEN
           BEGIN
-            LB3 := TRUE;
+            TABLEFLIPPED := TRUE;
             GOTO 1
           END
       END;
@@ -183,25 +188,25 @@ END;
 
 { Byte-swap a whole dictionary. }
 
-PROCEDURE LB4(VAR SEGTBL: BLOCK0);
-  VAR L2: INTEGER;
-      L3: WORDREC;
+PROCEDURE FLIPTABLE(VAR TABLE: BLOCK0);
+  VAR S: INTEGER;
+      WORD: WORDREC;
 BEGIN
-  FOR L2 := 0 TO MAXSEG DO
-    WITH SEGTBL DO
+  FOR S := 0 TO MAXSEG DO
+    WITH TABLE DO
       BEGIN
-        WITH SEGDSC[L2] DO
+        WITH SEGDSC[S] DO
           BEGIN
-            LB2(DISKADDR);
-            LB2(CODELENG)
+            BYTESWAP(DISKADDR);
+            BYTESWAP(CODELENG)
           END;
-        L3.KIND := SEGKIND[L2];
-        LB2(L3.INTEG);
-        SEGKIND[L2] := L3.KIND;
-        LB2(EXTRA[L2]);
-        L3.MISC := SEGINFO[L2];
-        LB2(L3.INTEG);
-        SEGINFO[L2] := L3.MISC
+        WORD.KIND := SEGKIND[S];
+        BYTESWAP(WORD.INTEG);
+        SEGKIND[S] := WORD.KIND;
+        BYTESWAP(EXTRA[S]);
+        WORD.MISC := SEGINFO[S];
+        BYTESWAP(WORD.INTEG);
+        SEGINFO[S] := WORD.MISC
       END
 END;
 
@@ -226,7 +231,7 @@ END;
 { PROMPT with a number after the message, always on the error
   line's terms: bell, then wait for a space. }
 
-PROCEDURE LB6(AT, N: INTEGER);
+PROCEDURE BELLWAIT(AT, N: INTEGER);
   VAR L3: CHAR;
 BEGIN
   GOTOXY(0,AT);
@@ -250,7 +255,7 @@ BEGIN
     BEGIN
       RSLT:=IORESULT;
       PL := 'I/O error # ';
-      LB6(ERROR,RSLT)
+      BELLWAIT(ERROR,RSLT)
     END;
 END; (* CHECKIO *)
 
@@ -303,7 +308,7 @@ PROCEDURE LINKCODE;
   LABEL 1;
   VAR NBLOCKS: INTEGER;
       M2: INTEGER;
-      M3: BOOLEAN;      { set by LINKIT when the output is full }
+      OUTFULL: BOOLEAN;      { set by LINKIT when the output is full }
 
   PROCEDURE LINKIT(SSEG, DSEG: INTEGER);
     VAR L3: CHAR;
@@ -347,8 +352,8 @@ PROCEDURE LINKCODE;
       NRECS := 0; DONE := FALSE;
       REPEAT
         GETREC;
-        IF G764 THEN
-          LB2(REC[4]);
+        IF FLIPPED THEN
+          BYTESWAP(REC[4]);
         IF NOT (REC[4] IN [0..14]) THEN
           BEGIN
             PL := 'bad link info';
@@ -359,8 +364,8 @@ PROCEDURE LINKCODE;
         IF NOT DONE THEN
           IF REC[4] IN [1..5,13,14] THEN
             BEGIN { COPY REF LIST }
-              IF G764 THEN
-                LB2(REC[6]);
+              IF FLIPPED THEN
+                BYTESWAP(REC[6]);
               N := (REC[6]+7) DIV 8;
               WHILE N > 0 DO
                 BEGIN GETREC; N := N-1 END
@@ -374,9 +379,9 @@ PROCEDURE LINKCODE;
       the file instead. }
 
     PROCEDURE COPYINTERFACE(START: INTEGER);
-      VAR L3, L2: INTEGER;
+      VAR L3, IFSIZE: INTEGER;
 
-      PROCEDURE LB15;
+      PROCEDURE IFWRERR;
       BEGIN
         PL := 'Interface write error';
         PROMPT(ERROR)
@@ -385,50 +390,50 @@ PROCEDURE LINKCODE;
     BEGIN
       IF START <= 0 THEN
         EXIT(COPYINTERFACE);
-      L2 := INTBL.SEGDSC[SSEG].DISKADDR-START;
+      IFSIZE := INTBL.SEGDSC[SSEG].DISKADDR-START;
       CODETABLE.EXTRA[DSEG] := OUTBLOCK;
-      IF L2 < 0 THEN
+      IF IFSIZE < 0 THEN
         BEGIN
-          L2 := START;
+          IFSIZE := START;
           WHILE BLOCKREAD(INFILE, BUF^, 1, START) = 1 DO
             BEGIN
               START := START+1;
               IF BLOCKWRITE(CODE, BUF^, 1, OUTBLOCK) <> 1 THEN
                 BEGIN
-                  LB15;
+                  IFWRERR;
                   EXIT(COPYINTERFACE)
                 END;
               OUTBLOCK := OUTBLOCK+1
             END;
-          IF L2 = START THEN
-            L2 := 0
+          IF IFSIZE = START THEN
+            IFSIZE := 0
           ELSE
             EXIT(COPYINTERFACE)
         END;
-      IF L2 = 0 THEN
+      IF IFSIZE = 0 THEN
         BEGIN
           PL := 'Interface error';
           PROMPT(ERROR);
           EXIT(COPYINTERFACE)
         END;
       MARK(L4);
-      FOR L3 := 1 TO L2 DO
+      FOR L3 := 1 TO IFSIZE DO
         NEW(BUF);
-      IF BLOCKREAD(INFILE, L4^, L2, START) <> L2 THEN
+      IF BLOCKREAD(INFILE, L4^, IFSIZE, START) <> IFSIZE THEN
         BEGIN
           PL := 'Interface read error';
           PROMPT(ERROR)
         END
       ELSE
-        IF BLOCKWRITE(CODE, L4^, L2, OUTBLOCK) <> L2 THEN
-          LB15
+        IF BLOCKWRITE(CODE, L4^, IFSIZE, OUTBLOCK) <> IFSIZE THEN
+          IFWRERR
         ELSE
-          OUTBLOCK := OUTBLOCK+L2;
+          OUTBLOCK := OUTBLOCK+IFSIZE;
       RELEASE(L4)
     END { COPYINTERFACE } ;
 
   BEGIN { LINKIT }
-    M3 := FALSE;
+    OUTFULL := FALSE;
     IF INTBL.SEGNAME[SSEG] <> '        ' THEN
       BEGIN
         IF CODETABLE.SEGDSC[DSEG].CODELENG <> 0 THEN
@@ -467,13 +472,13 @@ PROCEDURE LINKCODE;
                 IF BLOCKREAD(INFILE,L4^,NBLOCKS,DISKADDR) <> NBLOCKS THEN
                   BEGIN
                     PL := 'Error reading slot ';
-                    LB6(ERROR,SSEG)
+                    BELLWAIT(ERROR,SSEG)
                   END
                 ELSE
                   IF BLOCKWRITE(CODE,L4^,NBLOCKS,OUTBLOCK) <> NBLOCKS THEN
                     BEGIN
                       PL := 'I/O error - no room on disk';
-                      M3 := TRUE;
+                      OUTFULL := TRUE;
                       PROMPT(ERROR)
                     END
                   ELSE
@@ -545,33 +550,33 @@ BEGIN { LINKCODE }
       BEGIN
         RSLT:=IORESULT;
         PL := 'Read error # ';
-        LB6(ERROR,RSLT)
+        BELLWAIT(ERROR,RSLT)
       END;
-  IF G765 THEN
+  IF FIRSTFILE THEN
     BEGIN
-      IF LB3(INTBL) THEN
+      IF TABLEFLIPPED(INTBL) THEN
         BEGIN
-          LB4(INTBL);
-          G764 := TRUE
+          FLIPTABLE(INTBL);
+          FLIPPED := TRUE
         END
       ELSE
     END
   ELSE
-    IF G764 <> LB3(INTBL) THEN
+    IF FLIPPED <> TABLEFLIPPED(INTBL) THEN
       BEGIN
         PL := 'Incompatible byte sex';
         PROMPT(ERROR)
       END
     ELSE
-      IF G764 THEN
-        LB4(INTBL);
+      IF FLIPPED THEN
+        FLIPTABLE(INTBL);
   PL :=
 'Slot # to copy and <space>, = for all, ? for select, N(ew file, Q(uit, A(bort';
   PROMPT(0);
   REPEAT
     IF CONFIRM THEN
       BEGIN
-        G765 := FALSE;
+        FIRSTFILE := FALSE;
         IF CCH = '=' THEN
           BEGIN
             PL := 'Copying all slots...';
@@ -579,7 +584,7 @@ BEGIN { LINKCODE }
             FOR M2 := 0 TO MAXSEG DO
               BEGIN
                 LINKIT(M2,M2);
-                IF M3 THEN
+                IF OUTFULL THEN
                   GOTO 1
               END
           END
@@ -598,7 +603,7 @@ BEGIN { LINKCODE }
                     IF CCH IN ['Y','y'] THEN
                       BEGIN
                         LINKIT(M2,M2);
-                        IF M3 THEN
+                        IF OUTFULL THEN
                           GOTO 1
                       END
                   END;
@@ -628,8 +633,8 @@ BEGIN { LIBRARIAN }
     ELSE REWRITE(CODE,TITLE)
   UNTIL (LENGTH(TITLE) = 0) OR (CHECKIO);
   OUTBLOCK := 1; NEW(BUF);
-  G765 := TRUE;
-  G764 := FALSE;
+  FIRSTFILE := TRUE;
+  FLIPPED := FALSE;
   FILLCHAR(CODETABLE, SIZEOF(BLOCK0), 0);
   WITH CODETABLE DO
     FOR DSEG := 0 TO MAXSEG DO
@@ -643,11 +648,11 @@ BEGIN { LIBRARIAN }
   WRITE('Notice? ');
   WRITE(CHR(7));
   WITH SYSCOM^.CRTCTRL DO WRITE(ESCAPE,ERASEEOL);
-  READLN(INPUT,G131);
-  IF G131 <> '' THEN
-    CODETABLE.NOTICE := G131;
-  IF G764 THEN
-    LB4(CODETABLE);
+  READLN(INPUT,NOTICEIN);
+  IF NOTICEIN <> '' THEN
+    CODETABLE.NOTICE := NOTICEIN;
+  IF FLIPPED THEN
+    FLIPTABLE(CODETABLE);
   IF BLOCKWRITE(CODE,CODETABLE,1,0) = 1 THEN
     CLOSE(CODE,LOCK)
   ELSE

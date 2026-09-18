@@ -33,10 +33,10 @@ FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
 
 | File | IDs | Status |
 |------|-----|--------|
-| `LINKER.text` | `LK2`, `LK3`, `LK17`, `LK51`, `L45` | Apple additions; keep until body match (`G29`/`G91`/`L12` renamed) |
-| `LIBRARY.text` | `G131`, `LB6`, `LB15` (+ older note `M2`/`M3` if still present) | same |
-| `LIBMAP.text` | `L85` | same |
-| `FILER.text` | `FL56`, `L12`, `L14`, `L29` | Apple / local; `FL56` is a procedure |
+| `LINKER.text` | — | LK*/L45 renamed 2026-09-17 |
+| `LIBRARY.text` | `M2` | loop index only; `G131`/`LB*`/`M3` renamed |
+| `LIBMAP.text` | `L85` | loop index for upshift |
+| `FILER.text` | — | FL56/L12/L14/L29 renamed 2026-09-17 |
 
 ### Tier D — large ancestor mines (separate projects)
 
@@ -63,8 +63,9 @@ FINDINGS 225–228). Full table in `docs/RENAMES.md`. Leftover locals
 2. ~~**LINKER `G91`/`L12`**~~ done (`WORDHEAP`/`INTRLINK`).
 3. ~~**LINKER `G29`→`HOSTSLOT`**~~ done.
 4. ~~**GETCMD `GC*`**~~ done (role-based names; see RENAMES.md).
-5. **LINKER/LIBRARY/LIBMAP** leftovers only if an ancestor body turns up.
+5. ~~**LINKER/LIBRARY/FILER leftovers**~~ done (comment-backed batch).
 6. **ASSMBLER / natives** as dedicated naming campaigns, not drive-by renames.
+7. Optional: LIBMAP `L85` / LIBRARY `M2` (loop indices — low value).
 
 ## Counts snapshot (unique IDs, 2026-09-16)
 

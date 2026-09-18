@@ -71,3 +71,35 @@ UCSD identifiers). Source-only; `probe_os_exact` still green.
 | `GC21` | `TRIMLEAD` | strip leading spaces from compile title `.21` |
 | `GC22` | `AFTERCMP` | after-compile cleanup / run `.22` |
 | `GC24` | `NEWEXBUF` | allocate EXEC write buffer `.24` |
+
+## 2026-09-17 — LINKER / LIBRARY / FILER leftover helpers
+
+Comment-backed (or body+comment) roles. Source-only; linker/filer/library
+probes still green.
+
+### LINKER
+| Old | New | Role |
+|-----|-----|------|
+| `LK2` | `CLOSEINS` | close every input file |
+| `LK3` | `QUITLINK` | close everything and leave |
+| `LK17` | `STRIPDLE` | drop leading DLE blank-compression from a typed name |
+| `LK51` | `CHECKVER` | require 1.3 SYSTEM.PASCAL (`$BF21` = 4) |
+| `L45` | `LIBAT` | `POS('.LIBRARY', TITLE)` |
+
+### LIBRARY
+| Old | New | Role |
+|-----|-----|------|
+| `G131` | `NOTICEIN` | the notice as typed |
+| `LB6` | `BELLWAIT` | prompt with number, bell, wait for space |
+| `LB15` | `IFWRERR` | interface write error prompt |
+| `M3` | `OUTFULL` | set by LINKIT when the output is full |
+
+### FILER
+| Old | New | Role |
+|-----|-----|------|
+| `FL56` | `CHECKVER` | same 1.3 version check as the linker |
+| `L29` | `SCRWIDTH` | screen width (40 if CRT width &lt; 80) |
+| `L12` | `DIRSIGN` | 0 forward / 1 back when copying |
+| `L14` | `VOLCONF` | volume-name confirmation in ZEROVOLUME |
+
+Skipped: `M2`, `L85` (pure loop indices); no-ancestor leftovers none left in this batch.

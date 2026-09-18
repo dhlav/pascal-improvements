@@ -142,7 +142,7 @@ TYPE
 VAR NBLOCKS,OUTBLOCK,RSLT: INTEGER;
     DSEG,SSEG: SEGRANGE;
     PL,TITLE,NTITLE: STRING;
-    G131: STRING[79];           { the notice as typed }
+    NOTICEIN: STRING[79];           { the notice as typed }
     BUF: BLOCK0P;
     CODE,INFILE: FILE;
     CODETABLE,INTBL: BLOCK0;
@@ -231,7 +231,7 @@ END;
 { PROMPT with a number after the message, always on the error
   line's terms: bell, then wait for a space. }
 
-PROCEDURE LB6(AT, N: INTEGER);
+PROCEDURE BELLWAIT(AT, N: INTEGER);
   VAR L3: CHAR;
 BEGIN
   GOTOXY(0,AT);
@@ -255,7 +255,7 @@ BEGIN
     BEGIN
       RSLT:=IORESULT;
       PL := 'I/O error # ';
-      LB6(ERROR,RSLT)
+      BELLWAIT(ERROR,RSLT)
     END;
 END; (* CHECKIO *)
 
@@ -308,7 +308,7 @@ PROCEDURE LINKCODE;
   LABEL 1;
   VAR NBLOCKS: INTEGER;
       M2: INTEGER;
-      M3: BOOLEAN;      { set by LINKIT when the output is full }
+      OUTFULL: BOOLEAN;      { set by LINKIT when the output is full }
 
   PROCEDURE LINKIT(SSEG, DSEG: INTEGER);
     VAR L3: CHAR;
@@ -381,7 +381,7 @@ PROCEDURE LINKCODE;
     PROCEDURE COPYINTERFACE(START: INTEGER);
       VAR L3, IFSIZE: INTEGER;
 
-      PROCEDURE LB15;
+      PROCEDURE IFWRERR;
       BEGIN
         PL := 'Interface write error';
         PROMPT(ERROR)
@@ -400,7 +400,7 @@ PROCEDURE LINKCODE;
               START := START+1;
               IF BLOCKWRITE(CODE, BUF^, 1, OUTBLOCK) <> 1 THEN
                 BEGIN
-                  LB15;
+                  IFWRERR;
                   EXIT(COPYINTERFACE)
                 END;
               OUTBLOCK := OUTBLOCK+1
@@ -426,14 +426,14 @@ PROCEDURE LINKCODE;
         END
       ELSE
         IF BLOCKWRITE(CODE, L4^, IFSIZE, OUTBLOCK) <> IFSIZE THEN
-          LB15
+          IFWRERR
         ELSE
           OUTBLOCK := OUTBLOCK+IFSIZE;
       RELEASE(L4)
     END { COPYINTERFACE } ;
 
   BEGIN { LINKIT }
-    M3 := FALSE;
+    OUTFULL := FALSE;
     IF INTBL.SEGNAME[SSEG] <> '        ' THEN
       BEGIN
         IF CODETABLE.SEGDSC[DSEG].CODELENG <> 0 THEN
@@ -472,13 +472,13 @@ PROCEDURE LINKCODE;
                 IF BLOCKREAD(INFILE,L4^,NBLOCKS,DISKADDR) <> NBLOCKS THEN
                   BEGIN
                     PL := 'Error reading slot ';
-                    LB6(ERROR,SSEG)
+                    BELLWAIT(ERROR,SSEG)
                   END
                 ELSE
                   IF BLOCKWRITE(CODE,L4^,NBLOCKS,OUTBLOCK) <> NBLOCKS THEN
                     BEGIN
                       PL := 'I/O error - no room on disk';
-                      M3 := TRUE;
+                      OUTFULL := TRUE;
                       PROMPT(ERROR)
                     END
                   ELSE
@@ -550,7 +550,7 @@ BEGIN { LINKCODE }
       BEGIN
         RSLT:=IORESULT;
         PL := 'Read error # ';
-        LB6(ERROR,RSLT)
+        BELLWAIT(ERROR,RSLT)
       END;
   IF FIRSTFILE THEN
     BEGIN
@@ -584,7 +584,7 @@ BEGIN { LINKCODE }
             FOR M2 := 0 TO MAXSEG DO
               BEGIN
                 LINKIT(M2,M2);
-                IF M3 THEN
+                IF OUTFULL THEN
                   GOTO 1
               END
           END
@@ -603,7 +603,7 @@ BEGIN { LINKCODE }
                     IF CCH IN ['Y','y'] THEN
                       BEGIN
                         LINKIT(M2,M2);
-                        IF M3 THEN
+                        IF OUTFULL THEN
                           GOTO 1
                       END
                   END;
@@ -648,9 +648,9 @@ BEGIN { LIBRARIAN }
   WRITE('Notice? ');
   WRITE(CHR(7));
   WITH SYSCOM^.CRTCTRL DO WRITE(ESCAPE,ERASEEOL);
-  READLN(INPUT,G131);
-  IF G131 <> '' THEN
-    CODETABLE.NOTICE := G131;
+  READLN(INPUT,NOTICEIN);
+  IF NOTICEIN <> '' THEN
+    CODETABLE.NOTICE := NOTICEIN;
   IF FLIPPED THEN
     FLIPTABLE(CODETABLE);
   IF BLOCKWRITE(CODE,CODETABLE,1,0) = 1 THEN
