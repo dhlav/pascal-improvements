@@ -5,3 +5,8 @@ build/
 .claude/
 __pycache__/
 *.pyc
+
+# ProFile Manager lifts and the linked compare image. The compare
+# script in ppm/work/ stays; these are rebuilt from the binaries.
+ppm/work/*.txt
+ppm/work/PPMLINK.CODE

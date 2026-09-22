@@ -1,0 +1,15 @@
+{ VOLUMEMA -- Pascal ProFile Manager, segment 8 of PPM.CODE.
+
+  Same shape as VMGR: a plain unit, procedure 1 the
+  initialisation (RNP), and the one procedure the menu
+  calls is the first interface heading, so it is
+  procedure 2. The other lex-1 procedures of this segment
+  are not called from outside it, so they are not
+  headings yet. }
+UNIT VOLUMEMA;
+INTERFACE
+  PROCEDURE VOLUI;
+IMPLEMENTATION
+  PROCEDURE VOLUI; BEGIN END;
+BEGIN
+END.

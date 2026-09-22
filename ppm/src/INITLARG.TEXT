@@ -1,0 +1,1115 @@
+        .PROC INITLARG
+; INITLARG -- transient init for the ProFile driver. Asks
+; whether to assign volumes to their default units, then
+; opens PASCAL.AREA. Same assembly result as LARGEDIS:
+; segment bytes match, version nibble 6 instead of 4.
+L0000   JMP  L030D
+        .ASCII "PROFILE COPR. APPLE,198"
+L001A   .BYTE 033
+L001B   .BYTE 000,000,000,000,000,000,000
+L0022   .BYTE 000,000,000,000,000,000,000,000
+L002A   .BYTE 000
+L002B   .BYTE 000
+L002C   .BYTE 000
+L002D   .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000
+L00E0   .BYTE 000
+L00E1   .BYTE 000
+L00E2   .WORD L03B9
+L00E4   .WORD L0000
+        .BYTE 000,000
+L00E8   .BYTE 000
+L00E9   .BYTE 000
+L00EA   .BYTE 000
+L00EB   .BYTE 000,000
+L00ED   .BYTE 0C0
+L00EE   .WORD L0A81
+L00F0   .BYTE 000
+L00F1   .BYTE 000
+L00F2   .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000
+L0108   .BYTE 000
+L0109   .BYTE 000
+L010A   .BYTE 000
+L010B   .BYTE 000
+L010C   .BYTE 000
+L010D   .BYTE 000
+L010E   .BYTE 000
+L010F   .BYTE 000
+L0110   .BYTE 000
+L0111   .BYTE 000
+L0112   .BYTE 000
+L0113   .BYTE 000
+L0114   .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000
+L0130   .BYTE 000
+L0131   .BYTE 000
+L0132   .BYTE 000
+L0133   .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000,000,000,000,000,000,000
+        .BYTE 000,000
+L030D   STA  L002A
+        STX  L002B
+        PLA 
+        STA  L00F0
+        PLA 
+        STA  L00F1
+        LDY  #015
+L031D   LDA  0003A,Y
+        STA  L00F2,Y
+        DEY 
+        BPL  L031D
+        LDA  0C083
+        PLA 
+        STA  L010B
+        PLA 
+        STA  L010C
+        JSR  L059E
+        LDA  L00E2
+        STA  04C
+        LDA  L00E2+001
+        STA  04D
+        JSR  L05AC
+        LDX  #007
+L0343   LDA  L0022,X
+        BMI  L034F
+        DEX 
+        BNE  L0343
+        LDX  #009
+        BNE  L0358
+L034F   TXA 
+        ORA  #0C0
+        STA  L00ED
+        JSR  L048F
+L0358   LDY  #015
+L035A   LDA  L00F2,Y
+        STA  0003A,Y
+        DEY 
+        BPL  L035A
+        LDA  L00F1
+        PHA 
+        LDA  L00F0
+        PHA 
+        LDA  0C08B
+        RTS 
+L036F   TAY 
+        LDA  L001B,Y
+        BEQ  L037D
+        ORA  #0C0
+        JSR  L03A9
+        JMP  L0A81
+L037D   LDX  #009
+        RTS 
+L0380   LDA  L001B,X
+        STA  004
+        CPY  #002
+        BPL  L0392
+        TSX 
+        STA  00109,X
+        LDA  #000
+        STA  0010A,X
+L0392   RTS 
+L0393   LDA  04E
+        STA  L0108
+        LDA  04F
+        STA  L0109
+        RTS 
+L039E   LDY  L0108
+        STY  04E
+        LDY  L0109
+        STY  04F
+        RTS 
+L03A9   STA  007F8
+        STA  003
+        LDY  #000
+        STY  002
+        LDA  0CFFF
+        DEY 
+        LDA  @002,Y
+        RTS 
+L03B9   JSR  L0393
+        LDA  00478
+        PHA 
+        LDA  004F8
+        PHA 
+        LDA  00578
+        PHA 
+        LDA  005F8
+        PHA 
+        LDA  00678
+        PHA 
+        LDA  006F8
+        PHA 
+        LDA  00778
+        PHA 
+        LDA  007F8
+        PHA 
+        LDY  #037
+        LDA  @0E2,Y
+        STA  000
+        INY 
+        LDA  @0E2,Y
+        STA  001
+        JSR  L040D
+        PLA 
+        JSR  L03A9
+        PLA 
+        STA  00778
+        PLA 
+        STA  006F8
+        PLA 
+        STA  00678
+        PLA 
+        STA  005F8
+        PLA 
+        STA  00578
+        PLA 
+        STA  004F8
+        PLA 
+        STA  00478
+        JMP  L039E
+L040D   JMP  @00000
+L0410   JSR  L0393
+        LDY  #004
+        LDA  @0EE,Y
+        STA  L0429+001
+        INY 
+        LDA  @0EE,Y
+        STA  L0429+002
+        LDX  #000
+        STX  000
+L0424   LDA  L0435,X
+        BEQ  L0432
+L0429   JSR  00000
+        INC  000
+        LDX  000
+        BNE  L0424
+L0432   JMP  L039E
+L0435   .BYTE 00D,041,073,073,069,067,06E,020
+        .ASCII "volumes to their default unit number? (Y/N) "
+L0469   .BYTE 020,000
+L046B   STA  L0469
+        JSR  L0393
+        LDX  034
+        STX  000
+        JSR  L0424
+        LDA  L0469
+        RTS 
+L047C   JSR  L0393
+        LDA  L048D+001
+        PHA 
+        LDA  L048D
+        PHA 
+L0487   JMP  @000EE
+        .BYTE 04C
+L048B   .WORD L039E
+L048D   .WORD L0487+002
+L048F   JSR  L0410
+        JSR  L047C
+        JSR  L046B
+        AND  #0DF
+        CMP  #059
+        BEQ  L04AB
+        CMP  #04E
+        BNE  L048F
+        LDA  L00ED
+        JSR  L03A9
+        JMP  L054D
+L04AB   LDA  #000
+L04AD   PHA 
+        TAX 
+        LDA  L001B,X
+        BNE  L04B7
+        JMP  L04FC
+L04B7   PLA 
+        PHA 
+        JSR  L055D
+        LDX  #000
+        JSR  L036F
+        LDA  L00ED
+        JSR  L03A9
+        CPX  #000
+        BEQ  L04CE
+L04CB   JMP  L04FC
+L04CE   PLA 
+        PHA 
+        JSR  L0636
+        BCS  L04FC
+        PLA 
+        PHA 
+        JSR  L055D
+        LDX  #000
+        JSR  L036F
+        LDA  L00ED
+        JSR  L03A9
+        CPX  #000
+        BNE  L04CB
+        JSR  L096F
+        PLA 
+        PHA 
+        JSR  L055D
+        LDX  #001
+        JSR  L036F
+        LDA  L00ED
+        JSR  L03A9
+L04FC   LDA  L055B
+        STA  L0551
+        LDA  L055C
+        STA  L0552
+        PLA 
+        CLC 
+        ADC  #001
+        CMP  #008
+        BCS  L0513
+        JMP  L04AD
+L0513   LDA  #004
+        JSR  L08BE
+        TAY 
+        LDA  L002D,Y
+        BPL  L054D
+        LDA  #00C
+        JSR  L08BE
+        TAY 
+        LDA  L002D,Y
+        BMI  L054D
+        LDY  #016
+        LDA  @0EA,Y
+        CLC 
+        ADC  #001
+        STA  L00E0
+        INY 
+        LDA  @0EA,Y
+        ADC  #000
+        STA  L00E1
+        LDA  L00E8
+        SEC 
+        SBC  #001
+        LDY  #016
+        STA  @0EA,Y
+        LDA  L00E9
+        SBC  #000
+        INY 
+        STA  @0EA,Y
+L054D   JSR  L0590
+        RTS 
+L0551   .BYTE 002
+L0552   .BYTE 000,000,002
+L0555   .WORD L010D
+        .BYTE 000,000,002,000
+L055B   .BYTE 002
+L055C   .BYTE 000
+L055D   STA  002
+        PLA 
+        STA  000
+        PLA 
+        STA  001
+        INC  000
+        BNE  L056B
+        INC  001
+L056B   LDY  #009
+L056D   LDA  L0551,Y
+        PHA 
+        DEY 
+        BPL  L056D
+        LDY  #000
+        LDX  002
+        JSR  L0380
+        LDA  002
+        JMP  @00000
+L0580   LDA  L010B
+        CLC 
+        ADC  #01A
+        STA  006
+        LDA  L010C
+        ADC  #000
+        STA  007
+        RTS 
+L0590   JSR  L0580
+        LDY  #0D5
+L0595   LDA  L001A,Y
+        STA  @006,Y
+        DEY 
+        BNE  L0595
+        RTS 
+L059E   JSR  L0580
+        LDY  #0D5
+L05A3   LDA  @006,Y
+        STA  L001A,Y
+        DEY 
+        BNE  L05A3
+        RTS 
+L05AC   LDA  #000
+        STA  00D
+        STA  03E
+        LDA  #0C4
+        STA  03F
+L05B6   JSR  L03A9
+        JSR  L0A91
+        JSR  L05FA
+        BCS  L05E2
+        LDX  00C
+        LDY  L010A
+        TXA 
+        STA  L001B,Y
+        INC  L010A
+        LDA  #001
+        STA  L0022,X
+        JSR  L0A4C
+        LDX  00C
+        LDA  L0022,X
+        BPL  L05DF
+        JSR  L0A3E
+L05DF   JSR  L06E8
+L05E2   INC  03F
+        LDA  03F
+        CMP  #0C8
+        BNE  L05B6
+        LDX  #000
+        LDA  00D
+        BMI  L05F9
+        ROR  A
+        BCC  L05F7
+        LDX  #009
+        BNE  L05F9
+L05F7   LDX  #028
+L05F9   RTS 
+L05FA   LDX  043
+        LDA  0C083,X
+        LDX  #008
+        LDY  #001
+        LDA  @03E,Y
+        CMP  #020
+        BNE  L0623
+        INY 
+        INY 
+        LDA  @03E,Y
+        BNE  L0623
+        INY 
+        INY 
+        LDA  @03E,Y
+        CMP  #003
+        BNE  L0623
+        LDY  #0FF
+        LDA  @03E,Y
+        BEQ  L0623
+        CMP  #0FF
+        BEQ  L0623
+        CLC 
+        RTS 
+L0623   SEC 
+        RTS 
+L0625   .BYTE 000
+L0626   .BYTE 000
+L0627   .BYTE 000
+L0628   .BYTE 000
+L0629   .WORD L0111
+L062B   .ASCII "PASCAL.AREA"
+L0636   PHA 
+        LDA  L0132
+        STA  L0625
+        LDA  L0133
+        STA  L0626
+        LDA  L0130
+        STA  L0627
+        LDA  L0131
+        STA  L0628
+        TAX 
+L0650   LDY  #000
+        LDA  L0629
+        STA  010
+        LDA  L0629+001
+        STA  011
+L065C   LDA  @010,Y
+        BEQ  L0689
+        CMP  #04B
+        BNE  L067F
+        TYA 
+        PHA 
+        TXA 
+        PHA 
+        INY 
+        LDX  #000
+L066B   LDA  @010,Y
+        CMP  L062B,X
+        BNE  L067B
+        INY 
+        INX 
+        CPX  #00B
+        BNE  L066B
+        JMP  L06CA
+L067B   PLA 
+        TAX 
+        PLA 
+        TAY 
+L067F   DEC  L0625
+        BPL  L0689
+        DEC  L0626
+        BMI  L06C7
+L0689   DEX 
+        BEQ  L0699
+        CLC 
+        TYA 
+        ADC  L0627
+        BCC  L0695
+        INC  011
+L0695   TAY 
+        JMP  L065C
+L0699   LDA  L010F
+        TAY 
+        ORA  L0110
+        BEQ  L06C7
+        TYA 
+        STA  L0551
+        LDA  L0110
+        STA  L0552
+        PLA 
+        PHA 
+        JSR  L055D
+        LDX  #000
+        JSR  L036F
+        LDA  L00ED
+        JSR  L03A9
+        CPX  #000
+        BNE  L06C7
+        LDA  L0628
+        TAX 
+        JMP  L0650
+L06C7   PLA 
+        SEC 
+        RTS 
+L06CA   PLA 
+        PLA 
+        TAY 
+        PLA 
+        LDA  010
+        CLC 
+        ADC  #011
+        STA  010
+        LDA  011
+        ADC  #000
+        STA  011
+        LDA  @010,Y
+        STA  L0551
+        INY 
+        LDA  @010,Y
+        STA  L0552
+        CLC 
+        RTS 
+L06E8   LDA  #001
+        STA  006F8
+        JSR  L0729
+        LDA  #0FF
+        STA  042
+        JSR  L07C7
+        JSR  L081A
+        JSR  L081A
+        JSR  L0825
+        LDA  0C083,X
+        RTS 
+L0704   LDA  00778
+        AND  #0FE
+        STA  00778
+        LDY  03F
+        LDX  043
+        LDA  0C082,X
+        STA  0C083,X
+        ASL  A
+        ASL  A
+        BCC  L0728
+        LDA  #001
+        ORA  00778
+        STA  00778
+        ORA  004B8,Y
+        STA  004B8,Y
+L0728   RTS 
+L0729   PHA 
+        JSR  L0793
+        BCS  L075B
+        LDY  #005
+        LDA  @03E,Y
+        LDY  #007
+        LDA  @03E,Y
+        LDY  #004
+        LDA  @03E,Y
+L073B   CLC 
+        LDY  #000
+        LDX  043
+L0740   LDA  0C082,X
+        BPL  L075D
+        DEY 
+        BNE  L0740
+        LDA  005F8
+        BPL  L0756
+        LDA  03E
+        AND  #003
+        BNE  L0756
+        JSR  L03B9
+L0756   DEC  03E
+        BNE  L073B
+        SEC 
+L075B   PLA 
+        RTS 
+L075D   LDA  #000
+        STA  03E
+        PLA 
+        CMP  0C081,X
+        BNE  L076F
+        LDA  #055
+        JSR  L0803
+        LDA  #000
+        RTS 
+L076F   LDA  #002
+        ORA  00778
+        STA  00778
+        LDY  03F
+        ORA  004B8,Y
+        STA  004B8,Y
+        LDA  #0AA
+        JSR  L0803
+        BCS  L075B
+        LDA  03A
+        ASL  A
+        BPL  L078D
+        SEC 
+        RTS 
+L078D   ORA  #080
+        ROR  A
+        STA  03A
+        RTS 
+L0793   LDY  #001
+        LDA  006F8
+        PHA 
+L0799   CLC 
+        LDY  #000
+        LDX  043
+L079E   LDA  0C082,X
+        BMI  L07BE
+        DEY 
+        BNE  L079E
+        LDA  005F8
+        BPL  L07B4
+        LDA  03E
+        AND  #003
+        BNE  L07B4
+        JSR  L03B9
+L07B4   DEC  03E
+        BNE  L0799
+        DEC  006F8
+        BNE  L0799
+        SEC 
+L07BE   LDA  #000
+        STA  03E
+        PLA 
+        STA  006F8
+        RTS 
+L07C7   JSR  L07FA
+        LDA  042
+        STA  0C080,X
+        LDA  #000
+        LDY  047
+        INY 
+        BNE  L07D8
+        LDA  #0FF
+L07D8   STA  0C080,X
+        LDA  047
+        STA  0C080,X
+        LDA  046
+        STA  0C080,X
+        LDA  #003
+        STA  0C080,X
+        LDA  #00A
+        STA  0C080,X
+        LDY  #005
+        LDA  @03E,Y
+        LDY  #007
+        LDA  @03E,Y
+        JMP  L0704
+L07FA   LDY  #001
+        LDA  @03E,Y
+        LDY  #003
+        LDA  @03E,Y
+        RTS 
+L0803   STA  0C080,X
+        LDY  #003
+        LDA  @03E,Y
+        LDY  #000
+        LDA  @03E,Y
+        JSR  L0793
+L0811   LDY  #005
+        LDA  @03E,Y
+        LDY  #007
+        LDA  @03E,Y
+        RTS 
+L081A   JSR  L0811
+        LDY  #004
+        LDA  @03E,Y
+        RTS 
+        .BYTE 020
+L0823   .WORD L0811
+L0825   LDY  #000
+        LDA  @03E,Y
+        RTS 
+        .BYTE 08D
+L082B   .WORD L002A
+        .BYTE 086,042,068,08D
+L0831   .WORD L00EA
+        .BYTE 068,08D
+L0835   .WORD L00EB
+        .BYTE 0E0,004,0F0,046,0E0,002,0F0,023
+        .BYTE 0B0,04C,020
+L0842   .WORD L08F4
+        .BYTE 0E0,000,0D0,005,0A4,042,04C
+L084B   .WORD L0855
+        .BYTE 0A0,00A,068,088,0D0,0FC
+L0853   .BYTE 0A0,0FF
+L0855   .BYTE 085,002,0AD
+L0858   .WORD L00EB
+        .BYTE 048,0AD
+L085C   .WORD L00EA
+        .BYTE 048,0A5,002,060,0AD
+L0863   .WORD L002A
+        .BYTE 020
+L0866   .WORD L08BE
+        .BYTE 0A2,009,0B0,0E7,020
+L086D   .WORD L08E5
+        .BYTE 024,031,010,00A,0A5,030,029,007
+        .BYTE 0A4,042,0A2,000,0F0,0D8,0A2,009
+        .BYTE 0D0,0D2,0BA,0BD,004,001,029,0E0
+        .BYTE 0C9,040,0F0,006,0D0,0D5,0A2,003
+        .BYTE 0D0,0C2,068,085,000,068,085,001
+        .BYTE 068,029,002,085,004,068,0A2,000
+        .BYTE 0A0,0B6,0A5,004,0D0,00C,088,0B9
+L08A7   .WORD L002C
+        .BYTE 091,000,0C0,000,0D0,0F6,0F0,00A
+        .BYTE 088,0B1,000,099
+L08B5   .WORD L002C
+        .BYTE 0C0,000,0D0,0F6,04C
+L08BC   .WORD L0853
+L08BE   CMP  #004
+        BCC  L08D6
+        CMP  #006
+        BCC  L08DC
+        CMP  #009
+        BCC  L08D6
+        CMP  #015
+        BCC  L08DA
+        CMP  #080
+        BCC  L08D6
+        CMP  #090
+        BCC  L08D8
+L08D6   SEC 
+        RTS 
+L08D8   SBC  #06B
+L08DA   SBC  #003
+L08DC   SBC  #003
+        ASL  A
+        STA  000
+        ASL  A
+        ADC  000
+        RTS 
+L08E5   .BYTE 069,005,0A8,0A2,005,0B9
+L08EB   .WORD L002C
+        .BYTE 095,030,088,0CA,010,0F7,060
+L08F4   .BYTE 0BA,086,002,0BD,00B,001,04A,04A
+        .BYTE 0AD
+L08FD   .WORD L002A
+        .BYTE 090,00C,0BD,00C,001,018,029,0E0
+        .ASCII "****"
+        .BYTE 090,05F,020
+L090E   .WORD L08BE
+        .BYTE 0A2,009,0B0,05A,020
+L0915   .WORD L08E5
+        .BYTE 038,024,031,010,0F4,0A5,042,0C9
+        .BYTE 001,0D0,006,024,031,0A2,010,070
+        .BYTE 046,0A6,002,0BD,006,001,030,024
+        .BYTE 04A,0A8,0F0,008,0B0,006,0BD,005
+        .BYTE 001,0D0,001,088,098,018,07D,003
+        .BYTE 001,0A8,0BD,004,001,069,000,085
+        .BYTE 000,0B0,009,098,0C5,034,0A5,000
+        .BYTE 0E5,035,090,004,0A2,040,0D0,017
+        .BYTE 0BD,003,001,018,065,032,09D,003
+        .BYTE 001,0BD,004,001,065,033,09D,004
+        .BYTE 001,0A5,030,029,007,0A2,000,060
+L096F   PLA 
+        STA  006
+        PLA 
+        STA  007
+        LDX  #000
+        LDA  L010F,X
+        STA  008
+L097C   TXA 
+        CLC 
+        ADC  #008
+        TAX 
+        DEC  008
+        BPL  L098C
+        LDA  007
+        PHA 
+        LDA  006
+        PHA 
+        RTS 
+L098C   LDA  L0111,X
+        BEQ  L097C
+        CMP  #090
+        BCS  L097C
+        JSR  L08BE
+        BCS  L097C
+        PHA 
+        ADC  #001
+        TAY 
+        LDA  L0112,X
+        ROR  A
+        AND  #040
+        ORA  #080
+        STA  L002C,Y
+        PLA 
+        PHA 
+        ADC  #002
+        TAY 
+        LDA  L010D,X
+        STA  L002C,Y
+        INY 
+        LDA  L010E,X
+        STA  L002C,Y
+        PLA 
+        PHA 
+        ADC  #004
+        TAY 
+        LDA  L010F,X
+        STA  L002C,Y
+        INY 
+        LDA  L0110,X
+        STA  L002C,Y
+        PLA 
+        ADC  #000
+        TAY 
+        PLA 
+        PHA 
+        STA  L002C,Y
+        LDA  L00E4
+        STA  004
+        SEC 
+        SBC  #001
+        STA  000
+        LDA  L00E4+001
+        STA  005
+        SBC  #000
+        STA  001
+        LDY  L0111,X
+        CPY  #015
+        BCS  L0A1E
+        DEY 
+        TYA 
+        ASL  A
+        TAY 
+        LDA  @0EA,Y
+        CLC 
+        ADC  #001
+        STA  L0113,X
+        LDA  000
+        STA  @0EA,Y
+        INY 
+        LDA  @0EA,Y
+        ADC  #000
+        STA  L0114,X
+        LDA  001
+        STA  @0EA,Y
+        CPY  #007
+        BNE  L0A3B
+        LDA  L0113,X
+        STA  L00E8
+        LDA  L0114,X
+        STA  L00E9
+        BCS  L0A3B
+L0A1E   TYA 
+        EOR  #080
+        STA  000
+        ASL  A
+        SEC 
+        ADC  000
+        TAY 
+        LDA  @0E8,Y
+        STA  L0113,X
+        LDA  004
+        STA  @0E8,Y
+        INY 
+        LDA  @0E8,Y
+        STA  L0114,X
+        LDA  005
+        STA  @0E8,Y
+L0A3B   JMP  L097C
+L0A3E   LDY  #002
+        LDA  @03E,Y
+        JSR  L0811
+        JSR  L07FA
+        JSR  L0811
+        RTS 
+L0A4C   LDX  043
+        LDY  00C
+        STA  0C083,X
+        LDA  0C082,X
+        LDX  #0A0
+        NOP 
+        NOP 
+        NOP 
+        LDA  #001
+        ORA  00D
+        STA  00D
+        TXA 
+        BMI  L0A69
+        LDA  L0022,Y
+        BPL  L0A77
+L0A69   LDA  #080
+        ORA  00D
+        STA  00D
+        LDA  #080
+        ORA  L0022,Y
+        STA  L0022,Y
+L0A77   RTS 
+        .BYTE 0B9
+L0A79   .WORD L0022
+        .BYTE 029,07F,099
+L0A7E   .WORD L0022
+        .BYTE 060
+L0A81   CPX  #004
+        BEQ  L0A8B
+        CPX  #002
+        BEQ  L0A8E
+        BCC  L0A9E
+L0A8B   LDX  #003
+        RTS 
+L0A8E   LDX  #000
+        RTS 
+L0A91   LDA  03F
+        AND  #00F
+        STA  00C
+        ASL  A
+        ASL  A
+        ASL  A
+        ASL  A
+        STA  043
+        RTS 
+L0A9E   STX  042
+        INC  042
+        TSX 
+        LDA  00101,X
+        STA  00A
+        LDA  00102,X
+        STA  00B
+        LDA  00109,X
+        ORA  #0C0
+        STA  03F
+        STA  L0AF8+002
+        JSR  L0A91
+        LDA  #000
+        STA  03E
+        LDX  043
+        LDA  0C083,X
+        LDY  #0FF
+        LDA  @03E,Y
+        STA  L0AF8+001
+        TSX 
+L0ACB   LDA  00106,X
+        LSR  A
+        BNE  L0ADF
+        LDA  00105,X
+        ORA  00106,X
+        BEQ  L0B4C
+        LDA  042
+        CMP  #002
+        BNE  L0AEB
+L0ADF   LDA  00107,X
+        STA  044
+        LDA  00108,X
+        STA  045
+        BNE  L0AEE
+L0AEB   JSR  L0B68
+L0AEE   LDA  00103,X
+        STA  046
+        LDA  00104,X
+        STA  047
+L0AF8   JSR  00000
+        BCS  L0B50
+        TSX 
+        DEC  00106,X
+        DEC  00106,X
+        BMI  L0B16
+        INC  00108,X
+        INC  00108,X
+        INC  00103,X
+        BNE  L0ACB
+        INC  00104,X
+        BNE  L0ACB
+L0B16   LDA  042
+        CMP  #002
+        BEQ  L0B4C
+        LDA  00107,X
+        STA  046
+        LDA  00108,X
+        STA  047
+        LDA  00106,X
+        CMP  #0FE
+        BEQ  L0B3B
+        LDY  #000
+L0B2F   LDA  @010,Y
+        STA  @046,Y
+        INY 
+        BNE  L0B2F
+        INC  011
+        INC  047
+        TSX 
+L0B3B   LDY  00105,X
+        BEQ  L0B4C
+        DEY 
+L0B41   LDA  @010,Y
+        STA  @046,Y
+        DEY 
+        BNE  L0B41
+        LDA  @010,Y
+        STA  @046,Y
+L0B4C   LDY  #000
+        BEQ  L0B58
+L0B50   LDY  #014
+        CMP  #028
+        BNE  L0B58
+        LDY  #009
+L0B58   CLC 
+        TSX 
+        TXA 
+        ADC  #00C
+        TAX 
+        TXS 
+        LDA  00B
+        PHA 
+        LDA  00A
+        PHA 
+        TYA 
+        TAX 
+        RTS 
+L0B68   SEC 
+        LDA  05D
+        SBC  05B
+        CMP  #002
+        BCC  L0B7E
+        LDA  05A
+        STA  044
+        STA  010
+        LDA  05B
+        STA  045
+        STA  011
+        RTS 
+L0B7E   LDA  #026
+        STA  000
+        LDA  #0BD
+        STA  001
+        LDA  0BF22
+        AND  #040
+        BNE  L0B91
+        LDA  #0E6
+        STA  000
+L0B91   LDY  #000
+        LDA  @000,Y
+        INY 
+        ORA  @000,Y
+        BNE  L0BA0
+        PLA 
+        PLA 
+        LDY  #013
+        BNE  L0B58
+L0BA0   LDA  @000,Y
+        STA  045
+        STA  011
+        STA  05B
+        DEY 
+        LDA  @000,Y
+        STA  044
+        STA  010
+        STA  05A
+        LDA  #000
+        STA  @000,Y
+        INY 
+        STA  @000,Y
+        RTS 
+        .BYTE 000
+        .END

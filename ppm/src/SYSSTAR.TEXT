@@ -1,0 +1,18 @@
+{ PPM.SYS.STARTUP -- Pascal ProFile Manager 1.0.1, one procedure.
+
+  The codefile's only segment is SYSSTAR (102 bytes, SEGINFO version 2).
+  It is the boot program: load CHAINSTUFF (intrinsic segment 28), write
+  the banner, and chain to the manager. The load, the unit-init call
+  and the unload are the compiler's own USES sequence, not source.
+
+  Strings are the ones in the procedure. '%' is the system volume,
+  the same prefix the 1.1 CHAINSTUFF manual uses. }
+
+PROGRAM SYSSTAR;
+
+USES CHAINSTUFF;
+
+BEGIN
+  WRITELN('Loading Pascal ProFile Manager...');
+  SETCHAIN('%PPM.CODE')
+END.

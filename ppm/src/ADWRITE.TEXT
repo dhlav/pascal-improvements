@@ -1,0 +1,57 @@
+{ ATTACH.DATA for the ProFile large-disk driver.
+
+  The record is the one Appendix C of the Apple II Pascal 1.2
+  Device and Interrupt Support Tools manual defines. One record,
+  16 words. LARGEDIS is attached to unit 128 and initialized at
+  boot; both HiRes pages may be used; no interrupts; the
+  transient is INITLARG; neither piece asks for an alignment. }
+
+PROGRAM ADWRITE;
+
+TYPE ALPHA = PACKED ARRAY [0..7] OF CHAR;
+     PUNITS = (UNDEFU, CONSU, SYSTU, GRAPHU, DD4U, DD5U,
+               PRINTU, REMIU, REMOU, DD9U, DD10U, DD11U,
+               DD12U, DD13U, DD14U, DD15U, DD16U, DD17U,
+               DD18U, DD19U, DD20U, UD128U, UD129U, UD130U,
+               UD131U, UD132U, UD133U, UD134U, UD135U,
+               UD136U, UD137U, UD138U, UD139U, UD140U,
+               UD141U, UD142U, UD143U);
+     SOPUNITS = SET OF PUNITS;
+     DEVREC = PACKED RECORD
+                DEVNAME: ALPHA;
+                UATTACHED, INITUNITS: SOPUNITS;
+                DRIVALGN: 0..256;
+                UFHRP, USHRP: BOOLEAN;
+                HASINTR: BOOLEAN;
+                TRANSNAM: ALPHA;
+                TRANSALN: 0..256
+              END;
+
+VAR F: FILE OF DEVREC;
+    V: RECORD CASE BOOLEAN OF
+         TRUE: (R: DEVREC);
+         FALSE: (W: ARRAY [0..15] OF INTEGER)
+       END;
+
+BEGIN
+  FILLCHAR(V, 32, CHR(0));
+  V.R.DEVNAME := 'LARGEDIS';
+  V.R.INITUNITS := [UD128U];
+  V.R.UATTACHED := [UD128U];
+  V.R.DRIVALGN := 0;
+  V.R.USHRP := TRUE;
+  V.R.UFHRP := TRUE;
+  V.R.HASINTR := FALSE;
+  V.R.TRANSNAM := 'INITLARG';
+  V.R.TRANSALN := 0;
+  { Named fields fill bits 0..11 of word 10 and bits 0..8 of
+    word 15. The shipped file also has unused bits set there
+    (bit 15, and bits 10 and 12..15). A packed load of either
+    alignment or flag does not read them. }
+  V.W[10] := -31232;
+  V.W[15] := -3072;
+  REWRITE(F, 'WORKHD:ADREC.DATA');
+  F^ := V.R;
+  PUT(F);
+  CLOSE(F, LOCK)
+END.

@@ -1,0 +1,70 @@
+{ VMGR -- Pascal ProFile Manager, segment 7 of PPM.CODE.
+
+  A plain unit, compiled on its own and USE'd by PASCALPR.
+  Not a SEGMENT PROCEDURE: those nest at lex 2 and the
+  program cannot call them (error 104). Every procedure
+  here is lex 1, and procedure 1 returns with RNP, which
+  is the unit initialisation UNITBODY builds (finding 232).
+
+  The interface is a prefix. GETTEXT numbers headings from
+  2 in the order written, and an implementation-only
+  procedure is numbered after the whole interface. The
+  menu and VOLUMEMA call 2..9, 12..18 and 20..24, so those
+  numbers have to be interface headings. 10, 11 and 19 sit
+  in the same prefix, so they are headings too. Nothing
+  outside the unit calls past 24; later procedures stay
+  out of the interface until one of them does.
+
+  Empty bodies. The point of this file is the procedure
+  numbers, not the code. }
+UNIT VMGR;
+INTERFACE
+  PROCEDURE V02;
+  PROCEDURE V03;
+  PROCEDURE V04;
+  PROCEDURE V05(N: INTEGER);
+  PROCEDURE V06;
+  PROCEDURE V07;
+  PROCEDURE V08(N: INTEGER);
+  PROCEDURE V09;
+  PROCEDURE V10;
+  PROCEDURE V11;
+  PROCEDURE V12;
+  PROCEDURE V13;
+  PROCEDURE V14;
+  PROCEDURE V15;
+  PROCEDURE V16;
+  PROCEDURE V17;
+  PROCEDURE V18;
+  PROCEDURE V19;
+  PROCEDURE V20;
+  PROCEDURE V21;
+  PROCEDURE V22;
+  PROCEDURE V23;
+  PROCEDURE V24;
+IMPLEMENTATION
+  PROCEDURE V02; BEGIN END;
+  PROCEDURE V03; BEGIN END;
+  PROCEDURE V04; BEGIN END;
+  PROCEDURE V05; BEGIN END;
+  PROCEDURE V06; BEGIN END;
+  PROCEDURE V07; BEGIN END;
+  PROCEDURE V08; BEGIN END;
+  PROCEDURE V09; BEGIN END;
+  PROCEDURE V10; BEGIN END;
+  PROCEDURE V11; BEGIN END;
+  PROCEDURE V12; BEGIN END;
+  PROCEDURE V13; BEGIN END;
+  PROCEDURE V14; BEGIN END;
+  PROCEDURE V15; BEGIN END;
+  PROCEDURE V16; BEGIN END;
+  PROCEDURE V17; BEGIN END;
+  PROCEDURE V18; BEGIN END;
+  PROCEDURE V19; BEGIN END;
+  PROCEDURE V20; BEGIN END;
+  PROCEDURE V21; BEGIN END;
+  PROCEDURE V22; BEGIN END;
+  PROCEDURE V23; BEGIN END;
+  PROCEDURE V24; BEGIN END;
+BEGIN
+END.
