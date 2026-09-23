@@ -10,3 +10,7 @@ __pycache__/
 # script in ppm/work/ stays; these are rebuilt from the binaries.
 ppm/work/*.txt
 ppm/work/PPMLINK.CODE
+ppm/work/FILEHAND.CODE
+ppm/work/BKLINK.CODE
+ppm/work/VOLLINK.CODE
+ppm/work/VOLPROBE.CODE

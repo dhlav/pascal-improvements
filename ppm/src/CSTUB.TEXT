@@ -1,0 +1,21 @@
+{ CSTUB -- compile-time interface for the filer's Quit.
+
+  Shipped Quit is GETCVAL, SETCHAIN, clear, SETCVAL on the
+  STRING[40] at segment word 976: CXP 28,4 then 28,2 then
+  28,3. The 1.3 library CHAINSTUFF also exports SWAPON,
+  the same eight characters as the operating system's
+  SWAP_ON, and USES of that unit is error 101 inside this
+  filer. This stub is the three calls and nothing else.
+  Procedure 1 is the unit initialisation, so the headings
+  are procedures 2, 3 and 4. }
+UNIT CSTUB; INTRINSIC CODE 28;
+INTERFACE
+  PROCEDURE SETCHAIN(TYTLE: STRING);
+  PROCEDURE SETCVAL(VAL: STRING);
+  PROCEDURE GETCVAL(VAR VAL: STRING);
+IMPLEMENTATION
+  PROCEDURE SETCHAIN; BEGIN END;
+  PROCEDURE SETCVAL; BEGIN END;
+  PROCEDURE GETCVAL; BEGIN END;
+BEGIN
+END.

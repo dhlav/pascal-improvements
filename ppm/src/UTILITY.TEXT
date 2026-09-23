@@ -1,0 +1,419 @@
+{ UTILITY -- Pascal Backup, segment 7 of BACKUP.CODE.
+
+  A plain unit. Screen helpers copy CRTCTRL out of SYSCOM
+  (LOD 2,1) into interface arrays, then UNITWRITE unit 2.
+  Compiled (*$U-*) with SYSCOM at level 0, same wrapper as
+  VMGR. (*$NS 7*) keeps the unit on segment 7.
+
+  Interface variables occupy the whole host global frame
+  (host words 3..5766). BACKUP itself declares none. }
+(*$U-*)
+(*$NS 7*)
+(*$R+*)
+(*$I+*)
+PROGRAM OUTER;
+TYPE
+  SYSCOMREC = RECORD
+                PAD: ARRAY [0..28] OF INTEGER;
+                MISCINFO: PACKED RECORD
+                            NOBREAK, STUPID, SLOWTERM,
+                            HASXYCRT, HASLCCRT, HAS8510A,
+                            HASCLOCK: BOOLEAN;
+                            USERKIND: (NORMAL, AQUIZ,
+                                       BOOKER, PQUIZ);
+                            WORD_MACH, IS_FLIPT: BOOLEAN
+                          END;
+                CRTTYPE: INTEGER;
+                CRTCTRL: PACKED RECORD
+                           RLF, NDFS, ERASEEOL, ERASEEOS,
+                           HOME, ESCAPE: CHAR;
+                           BACKSPACE: CHAR;
+                           FILLCOUNT: 0..255;
+                           CLEARSCREEN, CLEARLINE: CHAR;
+                           PREFIXED: PACKED ARRAY [0..15]
+                             OF BOOLEAN
+                         END;
+                CRTINFO: PACKED RECORD
+                           WIDTH, HEIGHT: INTEGER;
+                           RIGHT, LEFT, DOWN, UP: CHAR;
+                           BADCH, CHARDEL, STOP, BREAK,
+                           FLUSH, EOF: CHAR;
+                           ALTMODE, LINEDEL: CHAR;
+                           ALPHA_LOCK, ETX, PREFIX: CHAR;
+                           PREFIXED: PACKED ARRAY [0..15]
+                             OF BOOLEAN
+                         END
+              END;
+VAR
+  SYSCOM: ^SYSCOMREC;
+UNIT UTILITY;
+INTERFACE
+(*$V-*)
+TYPE
+  CHARSET = SET OF CHAR;
+  STR80 = STRING[80];
+  CRTCHRS = PACKED ARRAY [0..8] OF CHAR;
+  PREF16 = PACKED ARRAY [0..15] OF BOOLEAN;
+VAR
+  { Host words 3..8. One name per group so Y is offset 0. }
+  CUR: RECORD
+         Y: INTEGER;
+         X: INTEGER;
+         WIDTH: INTEGER;
+         HEIGHT: INTEGER;
+         A: INTEGER;
+         B: INTEGER
+       END;
+  { 9..104: six SET OF CHAR, 16 words each. }
+  SETCR: CHARSET;
+  SET125: CHARSET;
+  SETAZ: CHARSET;
+  SETALNUM: CHARSET;
+  SETDIG: CHARSET;
+  SETDASH: CHARSET;
+  W105: INTEGER;
+  W106: INTEGER;
+  W107: INTEGER;
+  W108: INTEGER;
+  HEAP: ^INTEGER;
+  { 110..5653 }
+  PAD1: ARRAY [1..5544] OF INTEGER;
+  W5654: INTEGER;
+  W5655: INTEGER;
+  PAD2: ARRAY [1..12] OF INTEGER;
+  W5668: INTEGER;
+  ESCAPE: CHAR;
+  CRTCH: CRTCHRS;
+  PREFIXED: PREF16;
+  W5676: INTEGER;
+  KEYMAP: PACKED ARRAY [0..255] OF 0..15;
+  W5741: INTEGER;
+  W5742: INTEGER;
+  PAD3: ARRAY [1..12] OF INTEGER;
+  W5755: STRING[1];
+  W5756: INTEGER;
+  W5757: INTEGER;
+  CRTINFOCH: PACKED ARRAY [0..12] OF CHAR;
+  INFOPREF: PREF16;
+  W5766: SET OF 0..15;
+
+  PROCEDURE U02(X, Y: INTEGER);
+  PROCEDURE U03;
+  PROCEDURE U04;
+  PROCEDURE U05;
+  PROCEDURE U06;
+  PROCEDURE U07(VAR CH: CHAR; VALID: CHARSET);
+  PROCEDURE U08;
+  PROCEDURE U09(Y: INTEGER);
+  PROCEDURE U10;
+  PROCEDURE U11(X, Y: INTEGER);
+  PROCEDURE U12;
+  FUNCTION U13(N: INTEGER): BOOLEAN;
+  FUNCTION U14(N: INTEGER): BOOLEAN;
+  FUNCTION U15(N: INTEGER): INTEGER;
+  PROCEDURE U16(VAR S: STR80; N: INTEGER; CH: CHAR);
+  PROCEDURE U17(VAR S: STR80; N: INTEGER; CH: CHAR);
+  PROCEDURE U18(VAR S: STR80);
+  PROCEDURE U19(VAR S: STR80);
+  PROCEDURE U20(VAR S: STR80);
+  PROCEDURE U21(VAR S: STR80; N: INTEGER);
+  PROCEDURE U22(VAR N: INTEGER; S: STR80);
+  PROCEDURE U23(X, Y: INTEGER);
+  PROCEDURE U24(X, Y: INTEGER);
+  FUNCTION U25: CHAR;
+  PROCEDURE U26(VAR S: STR80; VALID: CHARSET);
+  PROCEDURE U27(VAR S: STR80; VALID: CHARSET; N: INTEGER);
+  PROCEDURE U28(X, Y: INTEGER);
+  PROCEDURE U29(X, Y: INTEGER);
+  PROCEDURE U30(VAR S: STR80);
+  PROCEDURE U31(VAR S: STR80; N: INTEGER);
+  PROCEDURE U32(VAR S: STR80; N: INTEGER);
+  PROCEDURE U33(X, Y: INTEGER; S: STR80);
+  PROCEDURE U34(Y: INTEGER; S: STR80);
+  PROCEDURE U35(X, Y: INTEGER; S: STR80);
+  PROCEDURE U36(N: INTEGER; FLAG: BOOLEAN; VAR S: STR80);
+  PROCEDURE U37(X, Y: INTEGER; S: STR80);
+  PROCEDURE U38(N: INTEGER; FLAG: BOOLEAN; VAR S: STR80);
+  PROCEDURE U39(S: STR80);
+  PROCEDURE U40;
+  PROCEDURE U41;
+  PROCEDURE U42;
+  FUNCTION U43(CH: CHAR): CHAR;
+  PROCEDURE U44(VAR S: STR80);
+  FUNCTION U45(N: INTEGER): INTEGER;
+  PROCEDURE U46;
+  PROCEDURE U47;
+  PROCEDURE U48;
+  PROCEDURE U49;
+  PROCEDURE U50;
+
+IMPLEMENTATION
+  { Emission order is declaration order. U52 is
+    implementation-only after the interface. Nested
+    U51 lives inside U50. }
+
+  (*$I-*)
+  (*$R-*)
+  PROCEDURE U02;
+  BEGIN
+    U23(X, Y);
+    IF PREFIXED[2] THEN
+      UNITWRITE(2, ESCAPE, 1, 0, 12);
+    UNITWRITE(2, CRTCH[2], 1, 0, 12)
+  END;
+
+  PROCEDURE U03;
+  BEGIN
+    IF PREFIXED[7] THEN
+      UNITWRITE(2, ESCAPE, 1, 0, 12);
+    UNITWRITE(2, CRTCH[7], 1, 0, 12)
+  END;
+
+  PROCEDURE U04;
+  BEGIN
+    IF PREFIXED[8] THEN
+      UNITWRITE(2, ESCAPE, 1, 0, 12);
+    UNITWRITE(2, CRTCH[8], 1, 0, 12)
+  END;
+
+  PROCEDURE U05;
+  BEGIN
+    IF PREFIXED[5] THEN
+      UNITWRITE(2, ESCAPE, 1, 0, 12);
+    UNITWRITE(2, CRTCH[5], 1, 0, 12)
+  END;
+
+  PROCEDURE U06;
+  BEGIN
+    UNITWRITE(2, CRTCH[6], 1, 0, 12)
+  END;
+
+  PROCEDURE U07;
+  BEGIN
+  END;
+
+  PROCEDURE U08;
+  BEGIN
+    IF PREFIXED[4] THEN
+      UNITWRITE(2, ESCAPE, 1, 0, 12);
+    UNITWRITE(2, CRTCH[4], 1, 0, 12)
+  END;
+
+  PROCEDURE U09;
+  BEGIN
+    U23(0, Y);
+    IF PREFIXED[2] THEN
+      UNITWRITE(2, ESCAPE, 1, 0, 12);
+    UNITWRITE(2, CRTCH[2], 1, 0, 12)
+  END;
+
+  PROCEDURE U10;
+  BEGIN
+    IF PREFIXED[0] THEN
+      UNITWRITE(2, ESCAPE, 1, 0, 12);
+    UNITWRITE(2, CRTCH[0], 1, 0, 12)
+  END;
+
+  PROCEDURE U11;
+  BEGIN
+    U23(X, Y);
+    IF PREFIXED[1] THEN
+      UNITWRITE(2, ESCAPE, 1, 0, 12);
+    UNITWRITE(2, CRTCH[1], 1, 0, 12)
+  END;
+  (*$R+*)
+  (*$I+*)
+
+  (*$I-*)
+  (*$R-*)
+  PROCEDURE U12;
+  BEGIN
+    IF CRTCH[3] = '0' THEN
+      BEGIN
+        U23(0, CUR.Y);
+        UNITWRITE(2, CRTCH[2], 1, 0, 12)
+      END
+    ELSE
+      BEGIN
+        IF PREFIXED[3] THEN
+          UNITWRITE(2, ESCAPE, 1, 0, 12);
+        UNITWRITE(2, CRTCH[3], 1, 0, 12)
+      END
+  END;
+  (*$R+*)
+  (*$I+*)
+
+  FUNCTION U13;
+  BEGIN
+    U13 := FALSE
+  END;
+
+  FUNCTION U14;
+  BEGIN
+    U14 := FALSE
+  END;
+
+  FUNCTION U15;
+  BEGIN
+    U15 := 0
+  END;
+
+  PROCEDURE U16;
+  BEGIN
+  END;
+
+  PROCEDURE U17;
+  BEGIN
+  END;
+
+  PROCEDURE U18;
+  BEGIN
+  END;
+
+  PROCEDURE U19;
+  BEGIN
+  END;
+
+  PROCEDURE U20;
+  BEGIN
+  END;
+
+  PROCEDURE U21;
+  BEGIN
+  END;
+
+  PROCEDURE U22;
+  BEGIN
+  END;
+
+  PROCEDURE U23;
+  BEGIN
+    CUR.X := X;
+    CUR.Y := Y;
+    GOTOXY(X, Y)
+  END;
+
+  PROCEDURE U24;
+  BEGIN
+  END;
+
+  FUNCTION U25;
+  BEGIN
+    U25 := ' '
+  END;
+
+  PROCEDURE U26;
+  BEGIN
+  END;
+
+  PROCEDURE U27;
+  BEGIN
+  END;
+
+  PROCEDURE U28;
+  BEGIN
+  END;
+
+  PROCEDURE U29;
+  BEGIN
+  END;
+
+  PROCEDURE U30;
+  BEGIN
+  END;
+
+  PROCEDURE U31;
+  BEGIN
+  END;
+
+  PROCEDURE U32;
+  BEGIN
+  END;
+
+  PROCEDURE U33;
+  BEGIN
+  END;
+
+  PROCEDURE U34;
+  BEGIN
+  END;
+
+  PROCEDURE U35;
+  BEGIN
+  END;
+
+  PROCEDURE U36;
+  BEGIN
+  END;
+
+  PROCEDURE U37;
+  BEGIN
+  END;
+
+  PROCEDURE U38;
+  BEGIN
+  END;
+
+  PROCEDURE U39;
+  BEGIN
+  END;
+
+  PROCEDURE U40;
+  BEGIN
+  END;
+
+  PROCEDURE U41;
+  BEGIN
+  END;
+
+  PROCEDURE U42;
+  BEGIN
+  END;
+
+  FUNCTION U43;
+  BEGIN
+    U43 := CH
+  END;
+
+  PROCEDURE U44;
+  BEGIN
+  END;
+
+  FUNCTION U45;
+  BEGIN
+    U45 := 0
+  END;
+
+  PROCEDURE U46;
+  BEGIN
+  END;
+
+  PROCEDURE U47;
+  BEGIN
+  END;
+
+  PROCEDURE U48;
+  BEGIN
+  END;
+
+  PROCEDURE U49;
+  BEGIN
+  END;
+
+  PROCEDURE U50;
+    PROCEDURE U51(VAR U: INTEGER; VAR BLK: INTEGER);
+    BEGIN
+    END;
+  BEGIN
+  END;
+
+  PROCEDURE U52;
+  BEGIN
+  END;
+
+BEGIN
+  U52
+END;
+
+BEGIN
+END.

@@ -1,0 +1,139 @@
+{ CHAIN12 -- CHAINSTUFF from the ProFile Manager disk.
+
+  ppm/ SYSTEM.LIBRARY, dated 21-Dec-83, both program disks.
+  Segment CHAINSTU is 410 bytes, version 5, eight procedures.
+  It is the 1.3 unit except procedure 8: the version byte
+  must be 3, and the two messages say 1.2. The interface,
+  from block 1 of that library, is Apple's 1.3 text,
+  including SWAPGPON. Temporary; not part of the 1.3 library. }
+
+{ CHAINSTUFF -- SYSTEM.LIBRARY slot 2, segment 28, 8 procedures, 410 bytes.
+
+  The INTERFACE is Apple's own text, from block 15 of the library
+  (finding 92a). The implementation is read back from the p-code.
+
+  This unit is not free-standing, and that is the first thing the binary
+  says about it. Every one of its procedures reaches a variable it does not
+  declare -- `LDA 2,328`, `STR 2,390` -- and a lex-2 reference from a lex-1
+  procedure is two levels down, which is the outer block of a (*$U-*)
+  program (finding 87d). CHAINSTUFF was compiled inside the operating
+  system's own source, and what it reads and writes are SYSTEM.PASCAL's
+  globals: the chain title, the chain value, and the two swap flags.
+
+  So a host program has to be here for it to compile at all, and the host
+  below is SCAFFOLDING, not a reconstruction of SYSTEM.PASCAL. Only two
+  things about it are load-bearing, and both are checked by the bytes:
+
+    * the offsets. GFILES[1] at 1-2..7 is OUTPUT and is II.0's own layout
+      (GLOBALS.TEXT, and the compiler reaches the same offset 3); the four
+      Apple globals are placed at 328, 340, 389 and 390 because that is
+      where the unit addresses them. The sizes follow: 340 - 328 is twelve
+      words, which is STRING[23] and nothing else.
+    * everything between is filler and is named FILL. II.0's GLOBALS.TEXT
+      has no chain title and no swap flags -- they are Apple's -- so what
+      occupies 8..327 and 381..388 is not recovered here and is not
+      claimed. SPECULATION would overstate it; it is simply unknown.
+
+  Two things in the p-code are worth flagging as Apple's, not as
+  reconstruction error, because both look like mistakes and both are in
+  the shipped bytes:
+
+    * SETCHAIN guards on `> 24` and copies 24 characters into a STRING[23].
+      A title of exactly 24 characters reaches `SAS 23` and is a run-time
+      error. The bytes are not ambiguous: `SLDC 24; GRTI` and `SAS 23`.
+    * SETCVAL guards on `> 82`, and its argument is a STRING[80] whose
+      length cannot exceed 80. That arm is dead code. }
+
+(*$U-*)
+PROGRAM PASCALSYSTEM;
+
+TYPE PHYLE = FILE;
+     FIBP = ^ PHYLE;
+     STRINGP = ^ STRING;
+
+VAR SYSCOM: ^ INTEGER;                  {   1 }
+    GFILES: ARRAY [0..5] OF FIBP;       {   2..7   GFILES[1] is OUTPUT }
+    FILL1: ARRAY [8..327] OF INTEGER;   {   8..327 not recovered }
+    CHAINTITLE: STRING[23];             { 328..339 }
+    CHAINVAL: STRING[80];               { 340..380 }
+    FILL2: ARRAY [381..388] OF INTEGER; { 381..388 not recovered }
+    GRAFSWAP: BOOLEAN;                  { 389 }
+    SWAPPING: BOOLEAN;                  { 390 }
+
+UNIT CHAINSTUFF; INTRINSIC CODE 28;
+
+INTERFACE
+  PROCEDURE SETCHAIN(TYTLE:STRING);
+  PROCEDURE SETCVAL(VAL:STRING);
+  PROCEDURE GETCVAL(VAR VAL:STRING);
+  PROCEDURE SWAPON;
+  PROCEDURE SWAPOFF;
+  PROCEDURE SWAPGPON;
+  
+IMPLEMENTATION
+
+{ Procedure 8, and the only one not in the interface. The address is
+  absolute and is reached by putting an integer into a pointer through a
+  variant record, which is how UCSD peeks at anything: -16607 is $BF21,
+  inside SYSCOM. The unit refuses to run rather than corrupt a version of
+  SYSTEM.PASCAL whose globals are not at these offsets -- which is exactly
+  what the note at the head of this file is about. }
+
+  PROCEDURE VERSIONCHECK;
+    VAR SYSVERS: RECORD CASE BOOLEAN OF
+                   TRUE: (ADDR: INTEGER);
+                   FALSE: (P: STRINGP)
+                 END;
+  BEGIN
+    SYSVERS.ADDR := -16607;
+    IF LENGTH(SYSVERS.P^) <> 3 THEN
+      BEGIN
+        WRITELN; WRITELN;
+        WRITELN('Version 1.2 of the Chainstuff unit cannot');
+        WRITELN('run with a non-1.2 version of SYSTEM.PASCAL');
+        REPEAT UNTIL FALSE
+      END
+  END (*VERSIONCHECK*) ;
+
+  PROCEDURE SETCHAIN;
+  BEGIN
+    IF LENGTH(TYTLE) > 24 THEN CHAINTITLE := COPY(TYTLE,1,24)
+    ELSE CHAINTITLE := TYTLE
+  END (*SETCHAIN*) ;
+
+  PROCEDURE SETCVAL;
+  BEGIN
+    IF LENGTH(VAL) > 82 THEN CHAINVAL := COPY(VAL,1,82)
+    ELSE CHAINVAL := VAL
+  END (*SETCVAL*) ;
+
+  PROCEDURE GETCVAL;
+  BEGIN
+    IF LENGTH(CHAINVAL) > 82 THEN VAL := COPY(CHAINVAL,1,82)
+    ELSE VAL := CHAINVAL
+  END (*GETCVAL*) ;
+
+  PROCEDURE SWAPON;
+  BEGIN
+    SWAPPING := TRUE;
+    GRAFSWAP := FALSE
+  END (*SWAPON*) ;
+
+  PROCEDURE SWAPOFF;
+  BEGIN
+    SWAPPING := FALSE;
+    GRAFSWAP := FALSE
+  END (*SWAPOFF*) ;
+
+  PROCEDURE SWAPGPON;
+  BEGIN
+    SWAPPING := TRUE;
+    GRAFSWAP := TRUE
+  END (*SWAPGPON*) ;
+
+BEGIN
+  VERSIONCHECK
+END (*CHAINSTUFF*) ;
+
+BEGIN
+END.

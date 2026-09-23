@@ -1,0 +1,17 @@
+{ VSTUB -- compile-time interface for the filer's U command.
+
+  Shipped FILEHAND calls VOLUMEMA procedure 2 as CXP 8,2.
+  A plain USES of VOLUMEMA would take the next segment
+  number and push FILEHAND off segment 1. An intrinsic
+  unit named here as code segment 8 emits CXP 8 and takes
+  no segment of the host. Procedure 1 is the unit
+  initialisation, so the first interface heading is
+  procedure 2. VOLUMEMA.TEXT itself stays a plain unit
+  for PPM. }
+UNIT VSTUB; INTRINSIC CODE 8;
+INTERFACE
+  PROCEDURE VOLUI;
+IMPLEMENTATION
+  PROCEDURE VOLUI; BEGIN END;
+BEGIN
+END.

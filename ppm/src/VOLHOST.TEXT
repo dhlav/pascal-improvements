@@ -1,0 +1,8 @@
+{ Host whose only job is to link the VOLUMEMA probe. }
+PROGRAM VOLHOST;
+
+USES (*$U WORKHD:VMGR.CODE*) VMGR,
+(*$U WORKHD:VOLUMEMA.CODE*) VOLUMEMA;
+
+BEGIN
+END.

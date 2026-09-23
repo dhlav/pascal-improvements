@@ -12,8 +12,10 @@
   library is still open for CHAINSTUFF, which comes first.
 
   All 32 procedures of segment 1 match the shipped
-  bodies, and the segment is 5788 bytes. The global
-  frame is 2226 words. Both unit bodies are still empty. }
+  bodies, and the segment is 5788 bytes. The variables
+  are VMGR's interface; USES allocates them, and the
+  data size is still 4452 bytes. Both unit procedure
+  bodies are still empty. }
 
 PROGRAM PASCALPR;
 
@@ -27,109 +29,8 @@ VOLUMEMA;
   check is compile-time only, so this changes no code. }
 (*$V-*)
 
-TYPE
-  NAMEREST = PACKED ARRAY [2..15] OF CHAR;
-  DRVNUM = 0..7;
-  DIRBLOCK = PACKED ARRAY [0..511] OF 0..255;
-  { Volume table, words 14..103. Drive in the low 3 bits,
-    a flag in bit 15, then two integers. }
-  VOLREC = PACKED RECORD
-             DV: DRVNUM;
-             FILL: 0..4095;
-             BUSY: BOOLEAN;
-             A, B: INTEGER
-           END;
-  { Drive table, words 105..232. }
-  { Names in one field group are allocated upward
-    from the last name, same as a VAR group. }
-  { Last name in a field group gets the low offset,
-    so MAPLO is word 0 and EXTRA is word 1. The name
-    is the STRING[3] the create command writes. }
-  DRVREC = RECORD
-             EXTRA, MAPLO: INTEGER;
-             DNAME: STRING[3]
-           END;
-  { Forty bytes. Bytes 0..1 are the name header, 2..15
-    the rest of the name, and 16..39 are plain bytes. }
-  FILEENT = PACKED RECORD
-              NAMELEN: 0..15;
-              STORTYPE: 0..15;
-              FIRST: CHAR;
-              REST: NAMEREST;
-              B16: 0..255;
-              B17: 0..255;
-              B18: 0..255;
-              B19: 0..255;
-              B20: 0..255;
-              B21: 0..255;
-              B22: 0..255;
-              B23: 0..255;
-              B24: 0..255;
-              B25: 0..255;
-              B26: 0..255;
-              B27: 0..255;
-              B28: 0..255;
-              B29: 0..255;
-              B30: 0..255;
-              B31: 0..255;
-              B32: 0..255;
-              B33: 0..255;
-              B34: 0..255;
-              B35: 0..255;
-              B36: 0..255;
-              B37: 0..255;
-              B38: 0..255;
-              B39: 0..255
-            END;
-  ANYSTR = STRING[255];
-  DRVSET = SET OF 0..15;
-  BITBUF = PACKED ARRAY [0..4095] OF BOOLEAN;
-  { ProDOS directory entry. The name occupies the first
-    sixteen bytes; the key block is bytes 17 and 18. }
-  DIRENT = PACKED RECORD
-             NAMELEN: 0..15;
-             STORTYPE: 0..15;
-             FIRST: CHAR;
-             REST: NAMEREST;
-             FTYPE: 0..255;
-             KEYLO: 0..255;
-             KEYHI: 0..255;
-             PAD: 0..255;
-             TAIL: PACKED ARRAY [0..19] OF CHAR
-           END;
-
-VAR
-  { Words 1 and 2 are the compiler's, from LC := LC+2 in
-    COMPINIT. The first variable declared is word 3. }
-  UNITS: SET OF 0..15;
-  MARKED: SET OF 0..15;
-  W5: INTEGER;
-  CURROW: INTEGER;
-  W7: INTEGER;
-  W8: INTEGER;
-  ERRNUM: INTEGER;
-  IOERR: INTEGER;
-  { Word 11. Passed to P08, which builds the UNITREAD
-    control word, so the drive is 0..7. }
-  DRIVE: DRVNUM;
-  W12: INTEGER;
-  W13: INTEGER;
-  VOLS: ARRAY [1..30] OF VOLREC;
-  W104: INTEGER;
-  DRVS: ARRAY [0..31] OF DRVREC;
-  GAP: ARRAY [233..616] OF INTEGER;
-  IDX: INTEGER;
-  CH: CHAR;
-  MENU: ARRAY [1..6] OF STRING[80];
-  OK: BOOLEAN;
-  BAKRES: INTEGER;
-  FILRES: INTEGER;
-  F: FILE;
-  W908: INTEGER;
-  PAUSE: BOOLEAN;
-  NOPT: INTEGER;
-  TAIL: ARRAY [911..2228] OF INTEGER;
-
+{ The variables and their types are VMGR's interface.
+  USES allocates them at these same words. }
   FUNCTION IOFAIL: BOOLEAN;
   BEGIN
     IF (IORESULT <> 0) OR (ERRNUM <> 0) THEN

@@ -1,0 +1,33 @@
+{ BACKUP -- Pascal ProFile Manager backup, host segment of
+  BACKUP.CODE. USES CHAINSTUFF (intrinsic 28) and UTILITY
+  (segment 7). SEGMENT PROCEDURES INITIALI, DOBACKUP,
+  DORESTOR take 8, 9, 10. The host declares no variables:
+  UTILITY's interface is the whole global frame. }
+
+PROGRAM BACKUP;
+
+USES CHAINSTUFF,
+     (*$U WORKHD:UTILITY.CODE*) UTILITY;
+
+SEGMENT PROCEDURE INITIALI;
+BEGIN
+END;
+
+SEGMENT PROCEDURE DOBACKUP;
+BEGIN
+END;
+
+SEGMENT PROCEDURE DORESTOR;
+BEGIN
+END;
+
+BEGIN
+  U49;
+  INITIALI;
+  MARK(HEAP);
+  REPEAT
+    U08;
+    U10
+  UNTIL FALSE;
+  EXIT(BACKUP)
+END.
