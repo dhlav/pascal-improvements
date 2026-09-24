@@ -6,7 +6,12 @@
   VMGR. (*$NS 7*) keeps the unit on segment 7.
 
   Interface variables occupy the whole host global frame
-  (host words 3..5766). BACKUP itself declares none. }
+  (host words 3..5766). BACKUP itself declares none.
+
+  CRTPRE is the unit's copy of CRTCTRL.PREFIXED; the name
+  avoids a clash with SYSCOM^.CRTCTRL.PREFIXED inside WITH.
+
+  U43..U48 are EXTERNAL 6502 in ppm/src/UTILNAT.TEXT. }
 (*$U-*)
 (*$NS 7*)
 (*$R+*)
@@ -25,24 +30,44 @@ TYPE
                           END;
                 CRTTYPE: INTEGER;
                 CRTCTRL: PACKED RECORD
-                           RLF, NDFS, ERASEEOL, ERASEEOS,
-                           HOME, ESCAPE: CHAR;
+                           RLF: CHAR;
+                           NDFS: CHAR;
+                           ERASEEOL: CHAR;
+                           ERASEEOS: CHAR;
+                           HOME: CHAR;
+                           ESCAPE: CHAR;
                            BACKSPACE: CHAR;
                            FILLCOUNT: 0..255;
-                           CLEARSCREEN, CLEARLINE: CHAR;
+                           CLEARSCREEN: CHAR;
+                           CLEARLINE: CHAR;
                            PREFIXED: PACKED ARRAY [0..15]
                              OF BOOLEAN
                          END;
                 CRTINFO: PACKED RECORD
-                           WIDTH, HEIGHT: INTEGER;
-                           RIGHT, LEFT, DOWN, UP: CHAR;
-                           BADCH, CHARDEL, STOP, BREAK,
-                           FLUSH, EOF: CHAR;
-                           ALTMODE, LINEDEL: CHAR;
-                           ALPHA_LOCK, ETX, PREFIX: CHAR;
+                           WIDTH: INTEGER;
+                           HEIGHT: INTEGER;
+                           RIGHT: CHAR;
+                           LEFT: CHAR;
+                           DOWN: CHAR;
+                           UP: CHAR;
+                           BADCH: CHAR;
+                           CHARDEL: CHAR;
+                           STOP: CHAR;
+                           BREAK: CHAR;
+                           FLUSH: CHAR;
+                           EOF: CHAR;
+                           ALTMODE: CHAR;
+                           LINEDEL: CHAR;
+                           ALPHA_LOCK: CHAR;
+                           ETX: CHAR;
+                           PREFIX: CHAR;
                            PREFIXED: PACKED ARRAY [0..15]
                              OF BOOLEAN
-                         END
+                         END;
+                SEGTABLE: ARRAY [0..15] OF RECORD
+                            CODEUNIT: INTEGER;
+                            A, B: INTEGER
+                          END
               END;
 VAR
   SYSCOM: ^SYSCOMREC;
@@ -51,9 +76,15 @@ INTERFACE
 (*$V-*)
 TYPE
   CHARSET = SET OF CHAR;
+  KEYSET = SET OF 0..15;
   STR80 = STRING[80];
   CRTCHRS = PACKED ARRAY [0..8] OF CHAR;
   PREF16 = PACKED ARRAY [0..15] OF BOOLEAN;
+  DIR26 = RECORD
+            A, B, C: INTEGER;
+            VID: STRING[7];
+            REST: ARRAY [1..6] OF INTEGER
+          END;
 VAR
   { Host words 3..8. One name per group so Y is offset 0. }
   CUR: RECORD
@@ -71,7 +102,7 @@ VAR
   SETALNUM: CHARSET;
   SETDIG: CHARSET;
   SETDASH: CHARSET;
-  W105: INTEGER;
+  W105: KEYSET;
   W106: INTEGER;
   W107: INTEGER;
   W108: INTEGER;
@@ -79,23 +110,21 @@ VAR
   { 110..5653 }
   PAD1: ARRAY [1..5544] OF INTEGER;
   W5654: INTEGER;
-  W5655: INTEGER;
-  PAD2: ARRAY [1..12] OF INTEGER;
-  W5668: INTEGER;
+  PROGDIR: DIR26;
+  W5668: BOOLEAN;
   ESCAPE: CHAR;
   CRTCH: CRTCHRS;
-  PREFIXED: PREF16;
+  CRTPRE: PREF16;
   W5676: INTEGER;
   KEYMAP: PACKED ARRAY [0..255] OF 0..15;
   W5741: INTEGER;
-  W5742: INTEGER;
-  PAD3: ARRAY [1..12] OF INTEGER;
+  BOOTDIR: DIR26;
   W5755: STRING[1];
-  W5756: INTEGER;
+  W5756: BOOLEAN;
   W5757: INTEGER;
   CRTINFOCH: PACKED ARRAY [0..12] OF CHAR;
   INFOPREF: PREF16;
-  W5766: SET OF 0..15;
+  W5766: KEYSET;
 
   PROCEDURE U02(X, Y: INTEGER);
   PROCEDURE U03;
@@ -110,31 +139,32 @@ VAR
   PROCEDURE U12;
   FUNCTION U13(N: INTEGER): BOOLEAN;
   FUNCTION U14(N: INTEGER): BOOLEAN;
-  FUNCTION U15(N: INTEGER): INTEGER;
+  FUNCTION U15(VAR CH: CHAR): INTEGER;
   PROCEDURE U16(VAR S: STR80; N: INTEGER; CH: CHAR);
   PROCEDURE U17(VAR S: STR80; N: INTEGER; CH: CHAR);
   PROCEDURE U18(VAR S: STR80);
   PROCEDURE U19(VAR S: STR80);
   PROCEDURE U20(VAR S: STR80);
-  PROCEDURE U21(VAR S: STR80; N: INTEGER);
-  PROCEDURE U22(VAR N: INTEGER; S: STR80);
+  PROCEDURE U21(N: INTEGER; VAR S: STR80);
+  FUNCTION U22(S: STR80; VAR N: INTEGER): BOOLEAN;
   PROCEDURE U23(X, Y: INTEGER);
-  PROCEDURE U24(X, Y: INTEGER);
+  PROCEDURE U24(VAR X, Y: INTEGER);
   FUNCTION U25: CHAR;
-  PROCEDURE U26(VAR S: STR80; VALID: CHARSET);
-  PROCEDURE U27(VAR S: STR80; VALID: CHARSET; N: INTEGER);
-  PROCEDURE U28(X, Y: INTEGER);
-  PROCEDURE U29(X, Y: INTEGER);
-  PROCEDURE U30(VAR S: STR80);
-  PROCEDURE U31(VAR S: STR80; N: INTEGER);
-  PROCEDURE U32(VAR S: STR80; N: INTEGER);
+  FUNCTION U26(VALID: CHARSET; ECHO: BOOLEAN): CHAR;
+  FUNCTION U27(VALID: CHARSET; KEYS: KEYSET;
+               VAR CH: CHAR; ECHO: BOOLEAN): INTEGER;
+  FUNCTION U28: BOOLEAN;
+  FUNCTION U29: BOOLEAN;
+  PROCEDURE U30(X, Y: INTEGER; FLAG: BOOLEAN);
+  PROCEDURE U31(X, Y: INTEGER; VAR FLAG: BOOLEAN);
+  FUNCTION U32(FLAG: BOOLEAN): BOOLEAN;
   PROCEDURE U33(X, Y: INTEGER; S: STR80);
   PROCEDURE U34(Y: INTEGER; S: STR80);
-  PROCEDURE U35(X, Y: INTEGER; S: STR80);
-  PROCEDURE U36(N: INTEGER; FLAG: BOOLEAN; VAR S: STR80);
-  PROCEDURE U37(X, Y: INTEGER; S: STR80);
-  PROCEDURE U38(N: INTEGER; FLAG: BOOLEAN; VAR S: STR80);
-  PROCEDURE U39(S: STR80);
+  PROCEDURE U35(X, Y: INTEGER; S: STR80; N: INTEGER);
+  PROCEDURE U36(X, Y: INTEGER; VAR S: STR80; N: INTEGER);
+  PROCEDURE U37(X, Y: INTEGER; VAL, WID: INTEGER);
+  PROCEDURE U38(X, Y: INTEGER; VAR NUM: INTEGER; WID: INTEGER);
+  FUNCTION U39(S: STR80): INTEGER;
   PROCEDURE U40;
   PROCEDURE U41;
   PROCEDURE U42;
@@ -157,28 +187,28 @@ IMPLEMENTATION
   PROCEDURE U02;
   BEGIN
     U23(X, Y);
-    IF PREFIXED[2] THEN
+    IF CRTPRE[2] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[2], 1, 0, 12)
   END;
 
   PROCEDURE U03;
   BEGIN
-    IF PREFIXED[7] THEN
+    IF CRTPRE[7] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[7], 1, 0, 12)
   END;
 
   PROCEDURE U04;
   BEGIN
-    IF PREFIXED[8] THEN
+    IF CRTPRE[8] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[8], 1, 0, 12)
   END;
 
   PROCEDURE U05;
   BEGIN
-    IF PREFIXED[5] THEN
+    IF CRTPRE[5] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[5], 1, 0, 12)
   END;
@@ -190,11 +220,22 @@ IMPLEMENTATION
 
   PROCEDURE U07;
   BEGIN
+    CH := ' ';
+    REPEAT
+      CH := U25;
+      IF CH IN ['a'..'z'] THEN
+        CH := CHR(ORD(CH) - 97 + 65);
+      IF NOT (CH IN VALID) THEN
+        BEGIN
+          CH := CHR(7);
+          UNITWRITE(2, CH, 1, 0, 12)
+        END
+    UNTIL CH IN VALID
   END;
 
   PROCEDURE U08;
   BEGIN
-    IF PREFIXED[4] THEN
+    IF CRTPRE[4] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[4], 1, 0, 12)
   END;
@@ -202,14 +243,14 @@ IMPLEMENTATION
   PROCEDURE U09;
   BEGIN
     U23(0, Y);
-    IF PREFIXED[2] THEN
+    IF CRTPRE[2] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[2], 1, 0, 12)
   END;
 
   PROCEDURE U10;
   BEGIN
-    IF PREFIXED[0] THEN
+    IF CRTPRE[0] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[0], 1, 0, 12)
   END;
@@ -217,7 +258,7 @@ IMPLEMENTATION
   PROCEDURE U11;
   BEGIN
     U23(X, Y);
-    IF PREFIXED[1] THEN
+    IF CRTPRE[1] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[1], 1, 0, 12)
   END;
@@ -235,56 +276,156 @@ IMPLEMENTATION
       END
     ELSE
       BEGIN
-        IF PREFIXED[3] THEN
+        IF CRTPRE[3] THEN
           UNITWRITE(2, ESCAPE, 1, 0, 12);
         UNITWRITE(2, CRTCH[3], 1, 0, 12)
       END
   END;
-  (*$R+*)
-  (*$I+*)
 
   FUNCTION U13;
   BEGIN
-    U13 := FALSE
+    U13 := CRTCH[N] <> CHR(0)
   END;
 
   FUNCTION U14;
   BEGIN
-    U14 := FALSE
+    U14 := CRTINFOCH[N] <> CHR(0)
   END;
 
   FUNCTION U15;
+  VAR
+    PREF: BOOLEAN;
+    CODE: INTEGER;
   BEGIN
-    U15 := 0
+    IF CH = ESCAPE THEN
+      BEGIN
+        UNITREAD(2, CH, 1, 0, 12);
+        PREF := TRUE
+      END
+    ELSE
+      PREF := FALSE;
+    CODE := KEYMAP[ORD(CH)];
+    IF NOT (PREF = INFOPREF[CODE]) THEN
+      CODE := 10;
+    U15 := CODE
   END;
 
   PROCEDURE U16;
+  VAR
+    T: STR80;
   BEGIN
+    FILLCHAR(T[1], N, CH);
+    T[0] := CHR(N);
+    MOVELEFT(S[1], T[(N - LENGTH(S)) + 1], LENGTH(S));
+    S := T
   END;
 
   PROCEDURE U17;
+  VAR
+    T: STR80;
   BEGIN
+    FILLCHAR(T[1], N, CH);
+    T[0] := CHR(N);
+    MOVELEFT(S[1], T[1], LENGTH(S));
+    S := T
   END;
 
   PROCEDURE U18;
+  VAR
+    I: INTEGER;
   BEGIN
+    I := SCAN(LENGTH(S), <>' ', S[1]);
+    S[0] := CHR(LENGTH(S) - I);
+    MOVELEFT(S[I + 1], S[1], LENGTH(S))
   END;
 
   PROCEDURE U19;
+  VAR
+    I: INTEGER;
   BEGIN
+    I := SCAN(-LENGTH(S), <>' ', S[LENGTH(S)]);
+    S[0] := CHR(LENGTH(S) + I)
   END;
 
   PROCEDURE U20;
+  VAR
+    I: INTEGER;
+    J: INTEGER;
   BEGIN
+    I := LENGTH(S);
+    J := 1;
+    WHILE I >= J DO
+      BEGIN
+        IF S[I] = ' ' THEN
+          DELETE(S, I, 1);
+        I := I - 1
+      END
   END;
 
   PROCEDURE U21;
+  VAR
+    POS: INTEGER;
+    NEG: BOOLEAN;
   BEGIN
+    IF N = 0 THEN
+      S := '0'
+    ELSE
+      BEGIN
+        NEG := N < 0;
+        IF NEG THEN
+          N := -N;
+        POS := 7;
+        WHILE N > 0 DO
+          BEGIN
+            POS := POS - 1;
+            S[POS] := CHR((N MOD 10) + 48);
+            N := N DIV 10
+          END;
+        IF NEG THEN
+          BEGIN
+            POS := POS - 1;
+            S[POS] := '-'
+          END;
+        IF POS > 1 THEN
+          MOVELEFT(S[POS], S[1], 7 - POS);
+        S[0] := CHR(7 - POS)
+      END
   END;
 
-  PROCEDURE U22;
+  FUNCTION U22;
+  VAR
+    NEG: BOOLEAN;
+    DIG: INTEGER;
   BEGIN
+    NEG := FALSE;
+    U22 := FALSE;
+    N := 0;
+    IF S[1] = '-' THEN
+      BEGIN
+        NEG := TRUE;
+        DELETE(S, 1, 1)
+      END;
+    WHILE (N < 1000) AND (S <> '') DO
+      BEGIN
+        DIG := ORD(S[1]) - 48;
+        N := N * 10 + DIG;
+        DELETE(S, 1, 1)
+      END;
+    IF S <> '' THEN
+      BEGIN
+        IF N > 3276 THEN
+          EXIT(U22);
+        IF (N = 3276) AND (S[1] > '7') THEN
+          EXIT(U22);
+        DIG := ORD(S[1]) - 48;
+        N := N * 10 + DIG
+      END;
+    IF NEG THEN
+      N := -N;
+    U22 := TRUE
   END;
+  (*$R+*)
+  (*$I+*)
 
   PROCEDURE U23;
   BEGIN
@@ -295,121 +436,457 @@ IMPLEMENTATION
 
   PROCEDURE U24;
   BEGIN
+    X := CUR.X;
+    Y := CUR.Y
   END;
 
+  (*$I-*)
+  (*$R-*)
   FUNCTION U25;
+  VAR
+    CH: PACKED ARRAY [0..0] OF CHAR;
   BEGIN
-    U25 := ' '
+    U25 := ' ';
+    UNITREAD(2, CH, 1, 0, 12);
+    U25 := CH[0];
+    W5668 := CH[0] = CHR(27)
   END;
 
-  PROCEDURE U26;
+  FUNCTION U26;
+  VAR
+    CH: CHAR;
   BEGIN
+    CH := U25;
+    WHILE NOT (CH IN VALID) DO
+      BEGIN
+        U42;
+        CH := U25
+      END;
+    IF ECHO THEN
+      IF CH IN SET125 THEN
+        UNITWRITE(1, CH, 1, 0, 12);
+    U26 := CH
   END;
 
-  PROCEDURE U27;
+  FUNCTION U27;
+  VAR
+    CODE: INTEGER;
+    OK: BOOLEAN;
   BEGIN
+    REPEAT
+      CH := U25;
+      CODE := U15(CH);
+      IF CH IN VALID THEN
+        OK := TRUE
+      ELSE
+        IF U43(CH) IN VALID THEN
+          BEGIN
+            CH := U43(CH);
+            OK := TRUE
+          END
+        ELSE
+          IF CODE IN KEYS THEN
+            OK := TRUE
+          ELSE
+            BEGIN
+              OK := FALSE;
+              U42
+            END
+    UNTIL OK;
+    IF CODE = 10 THEN
+      IF (CH IN SET125) AND ECHO THEN
+        UNITWRITE(1, CH, 1, 0, 12);
+    W106 := CODE;
+    U27 := CODE
+  END;
+  (*$R+*)
+  (*$I+*)
+
+  FUNCTION U28;
+  BEGIN
+    U28 := W5668;
+    W5668 := FALSE
   END;
 
-  PROCEDURE U28;
+  FUNCTION U29;
   BEGIN
-  END;
-
-  PROCEDURE U29;
-  BEGIN
+    U29 := W5756;
+    W5756 := FALSE
   END;
 
   PROCEDURE U30;
   BEGIN
+    IF FLAG THEN
+      U33(X, Y, 'Yes')
+    ELSE
+      U33(X, Y, 'No ')
   END;
 
+  (*$I-*)
+  (*$R-*)
   PROCEDURE U31;
+  VAR
+    CH: CHAR;
   BEGIN
+    U30(X, Y, FLAG);
+    U24(X, Y);
+    U23(X - 3, Y);
+    W106 := U27([CHR(13), 'F', 'N', 'T', 'Y',
+                 'f', 'n', 't', 'y'],
+                [3, 4], CH, FALSE);
+    CH := U43(CH);
+    W5756 := TRUE;
+    CASE CH OF
+      'T', 'Y':
+        FLAG := TRUE;
+      'F', 'N':
+        FLAG := FALSE;
+      OTHERWISE
+        W5756 := FALSE
+    END;
+    U30(X - 3, Y, FLAG)
   END;
 
-  PROCEDURE U32;
+  FUNCTION U32;
   BEGIN
+    U31(-1, 0, FLAG);
+    U32 := FLAG
   END;
 
   PROCEDURE U33;
   BEGIN
+    IF X < 0 THEN
+      U24(X, Y);
+    CUR.X := X;
+    CUR.Y := Y;
+    U23(X, Y);
+    UNITWRITE(1, S[1], LENGTH(S), 0, 0);
+    CUR.X := CUR.X + LENGTH(S);
+    IF CUR.X > W108 THEN
+      CUR.X := W108
   END;
 
   PROCEDURE U34;
+  VAR
+    PAD: INTEGER;
   BEGIN
+    PAD := 0;
+    U02(0, Y);
+    IF LENGTH(S) > (W108 + 1) THEN
+      S := COPY(S, 1, W108 + 1);
+    IF LENGTH(S) < (W108 + 1) THEN
+      PAD := ((W108 + 1) - LENGTH(S)) DIV 2;
+    IF PAD > 0 THEN
+      PAD := PAD - 1;
+    U33(PAD, Y, S)
   END;
 
   PROCEDURE U35;
   BEGIN
+    U17(S, N, ' ');
+    U33(X, Y, S)
   END;
 
   PROCEDURE U36;
+  VAR
+    CH: CHAR;
+    UNUSED: STR80;
+    T: STR80;
+    I: INTEGER;
+    VALID: CHARSET;
+    CODE: INTEGER;
   BEGIN
+    IF X < 0 THEN
+      U24(X, Y);
+    T := '';
+    I := 0;
+    U35(X, Y, ' ', N);
+    U23(X, Y);
+    REPEAT
+      IF I >= N THEN
+        VALID := []
+      ELSE
+        VALID := SET125;
+      VALID := VALID + [CHR(13)];
+      CODE := U27(VALID, W105, CH, TRUE);
+      CASE CODE OF
+        0, 5, 8:
+          IF CH <> CHR(13) THEN
+            BEGIN
+              I := I + 1;
+              T[I] := CH
+            END;
+        4:
+          BEGIN
+            T := S;
+            I := LENGTH(S)
+          END;
+        10:
+          IF I > 0 THEN
+            BEGIN
+              I := I - 1;
+              WRITE(CHR(8), ' ', CHR(8))
+            END
+      END
+    UNTIL (CODE IN W5766) OR (CH = CHR(13));
+    T[0] := CHR(I);
+    U35(X, Y, T, N);
+    S := T
   END;
 
   PROCEDURE U37;
+  VAR
+    T: STR80;
   BEGIN
+    U21(VAL, T);
+    U16(T, WID, ' ');
+    U33(X, Y, T)
   END;
 
   PROCEDURE U38;
+  VAR
+    CH: CHAR;
+    SPARE: INTEGER;
+    I: INTEGER;
+    UNUSED: STR80;
+    T: STR80;
+    VALID: CHARSET;
+    CODE: INTEGER;
+    K: INTEGER;
   BEGIN
+    IF X < 0 THEN
+      U24(X, Y);
+    T := '';
+    I := 0;
+    U35(X, Y, ' ', WID);
+    U23(X, Y);
+    REPEAT
+      IF I = WID THEN
+        VALID := []
+      ELSE
+        VALID := SETDIG;
+      VALID := VALID + [CHR(13)];
+      CODE := U27(VALID, W105, CH, TRUE);
+      CASE CODE OF
+        0, 5, 8:
+          IF I > 0 THEN
+            BEGIN
+              I := I - 1;
+              WRITE(CHR(8), ' ', CHR(8))
+            END;
+        10:
+          IF CH <> CHR(13) THEN
+            BEGIN
+              I := I + 1;
+              T[I] := CH
+            END
+          ELSE
+            BEGIN
+              NUM := 0;
+              W5676 := 1;
+              K := I;
+              WHILE W5676 <= K DO
+                BEGIN
+                  NUM := (NUM * 10 + ORD(T[W5676])) - 48;
+                  W5676 := W5676 + 1
+                END
+            END
+      END
+    UNTIL (CODE IN W5766) OR (CH = CHR(13));
+    U37(X, Y, NUM, WID)
   END;
 
-  PROCEDURE U39;
+  FUNCTION U39;
+  VAR
+    CH: CHAR;
   BEGIN
+    U34(W107 - 1, S);
+    U34(W107, 'Press SPACE to continue');
+    U39 := U27([CHR(13), ' '], [3, 4], CH, FALSE);
+    IF W106 = 10 THEN
+      U39 := 3
   END;
+  (*$R+*)
+  (*$I+*)
 
   PROCEDURE U40;
   BEGIN
+    U02(0, W107 - 1)
   END;
 
+  (*$I-*)
+  (*$R-*)
   PROCEDURE U41;
+  VAR
+    CODE: INTEGER;
+    CH: CHAR;
   BEGIN
+    U42;
+    U33(0, W107, 'Press SPACEBAR to continue');
+    CODE := U27([CHR(13), ' '], [4], CH, FALSE)
   END;
 
   PROCEDURE U42;
+  VAR
+    CH: CHAR;
   BEGIN
+    CH := CHR(7);
+    UNITWRITE(2, CH, 1, 0, 12)
   END;
+  (*$R+*)
+  (*$I+*)
 
-  FUNCTION U43;
-  BEGIN
-    U43 := CH
-  END;
+  FUNCTION U43; EXTERNAL;
+  PROCEDURE U44; EXTERNAL;
+  FUNCTION U45; EXTERNAL;
+  PROCEDURE U46; EXTERNAL;
+  PROCEDURE U47; EXTERNAL;
+  PROCEDURE U48; EXTERNAL;
 
-  PROCEDURE U44;
-  BEGIN
-  END;
-
-  FUNCTION U45;
-  BEGIN
-    U45 := 0
-  END;
-
-  PROCEDURE U46;
-  BEGIN
-  END;
-
-  PROCEDURE U47;
-  BEGIN
-  END;
-
-  PROCEDURE U48;
-  BEGIN
-  END;
-
+  (*$I-*)
+  (*$R-*)
   PROCEDURE U49;
   BEGIN
+    W5654 := SYSCOM^.SEGTABLE[1].CODEUNIT;
+    W5741 := SYSCOM^.SEGTABLE[0].CODEUNIT;
+    UNITREAD(W5654, PROGDIR, 26, 2, 0);
+    W5757 := IORESULT;
+    IF W5757 <> 0 THEN
+      BEGIN
+        WRITE('Unable to read directory block of program disk ');
+        WRITELN
+      END;
+    IF W5741 <> W5654 THEN
+      BEGIN
+        UNITREAD(W5741, BOOTDIR, 26, 2, 0);
+        W5757 := IORESULT;
+        IF W5757 <> 0 THEN
+          BEGIN
+            WRITE('Unable to read directory block of boot disk');
+            WRITELN
+          END
+      END
   END;
+  (*$R+*)
+  (*$I+*)
 
   PROCEDURE U50;
-    PROCEDURE U51(VAR U: INTEGER; VAR BLK: INTEGER);
+  VAR
+    D1: INTEGER;
+    D2: INTEGER;
+    D3: INTEGER;
+    VID: STRING[7];
+    REST: ARRAY [1..6] OF INTEGER;
+
+    (*$I-*)
+    PROCEDURE U51(VAR U: INTEGER; VAR BLK: DIR26);
     BEGIN
+      REPEAT
+        FILLCHAR(D1, 26, CHR(0));
+        UNITREAD(U, D1, 26, 2, 0);
+        W5757 := IORESULT;
+        IF (W5757 <> 0) OR (VID <> BLK.VID) THEN
+          BEGIN
+            W5757 := 1;
+            U09(22);
+            WRITE('Insert ', BLK.VID, ' in unit #', U);
+            U41;
+            U11(0, 22)
+          END
+      UNTIL W5757 = 0
     END;
+    (*$I+*)
+
   BEGIN
+    U51(W5654, PROGDIR);
+    IF W5654 <> W5741 THEN
+      U51(W5741, BOOTDIR)
   END;
 
+  (*$R-*)
   PROCEDURE U52;
+  VAR
+    I: INTEGER;
+    J: INTEGER;
   BEGIN
+    WITH SYSCOM^.CRTCTRL DO
+      BEGIN
+        CRTCH[0] := NDFS;
+        CRTPRE[0] := PREFIXED[4];
+        CRTCH[1] := ERASEEOL;
+        CRTPRE[1] := PREFIXED[3];
+        CRTCH[4] := CLEARLINE;
+        CRTPRE[4] := PREFIXED[6];
+        CRTCH[2] := ERASEEOS;
+        CRTPRE[2] := PREFIXED[2];
+        CRTCH[3] := CLEARSCREEN;
+        CRTPRE[3] := PREFIXED[7];
+        CRTCH[5] := ESCAPE;
+        CRTPRE[5] := PREFIXED[0];
+        CRTCH[6] := CHR(10);
+        CRTPRE[6] := FALSE;
+        CRTCH[7] := BACKSPACE;
+        CRTPRE[7] := PREFIXED[5];
+        CRTCH[8] := HOME;
+        CRTPRE[8] := PREFIXED[1]
+      END;
+    WITH SYSCOM^.CRTINFO DO
+      BEGIN
+        CRTINFOCH[0] := DOWN;
+        INFOPREF[0] := PREFIXED[1];
+        CRTINFOCH[1] := CHR(17);
+        INFOPREF[1] := FALSE;
+        CRTINFOCH[2] := BADCH;
+        INFOPREF[2] := PREFIXED[8];
+        CRTINFOCH[3] := ETX;
+        INFOPREF[3] := PREFIXED[12];
+        CRTINFOCH[4] := LINEDEL;
+        INFOPREF[4] := PREFIXED[9];
+        CRTINFOCH[5] := ALTMODE;
+        INFOPREF[5] := PREFIXED[10];
+        CRTINFOCH[6] := RIGHT;
+        INFOPREF[6] := PREFIXED[2];
+        CRTINFOCH[7] := LEFT;
+        INFOPREF[7] := PREFIXED[3];
+        CRTINFOCH[8] := DOWN;
+        INFOPREF[8] := PREFIXED[1];
+        CRTINFOCH[9] := UP;
+        INFOPREF[9] := PREFIXED[0];
+        CRTINFOCH[11] := CHR(128 + 73);
+        INFOPREF[11] := FALSE;
+        CRTINFOCH[12] := CHR(128 + 68);
+        INFOPREF[12] := FALSE;
+        CRTINFOCH[10] := CHR(0);
+        INFOPREF[10] := FALSE
+      END;
+    ESCAPE := SYSCOM^.CRTINFO.ALPHA_LOCK;
+    SETCR := [CHR(13)] + [' '..CHR(127)];
+    FOR I := 0 TO 255 DO
+      KEYMAP[I] := 10;
+    FOR J := 0 TO 12 DO
+      KEYMAP[ORD(CRTINFOCH[J])] := J;
+    KEYMAP[128 + 105] := 11;
+    KEYMAP[128 + 100] := 12;
+    CUR.B := 0;
+    CUR.A := 0;
+    CUR.HEIGHT := 23;
+    CUR.WIDTH := 79;
+    CUR.X := 0;
+    CUR.Y := 0;
+    W5766 := [4];
+    W107 := CUR.HEIGHT;
+    W108 := CUR.WIDTH;
+    W5756 := FALSE;
+    W5668 := FALSE;
+    SETDIG := ['0'..'9'];
+    SETALNUM := ['A'..'Z', 'a'..'z'];
+    SETAZ := ['A'..'Z'];
+    SET125 := [' '..'}'];
+    W5755 := ' ';
+    SETDASH := SETDIG + ['-'];
+    W105 := [0..12] - [10]
   END;
+  (*$R+*)
 
 BEGIN
   U52
