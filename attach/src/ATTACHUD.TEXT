@@ -1,88 +1,136 @@
 PROGRAM ATTACHUD;
 
-{ ATTACH-BIOS, Barry Haynes, 12 Jan 1980. Builds the ATTACH.DATA
-  file that SYSTEM.ATTACH reads at boot. One record per driver. }
+{ Apple Pascal ATTACH.DATA Creation Utility [1.3]. Builds the 16-word
+  records SYSTEM.ATTACH reads at boot. One record per driver; if any
+  driver uses interrupts, a final IM record is appended. }
 
 TYPE
   DIGITS = 1..5;
-  BITSET = SET OF 0..31;
+  BITSET = SET OF 0..47;
+  NAME8 = PACKED ARRAY [0..7] OF CHAR;
   DEVREC = PACKED RECORD
-             NM: PACKED ARRAY [0..7] OF CHAR;
+             NM: NAME8;
              INITU: BITSET;
              UNITU: BITSET;
              BOUND: 0..256;
              PAGE4: BOOLEAN;
-             PAGE2: BOOLEAN
+             PAGE2: BOOLEAN;
+             IMFLAG: BOOLEAN;
+             TNM: NAME8;
+             TBOUND: 0..256
            END;
 
 VAR
-  PAD3: INTEGER; { word 3, so FNAME sits at word 4 as in the 1.1 frame }
   FNAME: STRING[80];
-  MORE: BOOLEAN;
+  BIT: BITSET;
+  NAMES: ARRAY [0..16] OF NAME8;
+  NDRV: INTEGER;
+  UNUM: INTEGER;
+  OUTF: FILE OF DEVREC;
+  NEEDIM: BOOLEAN;
+  LASTINIT: BOOLEAN;
+  AGAIN: BOOLEAN;
   CAN4000: BOOLEAN;
   CAN2000: BOOLEAN;
-  OUTF: FILE OF DEVREC;
+  USED128: PACKED ARRAY [128..143] OF BOOLEAN;
+
+PROCEDURE COPYNAME(VAR S: STRING; VAR D: NAME8);
+VAR
+  I: INTEGER;
+
+  FUNCTION MIN(A, B: INTEGER): INTEGER;
+  BEGIN
+    IF A > B THEN MIN := B ELSE MIN := A
+  END;
+
+BEGIN
+  D := '        ';
+  FOR I := 1 TO MIN(LENGTH(S), 8) DO
+    D[I - 1] := S[I]
+END;
+
+PROCEDURE UPCASE(VAR S: STRING);
+VAR
+  DELTA: INTEGER;
+  I: INTEGER;
+BEGIN
+  DELTA := ORD('a') - ORD('A');
+  FOR I := 1 TO LENGTH(S) DO
+    IF S[I] IN ['a'..'z'] THEN
+      S[I] := CHR(ORD(S[I]) - DELTA)
+END;
 
 PROCEDURE READIT(VAR S: STRING);
 BEGIN
+  WRITE('(<RETURN> to exit program): ');
   READLN(S);
   IF LENGTH(S) = 0 THEN
     EXIT(ATTACHUD)
+  ELSE
+    UPCASE(S)
 END;
 
 PROCEDURE ERRTRY(MSG: STRING; VAR S: STRING);
 BEGIN
   WRITELN;
+  WRITE(CHR(7));
   WRITE('ERROR => ');
   WRITE(MSG);
   WRITELN;
-  WRITE('Try again (RETURN to exit program):');
+  WRITE('Please try again ...');
   WRITELN;
   READIT(S)
 END;
 
 FUNCTION YESNO: BOOLEAN;
 VAR
-  S: STRING[80];
+  OK: BOOLEAN;
+  S: STRING;
 BEGIN
-  S := ' ';
-  WHILE NOT (S[1] IN ['N','Y','n','y']) DO
-    BEGIN
-      READLN(S);
-      IF LENGTH(S) = 0 THEN
-        S := ' ';
-      IF NOT (S[1] IN ['N','Y','n','y']) THEN
-        WRITE('Y/N:')
-    END;
-  YESNO := S[1] IN ['Y','y']
+  REPEAT
+    READLN(S);
+    UPCASE(S);
+    IF LENGTH(S) > 0 THEN
+      OK := S[1] IN ['N','Y']
+    ELSE
+      OK := FALSE;
+    IF NOT OK THEN
+      BEGIN
+        WRITE(CHR(7));
+        WRITE('(Y/N)? ')
+      END
+  UNTIL OK;
+  YESNO := S[1] = 'Y'
 END;
 
 FUNCTION GETNUM(VAR S: STRING; MAXD: DIGITS): INTEGER;
 VAR
+  OK: BOOLEAN;
+  LIM: INTEGER;
   VAL: INTEGER;
   I: INTEGER;
-  OK: BOOLEAN;
 BEGIN
   REPEAT
     VAL := 0;
     WHILE LENGTH(S) > MAXD DO
-      ERRTRY('Number too large', S);
-    OK := TRUE;
+      ERRTRY('Number too large.', S);
     REPEAT
       I := 1;
+      OK := TRUE;
       WHILE (I <= LENGTH(S)) AND OK DO
         BEGIN
           OK := S[I] IN ['0'..'9'];
           I := I + 1
         END;
       IF NOT OK THEN
-        ERRTRY('We want a positive number', S)
+        ERRTRY('We want a positive number.', S)
     UNTIL OK;
     I := 1;
     WHILE (I <= LENGTH(S)) AND OK DO
       BEGIN
-        IF (VAL > (32767 DIV 10)) OR
-           ((VAL = (32767 DIV 10)) AND (S[I] > '7')) THEN
+        LIM := 32767 DIV 10;
+        IF (VAL > LIM) OR
+           ((VAL = LIM) AND (S[I] > '7')) THEN
           BEGIN
             OK := FALSE;
             S := '      '
@@ -96,217 +144,443 @@ BEGIN
 END;
 
 PROCEDURE OPENDAT;
+VAR
+  OK: BOOLEAN;
+  I: INTEGER;
+
   PROCEDURE ASKHIRES;
   BEGIN
     WRITELN;
-    WRITE('These next questions will determine if');
+    WRITE('NOTE: These next questions will determine if');
     WRITELN;
-    WRITE('attached drivers can reside in the hires');
+    WRITE('any attached drivers can reside in the HIRES');
     WRITELN;
-    WRITE('pages.  It will be assumed they can for');
+    WRITE('pages.  It will be assumed that they can for');
     WRITELN;
-    WRITE('page in question if you answer no to the');
+    WRITE('the page in question if your program will not');
     WRITELN;
-    WRITE('prompt for that page.');
+    WRITE('ever use the HIRES page and you answer no to');
     WRITELN;
-    WRITE('Will you ever use the (2000.3FFF hex)');
+    WRITE('the prompt for that page.');
     WRITELN;
-    WRITE('hires page? ');
+    WRITELN;
+    WRITE('Will you use the 2000.3FFF HIRES page? (Y/N) ');
     CAN2000 := NOT YESNO;
-    WRITE('Will you ever use the (4000.5FFF hex)');
     WRITELN;
-    WRITE('hires page? ');
+    WRITE('Will you use the 4000.5FFF HIRES page? (Y/N) ');
     CAN4000 := NOT YESNO
   END;
 
 BEGIN
-  WRITE('Apple pascal attachud [1.1]');
+  WRITE('Apple Pascal ATTACH.DATA Creation Utility [1.3]');
+  WRITELN;
+  WRITE('Copyright Apple Computer, Inc. 1983,1985');
   WRITELN;
   WRITELN;
-  WRITE('Enter name of attach data file:');
+  WRITE('What will be the name of the attach data file?');
+  WRITELN;
   READIT(FNAME);
-  REWRITE(OUTF, FNAME);
-  IF IORESULT <> 0 THEN
-    BEGIN
-      WRITE('ERROR opening attach data file');
-      WRITELN;
-      WRITE('Hit RETURN to exit program');
-      WRITELN;
-      READLN;
-      EXIT(ATTACHUD)
-    END;
-  ASKHIRES
+  REPEAT
+    (*$I-*)
+    REWRITE(OUTF, FNAME);
+    OK := IORESULT = 0;
+    (*$I+*)
+    IF NOT OK THEN
+      BEGIN
+        WRITELN;
+        WRITE(CHR(7));
+        WRITE('ERROR => Open failed upon attach data file.');
+        WRITELN;
+        WRITE('Please try again ...');
+        WRITELN;
+        WRITE('(<RETURN> to exit program): ');
+        READLN(FNAME);
+        IF LENGTH(FNAME) = 0 THEN
+          EXIT(ATTACHUD)
+        ELSE
+          UPCASE(FNAME)
+      END
+  UNTIL OK;
+  ASKHIRES;
+  FOR I := 128 TO 143 DO
+    USED128[I] := FALSE;
+  NEEDIM := FALSE;
+  NDRV := 0
 END;
 
 PROCEDURE ADDRIVER;
 VAR
-  S: STRING[80];
-  U: INTEGER;
-  I: INTEGER;
-  AGAIN: BOOLEAN;
-  BIT: BITSET;
-  N: INTEGER;
+  OK: BOOLEAN;
+  U: INTEGER; { unused; WITH OUTF^ must sit at word 3 }
+
+  FUNCTION VALIDNM(VAR S: STRING): BOOLEAN;
+  VAR
+    LEN: INTEGER;
+    I: INTEGER;
+  BEGIN
+    VALIDNM := FALSE;
+    LEN := LENGTH(S);
+    IF (LEN < 1) OR (LEN > 8) THEN
+      EXIT(VALIDNM);
+    FOR I := 1 TO LEN DO
+      IF NOT ((S[I] IN ['A'..'Z']) OR (S[I] IN ['0'..'9'])) THEN
+        EXIT(VALIDNM);
+    VALIDNM := TRUE
+  END;
+
+  FUNCTION UNIQNAME(VAR S: STRING): BOOLEAN;
+  VAR
+    I: INTEGER;
+    NM: NAME8;
+  BEGIN
+    UNIQNAME := FALSE;
+    COPYNAME(S, NM);
+    FOR I := 1 TO NDRV DO
+      IF NAMES[I] = NM THEN
+        EXIT(UNIQNAME);
+    IF NDRV < 16 THEN
+      NDRV := NDRV + 1
+    ELSE
+      BEGIN
+        WRITELN;
+        WRITE(CHR(7));
+        WRITE('ERROR => A maximum of 16 drivers');
+        WRITELN;
+        WRITE('and transients are allowed per file.');
+        WRITELN;
+        WRITE('(<RETURN> to exit program)');
+        READLN;
+        EXIT(ATTACHUD)
+      END;
+    NAMES[NDRV] := NM;
+    UNIQNAME := TRUE
+  END;
 
   FUNCTION MIXOK: BOOLEAN;
   BEGIN
-    MIXOK := TRUE;
-    IF ([1,6,7] * OUTF^.UNITU <> []) AND
-       (OUTF^.UNITU - [1,6,7] <> []) THEN
-      BEGIN
-        MIXOK := FALSE;
-        WRITELN;
-        WRITE('You can''t attach a character unit and');
-        WRITELN;
-        WRITE('a block unit to the same driver.  I');
-        WRITELN;
-        WRITE('will remove the last unit# you entered.');
-        WRITELN;
-        OUTF^.UNITU := OUTF^.UNITU - BIT;
-        WRITE('Type RETURN to continue:');
-        READLN
-      END
+    WITH OUTF^ DO
+      IF ([1,6,7] * UNITU <> []) AND
+         (UNITU - [1,6,7] <> []) THEN
+        BEGIN
+          WRITELN;
+          WRITE(CHR(7));
+          WRITE('ERROR => Character units and block');
+          WRITELN;
+          WRITE('units cannot be attached to the same');
+          WRITELN;
+          WRITE('device driver.  Your last entry will');
+          WRITELN;
+          WRITE('be removed.');
+          WRITELN;
+          WRITE('(<RETURN> to continue program)');
+          READLN;
+          UNITU := UNITU - BIT;
+          MIXOK := FALSE
+        END
+      ELSE
+        MIXOK := TRUE
   END;
 
   PROCEDURE ASKINIT;
   BEGIN
     WRITELN;
-    WRITE('Do you want this unit to be');
+    WRITE('Do you want this unit to be initialized');
     WRITELN;
-    WRITE('initialized at boot time?');
-    IF YESNO THEN
-      OUTF^.INITU := OUTF^.INITU + BIT
+    WRITE('at boot time? (Y/N) ');
+    LASTINIT := YESNO;
+    IF LASTINIT THEN
+      WITH OUTF^ DO
+        INITU := INITU + BIT
   END;
 
-  PROCEDURE ASKALIN;
+  FUNCTION GETALIGN: INTEGER;
   BEGIN
     WRITELN;
-    WRITE('Do you want this driver to start on a');
+    WRITE('The boundary can be between 0 and 256.');
     WRITELN;
-    WRITE('certain byte boundry?');
-    IF YESNO THEN
-      BEGIN
-        WRITELN;
-        WRITE('The boundry can be between 0 and 256.');
-        WRITELN;
-        WRITE('  0=>Driver can start anywhere.(default)');
-        WRITELN;
-        WRITE('  8=>Driver starts on 8 byte boundry.');
-        WRITELN;
-        WRITE('  N=>Driver starts on N byte boundry.');
-        WRITELN;
-        WRITE('256=>Driver starts on 256 byte PAGE boundry.');
-        WRITELN;
-        U := 257;
-        WHILE U > 256 DO
-          BEGIN
-            WRITELN;
-            WRITE('Enter boundry (RETURN to exit program):');
-            READIT(S);
-            U := GETNUM(S, 3)
-          END;
-        OUTF^.BOUND := U
-      END
-    ELSE
-      OUTF^.BOUND := 0
+    WRITE('   0=>Driver can start anywhere.(default)');
+    WRITELN;
+    WRITE('   8=>Driver starts on 8 byte boundary.');
+    WRITELN;
+    WRITE('   N=>Driver starts on N byte boundary.');
+    WRITELN;
+    WRITE(' 256=>Driver starts on PAGE boundary.');
+    WRITELN;
+    REPEAT
+      WRITELN;
+      WRITE('What boundary do you want? (0..256)');
+      WRITELN;
+      READIT(FNAME);
+      UNUM := GETNUM(FNAME, 3)
+    UNTIL UNUM <= 256;
+    GETALIGN := UNUM
   END;
 
-BEGIN
-  WRITELN;
-  WRITE('What is the name of this driver?  This');
-  WRITELN;
-  WRITE('must be the .PROC name in it''s assembly');
-  WRITELN;
-  WRITE('source (RETURN to exit program):');
-  READIT(S);
-  WHILE LENGTH(S) > 8 DO
-    ERRTRY('Name of driver too long', S);
-  OUTF^.NM := '        ';
-  I := 1;
-  N := LENGTH(S);
-  WHILE I <= N DO
-    BEGIN
-      OUTF^.NM[I - 1] := S[I];
-      I := I + 1
-    END;
-  WRITELN;
-  WRITE('Which unit numbers should refer to this');
-  WRITELN;
-  WRITE('device driver?');
-  WRITELN;
-  AGAIN := TRUE;
-  OUTF^.PAGE2 := CAN2000;
-  OUTF^.PAGE4 := CAN4000;
-  OUTF^.UNITU := [];
-  OUTF^.INITU := [];
-  WHILE AGAIN DO
-    BEGIN
-      WRITELN;
-      WRITE('Unit number (RETURN to abort program):');
-      READIT(S);
-      U := GETNUM(S, 3);
-      IF U IN [1,2,4..12] THEN
-        CASE U OF
-          1: BIT := [1];
-          2: BIT := [1];
-          4: BIT := [4];
-          5: BIT := [5];
-          6: BIT := [6];
-          7: BIT := [7];
-          8: BIT := [7];
-          9: BIT := [9];
-          10: BIT := [10];
-          11: BIT := [11];
-          12: BIT := [12]
-        END
-      ELSE
-        IF U IN [128..143] THEN
-          CASE U OF
-            128: BIT := [13];
-            129: BIT := [14];
-            130: BIT := [15];
-            131: BIT := [16];
-            132: BIT := [17];
-            133: BIT := [18];
-            134: BIT := [19];
-            135: BIT := [20];
-            136: BIT := [21];
-            137: BIT := [22];
-            138: BIT := [23];
-            139: BIT := [24];
-            140: BIT := [25];
-            141: BIT := [26];
-            142: BIT := [27];
-            143: BIT := [28]
+  PROCEDURE ASKIRQ;
+  BEGIN
+    WRITELN;
+    WRITE('Will this driver use interrupts? (Y/N) ');
+    WITH OUTF^ DO
+      IF YESNO THEN
+        IF LASTINIT THEN
+          BEGIN
+            IMFLAG := TRUE;
+            NEEDIM := TRUE
           END
         ELSE
           BEGIN
             WRITELN;
-            WRITE('ERROR => Illegal unit number');
+            WRITE(CHR(7));
+            WRITE('ERROR => Drivers using interrupts');
             WRITELN;
-            BIT := []
-          END;
-      OUTF^.UNITU := OUTF^.UNITU + BIT;
-      IF MIXOK THEN
-        ASKINIT;
+            WRITE('must be initialized at boot time.');
+            WRITELN;
+            WRITE('(<RETURN> to exit program)');
+            READLN;
+            IMFLAG := FALSE;
+            EXIT(ATTACHUD)
+          END
+      ELSE
+        IMFLAG := FALSE
+  END;
+
+  PROCEDURE ASKTRANS;
+  BEGIN
+    WRITELN;
+    WRITE('Do you want this driver to have a');
+    WRITELN;
+    WRITE('transient initialization section? (Y/N) ');
+    WITH OUTF^ DO
+      IF YESNO THEN
+        BEGIN
+          WRITELN;
+          WRITE('What is the transient''s name?');
+          WRITELN;
+          WRITE('It will be the assembly''s .PROC name.');
+          WRITELN;
+          READIT(FNAME);
+          OK := FALSE;
+          REPEAT
+            IF NOT VALIDNM(FNAME) THEN
+              ERRTRY('Alphanumeric names of 1..8 characters.',
+                     FNAME)
+            ELSE
+              IF NOT UNIQNAME(FNAME) THEN
+                ERRTRY('Driver/transient names must be unique.',
+                       FNAME)
+              ELSE
+                OK := TRUE
+          UNTIL OK;
+          COPYNAME(FNAME, TNM);
+          WRITELN;
+          WRITE('Do you want this transient aligned on');
+          WRITELN;
+          WRITE('a particular byte boundary? (Y/N) ');
+          IF YESNO THEN
+            TBOUND := GETALIGN
+          ELSE
+            TBOUND := 0
+        END
+      ELSE
+        BEGIN
+          TNM := '        ';
+          TBOUND := 0
+        END
+  END;
+
+BEGIN
+  WRITELN;
+  WRITE('What is this device driver''s name?');
+  WRITELN;
+  WRITE('It will be the assembly''s .PROC name.');
+  WRITELN;
+  READIT(FNAME);
+  OK := FALSE;
+  REPEAT
+    IF NOT VALIDNM(FNAME) THEN
+      ERRTRY('Alphanumeric names of 1..8 characters.', FNAME)
+    ELSE
+      IF NOT UNIQNAME(FNAME) THEN
+        ERRTRY('Driver/transient names must be unique.', FNAME)
+      ELSE
+        OK := TRUE
+  UNTIL OK;
+  WITH OUTF^ DO
+    BEGIN
+      COPYNAME(FNAME, NM);
       WRITELN;
-      WRITE('Do you want another unit number to refer');
+      WRITE('NOTE: The next questions will be repeated for');
       WRITELN;
-      WRITE('to this device driver?:');
-      AGAIN := YESNO
+      WRITE('each unit number to be attached to this driver.');
+      WRITELN;
+      WRITE('As many unit numbers as desired may be attached');
+      WRITELN;
+      WRITE('to the driver.  The units should be either');
+      WRITELN;
+      WRITE('all character devices or all block devices.');
+      WRITELN;
+      AGAIN := TRUE;
+      PAGE2 := CAN2000;
+      PAGE4 := CAN4000;
+      UNITU := [];
+      INITU := [];
+      WHILE AGAIN DO
+        BEGIN
+          WRITELN;
+          WRITE('Assign what unit number to this driver?');
+          WRITELN;
+          WRITE('Valid units are 1, 2, 4..20, 128..143.');
+          WRITELN;
+          READIT(FNAME);
+          REPEAT
+            UNUM := GETNUM(FNAME, 3);
+            OK := UNUM IN ([128..143] + [1,2,4..20]);
+            IF NOT OK THEN
+              ERRTRY('Invalid unit number.', FNAME)
+          UNTIL OK;
+          IF UNUM IN [1,2,4..20] THEN
+            CASE UNUM OF
+              1: BIT := [1];
+              2: BIT := [1];
+              4: BIT := [4];
+              5: BIT := [5];
+              6: BIT := [6];
+              7: BIT := [7];
+              8: BIT := [7];
+              9: BIT := [9];
+              10: BIT := [10];
+              11: BIT := [11];
+              12: BIT := [12];
+              13: BIT := [13];
+              14: BIT := [14];
+              15: BIT := [15];
+              16: BIT := [16];
+              17: BIT := [17];
+              18: BIT := [18];
+              19: BIT := [19];
+              20: BIT := [20]
+            END
+          ELSE
+            IF UNUM IN [128..143] THEN
+              BEGIN
+                USED128[UNUM] := TRUE;
+                CASE UNUM OF
+                  128: BIT := [21];
+                  129: BIT := [22];
+                  130: BIT := [23];
+                  131: BIT := [24];
+                  132: BIT := [25];
+                  133: BIT := [26];
+                  134: BIT := [27];
+                  135: BIT := [28];
+                  136: BIT := [29];
+                  137: BIT := [30];
+                  138: BIT := [31];
+                  139: BIT := [32];
+                  140: BIT := [33];
+                  141: BIT := [34];
+                  142: BIT := [35];
+                  143: BIT := [36]
+                END
+              END;
+          UNITU := UNITU + BIT;
+          IF MIXOK THEN
+            ASKINIT;
+          WRITELN;
+          WRITE('Do you want another unit number to');
+          WRITELN;
+          WRITE('refer to this device driver? (Y/N) ');
+          AGAIN := YESNO
+        END;
+      WRITELN;
+      WRITE('Do you want this driver aligned on');
+      WRITELN;
+      WRITE('a particular byte boundary? (Y/N) ');
+      IF YESNO THEN
+        BOUND := GETALIGN
+      ELSE
+        BOUND := 0;
+      ASKTRANS;
+      ASKIRQ;
+      PUT(OUTF)
+    END
+END;
+
+PROCEDURE ADDIM;
+VAR
+  U: INTEGER;
+  BIT: BITSET;
+
+  PROCEDURE FINDUNIT;
+  VAR
+    FOUND: BOOLEAN;
+  BEGIN
+    U := 144;
+    FOUND := FALSE;
+    REPEAT
+      U := U - 1;
+      FOUND := NOT USED128[U]
+    UNTIL FOUND OR (U = 127);
+    IF FOUND THEN
+      CASE U OF
+        128: BIT := [21];
+        129: BIT := [22];
+        130: BIT := [23];
+        131: BIT := [24];
+        132: BIT := [25];
+        133: BIT := [26];
+        134: BIT := [27];
+        135: BIT := [28];
+        136: BIT := [29];
+        137: BIT := [30];
+        138: BIT := [31];
+        139: BIT := [32];
+        140: BIT := [33];
+        141: BIT := [34];
+        142: BIT := [35];
+        143: BIT := [36]
+      END
+    ELSE
+      BEGIN
+        WRITELN;
+        WRITE(CHR(7));
+        WRITE('ERROR => No user unit number available');
+        WRITELN;
+        WRITE('for Interrupt Manager puesdo-driver.');
+        WRITELN;
+        WRITE('(<RETURN> to exit program)');
+        WRITELN;
+        READLN;
+        EXIT(ATTACHUD)
+      END
+  END;
+
+BEGIN
+  FINDUNIT;
+  WITH OUTF^ DO
+    BEGIN
+      NM := 'IM      ';
+      BOUND := 0;
+      IMFLAG := TRUE;
+      UNITU := BIT;
+      INITU := BIT;
+      PAGE2 := CAN2000;
+      PAGE4 := CAN4000
     END;
-  ASKALIN;
   PUT(OUTF)
 END;
 
 BEGIN
   OPENDAT;
-  MORE := TRUE;
-  WHILE MORE DO
-    BEGIN
-      ADDRIVER;
-      WRITELN;
-      WRITE('Do you want to attach another driver?');
-      MORE := YESNO
-    END;
-  CLOSE(OUTF, LOCK)
+  REPEAT
+    ADDRIVER;
+    WRITELN;
+    WRITE('Do you want to attach another driver? (Y/N) ')
+  UNTIL NOT YESNO;
+  IF NEEDIM THEN
+    ADDIM;
+  CLOSE(OUTF, LOCK);
+  WRITELN;
+  WRITE('Attach data creation complete.');
+  WRITELN
 END.

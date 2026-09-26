@@ -15,7 +15,5 @@ ppm/work/BKLINK.CODE
 ppm/work/BKFORMAT.CODE
 ppm/work/VOLLINK.CODE
 ppm/work/VOLPROBE.CODE
-attach/work/ATTACHUD.CODE
-attach/work/SYSATCH.CODE
-attach/work/ATCHLNK.CODE
-attach/work/PROBE.CODE
+attach/work/*.CODE
+attach/work/*.lift.txt

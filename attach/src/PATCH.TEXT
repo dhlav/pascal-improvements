@@ -1,0 +1,369 @@
+(*$G+*)
+PROGRAM STATFIX;
+
+{ SYSTEM.APPLE patcher v2.0. Two scans: 1.3 UNITSTATUS, then
+  IIGS 5.25-drive version check. STR() pulls LONGINTIO. }
+
+TYPE
+  BYTE = 0..255;
+  HEX2 = PACKED ARRAY [1..2] OF CHAR;
+  BLOCK = PACKED ARRAY [0..1023] OF BYTE;
+
+VAR
+  BUF: BLOCK;
+  WHICH: INTEGER;
+  PAD1: INTEGER;
+  BLK: INTEGER;
+  UNITNUM: INTEGER;
+  PAD2: INTEGER;
+  BUFOFF: INTEGER;
+  F: FILE;
+  FNAME: STRING[80];
+  FAIL: BOOLEAN;
+  DEBUG: BOOLEAN;
+  QUIET: BOOLEAN;
+  CH: CHAR;
+  PAD3: INTEGER;
+  TARG: ARRAY [0..16] OF HEX2;
+
+PROCEDURE DEBUGON;
+BEGIN
+  DEBUG := TRUE
+END;
+
+PROCEDURE DEBUGOFF;
+BEGIN
+  DEBUG := FALSE
+END;
+
+PROCEDURE SAY(S: STRING);
+BEGIN
+  IF DEBUG AND NOT QUIET THEN
+    WRITELN(S)
+END;
+
+PROCEDURE SAYNUM(MSG: STRING; N: INTEGER);
+BEGIN
+  IF DEBUG AND NOT QUIET THEN
+    WRITELN(MSG, N:0)
+END;
+
+PROCEDURE PUTPATCH;
+BEGIN
+  WRITELN('Patching the file ... Don''t you dare to remove the disk!');
+  (*$I-*)
+  IF (BLOCKWRITE(F, BUF, 2, BLK) <> 2) OR (IORESULT <> 0) THEN
+    BEGIN
+      (*$I+*)
+      WRITELN('Something fishy occurred while trying to update');
+      WRITELN('SYSTEM.APPLE. Process Failed! Restore from backup and try Again!!!');
+      FAIL := TRUE
+    END
+  ELSE
+    IF WHICH = 1 THEN
+      WRITELN('SYSTEM.APPLE version 1.3 updated to correct unitstatus')
+    ELSE
+      WRITELN('SYSTEM.APPLE updated to run with 5 1/4 drives on GS, good bye!')
+END;
+
+PROCEDURE GETNUM;
+VAR
+  I: INTEGER;
+  CH: CHAR;
+  N: INTEGER;
+BEGIN
+  WRITELN;
+  WRITELN('Please enter the number of the unit containing the');
+  WRITELN('diskette with the SYSTEM.APPLE file to be updated ');
+  WRITE('and press RETURN (ESCAPE exits) ---> ');
+  UNITNUM := 0;
+  REPEAT
+    READ(CH);
+    WRITE(CHR(6));
+    IF EOLN THEN
+      BEGIN
+        IF UNITNUM IN [4, 5, 9, 10, 11, 12] THEN
+          BEGIN
+            WRITE(CHR(5));
+            EXIT(GETNUM)
+          END
+        ELSE
+          BEGIN
+            I := 1;
+            N := 32 - UNITNUM;
+            WHILE I <= N DO
+              BEGIN
+                WRITE(CHR(8));
+                I := I + 1
+              END
+          END
+      END;
+    IF CH = CHR(27) THEN
+      BEGIN
+        WRITELN;
+        WRITELN('YOU ASKED FOR IT!!!');
+        WRITE(CHR(5));
+        EXIT(STATFIX)
+      END;
+    IF (CH = CHR(8)) AND (UNITNUM > 0) THEN
+      BEGIN
+        IF UNITNUM < 10 THEN
+          UNITNUM := 0
+        ELSE
+          UNITNUM := UNITNUM DIV 10;
+        WRITE(CHR(8), ' ', CHR(8))
+      END
+    ELSE
+      IF (UNITNUM = 0) AND (CH IN ['1', '4', '5', '9']) THEN
+        UNITNUM := ORD(CH) - ORD('0')
+      ELSE
+        IF (UNITNUM = 1) AND (CH IN ['0', '1', '2']) THEN
+          UNITNUM := 10 * UNITNUM + ORD(CH) - ORD('0')
+        ELSE
+          IF CH > CHR(31) THEN
+            WRITE(CHR(8), ' ', CHR(8))
+  UNTIL FALSE
+END;
+
+FUNCTION CHECKIT: BOOLEAN;
+VAR
+  S: STRING;
+BEGIN
+  WRITELN('Looking for SYSTEM.APPLE ... ');
+  CHECKIT := FALSE;
+  FNAME := '#';
+  STR(UNITNUM, S);
+  FNAME := CONCAT(FNAME, S, ':SYSTEM.APPLE');
+  (*$I-*)
+  RESET(F, FNAME);
+  (*$I+*)
+  IF IORESULT = 0 THEN
+    CHECKIT := TRUE
+END;
+
+FUNCTION HEXBYTE(S: HEX2): INTEGER;
+VAR
+  UNUSED: INTEGER;
+  LOVAL: INTEGER;
+  HIVAL: INTEGER;
+  CH2: CHAR;
+  CH1: CHAR;
+BEGIN
+  IF S = 'GG' THEN
+    HEXBYTE := 0
+  ELSE
+    BEGIN
+      HIVAL := 0;
+      LOVAL := 0;
+      CH1 := S[1];
+      CH2 := S[2];
+      IF (CH1 <= 'F') AND (CH1 >= 'A') THEN
+        HIVAL := 16 * ((ORD(CH1) - ORD('A')) + 10)
+      ELSE
+        HIVAL := 16 * (ORD(CH1) - ORD('0'));
+      IF (CH2 <= 'F') AND (CH2 >= 'A') THEN
+        LOVAL := (ORD(CH2) - ORD('A')) + 10
+      ELSE
+        LOVAL := ORD(CH2) - ORD('0');
+      HEXBYTE := HIVAL + LOVAL
+    END
+END;
+
+FUNCTION SEARCH: BOOLEAN;
+LABEL 1, 3;
+VAR
+  PATOFF: INTEGER;
+  NREAD: INTEGER;
+  KEEP: INTEGER;
+  FOUND: BOOLEAN;
+  D1: INTEGER;
+  D2: INTEGER;
+  D3: INTEGER;
+BEGIN
+  SAY('entering search');
+  SEARCH := FALSE;
+  FOUND := FALSE;
+  KEEP := 1;
+  BLK := 0;
+  WRITE('Finding part of file to patch');
+  IF WHICH = 1 THEN
+    WRITE(' for version 1.3');
+  WRITE('...');
+  REPEAT
+    BUFOFF := 0;
+    PATOFF := 0;
+    DEBUGON;
+    SAYNUM('next blktoread = ', BLK);
+    DEBUGOFF;
+    NREAD := BLOCKREAD(F, BUF, 2, BLK);
+    WRITE('.');
+    REPEAT
+3:    IF ((BUF[BUFOFF + PATOFF] = HEXBYTE(TARG[PATOFF])) AND
+        (PATOFF < 16)) OR (TARG[PATOFF] = 'GG') THEN
+        BEGIN
+          DEBUGON;
+          IF TARG[PATOFF] <> 'GG' THEN
+            BEGIN
+              DEBUGON;
+              SAYNUM('buffer offset = ', BUFOFF + PATOFF);
+              SAYNUM('pattern offset = ', PATOFF);
+              SAYNUM('targ byte = ', HEXBYTE(TARG[PATOFF]));
+              SAYNUM('src  byte = ', BUF[BUFOFF + PATOFF]);
+              DEBUGOFF;
+              PATOFF := PATOFF + 1;
+              IF PATOFF = 16 THEN
+                BEGIN
+                  IF WHICH = 2 THEN
+                    BUF[BUFOFF + 15] := 255
+                  ELSE
+                    BEGIN
+                      BUF[BUFOFF + 6] := BUF[BUFOFF + 5];
+                      BUF[BUFOFF + 5] := BUF[BUFOFF + 4];
+                      BUF[BUFOFF + 14] := BUF[BUFOFF + 13];
+                      BUF[BUFOFF + 13] := BUF[BUFOFF + 12];
+                      BUF[BUFOFF + 0] := HEXBYTE('8A');
+                      BUF[BUFOFF + 1] := HEXBYTE('48');
+                      BUF[BUFOFF + 2] := HEXBYTE('29');
+                      BUF[BUFOFF + 3] := HEXBYTE('01');
+                      BUF[BUFOFF + 4] := HEXBYTE('20');
+                      BUF[BUFOFF + 7] := HEXBYTE('68');
+                      BUF[BUFOFF + 8] := HEXBYTE('90');
+                      BUF[BUFOFF + 9] := HEXBYTE('05');
+                      BUF[BUFOFF + 10] := HEXBYTE('29');
+                      BUF[BUFOFF + 11] := HEXBYTE('01');
+                      BUF[BUFOFF + 12] := HEXBYTE('4C')
+                    END;
+                  FOUND := TRUE;
+                  SEARCH := TRUE;
+                  WRITELN;
+                  IF BUFOFF < 512 THEN
+                    GOTO 1;
+                1: PUTPATCH
+                END
+            END
+          ELSE
+            IF TARG[PATOFF] = 'GG' THEN
+              PATOFF := PATOFF + 1;
+          GOTO 3
+        END;
+      IF NOT FOUND THEN
+        BEGIN
+          IF PATOFF > 0 THEN
+            BEGIN
+              IF BUF[BUFOFF + PATOFF - 1] =
+                HEXBYTE(TARG[PATOFF - 1]) THEN
+                BEGIN
+                  SAYNUM('buffer offset = ', BUFOFF + PATOFF);
+                  SAYNUM('pattern offset = ', PATOFF)
+                END
+              ELSE
+                BEGIN
+                  SAY('following byte not located');
+                  SAYNUM('buffer offset = ', BUFOFF + PATOFF);
+                  SAYNUM('pattern offset = ', PATOFF);
+                  SAYNUM('targ byte was ', HEXBYTE(TARG[PATOFF]));
+                  SAYNUM('match byte was', BUF[BUFOFF + PATOFF])
+                END
+            END;
+          BUFOFF := BUFOFF + 1;
+          PATOFF := 0
+        END;
+      QUIET := TRUE
+    UNTIL (BUFOFF = (1024 - 15)) OR FOUND;
+    BLK := BLK + 1
+  UNTIL (BLK = 26) OR FOUND;
+  WRITELN
+END;
+
+FUNCTION STARTHERE: BOOLEAN;
+BEGIN
+  STARTHERE := FALSE;
+  IF BLOCKREAD(F, BUF, 1, 6) = 1 THEN
+    IF SEARCH THEN
+      STARTHERE := TRUE
+END;
+
+BEGIN
+  QUIET := TRUE;
+  DEBUGON;
+  WRITELN;
+  WRITELN('Pascal v1.3 & v1.2 Apple IIGS Patch, v1.3 Unitstatus Patch ');
+  WRITELN('Program Version 2.0 ');
+  WRITELN;
+  WRITELN('This program patches SYSTEM.APPLE (Versions 1.3 or 1.2) to run');
+  WRITELN('correctly on the Apple IIGS, and patches SYSTEM.APPLE (Version');
+  WRITELN('1.3 only) to fix unitstatus. Make sure you know what you are');
+  WRITELN('doing and never use this program with your only copy of the');
+  WRITELN('system.  ALWAYS MAKE BACKUP COPIES!');
+  WRITELN;
+  FAIL := FALSE;
+  WHICH := 1;
+  TARG[0] := '8A';
+  TARG[1] := '29';
+  TARG[2] := '01';
+  TARG[3] := '20';
+  TARG[4] := 'GG';
+  TARG[5] := 'GG';
+  TARG[6] := '90';
+  TARG[7] := 'GG';
+  TARG[8] := '8A';
+  TARG[9] := '29';
+  TARG[10] := '01';
+  TARG[11] := '4C';
+  TARG[12] := 'GG';
+  TARG[13] := 'GG';
+  TARG[14] := '8A';
+  TARG[15] := '4A';
+  TARG[16] := 'NU';
+  SAY('calling getnum');
+  GETNUM;
+  SAY('calling checkit');
+  IF CHECKIT THEN
+    BEGIN
+      SAY('calling starthere');
+      IF STARTHERE THEN
+        BEGIN
+        END
+      ELSE
+        WRITELN('SYSTEM.APPLE not version 1.3 or has already been patched.')
+    END
+  ELSE
+    WRITELN('SYSTEM.APPLE file is not there.');
+  CLOSE(F, LOCK);
+  IF FAIL = FALSE THEN
+    BEGIN
+      WHICH := 2;
+      TARG[0] := 'AD';
+      TARG[1] := '2A';
+      TARG[2] := 'BF';
+      TARG[3] := 'C9';
+      TARG[4] := '03';
+      TARG[5] := 'D0';
+      TARG[6] := '03';
+      TARG[7] := '4C';
+      TARG[8] := 'GG';
+      TARG[9] := 'GG';
+      TARG[10] := 'C9';
+      TARG[11] := '04';
+      TARG[12] := 'F0';
+      TARG[13] := '46';
+      TARG[14] := 'C9';
+      TARG[15] := '06';
+      TARG[16] := 'NU';
+      IF CHECKIT THEN
+        BEGIN
+          SAY('calling starthere');
+          IF STARTHERE THEN
+            BEGIN
+            END
+          ELSE
+            WRITELN('SYSTEM.APPLE incorrect version to patch or has already been patched.')
+        END
+      ELSE
+        WRITELN('SYSTEM.APPLE file is not there.')
+    END;
+  CLOSE(F, LOCK);
+  WRITELN('press escape to exit program');
+  WHILE CH <> CHR(27) DO
+    READ(CH)
+END.

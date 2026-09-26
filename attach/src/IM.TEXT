@@ -1,0 +1,123 @@
+; Interrupt Manager pseudo-driver. Unlinked assembler output
+; of attach/IM.CODE, segment IM, SEPRTSEG, version 3.
+;
+; X is the BIOS request. 0, 1 and 4 return $81; 2 hooks IRQ;
+; 3 and X>=5 return 3. The IRQ path chains to the previous
+; vector with $00AE as the RTI return, then restores IIe
+; PAGE2/CXROM and the slot $C0xx window.
+
+        .PROC IM,0
+
+        PLA
+        STA RETLO
+        PLA
+        STA RETHI
+        TXA
+        CMP #005
+        BCS OKX
+        ASL A
+        TAY
+        LDA VECTAB+1,Y
+        PHA
+        LDA VECTAB,Y
+        PHA
+        RTS
+OKX     LDX #003
+        BNE RESTN
+RET0    LDX #000
+RESTN   LDA RETHI
+        PHA
+        LDA RETLO
+        PHA
+        RTS
+VECTAB  .WORD ERRX-1
+        .WORD ERRX-1
+        .WORD INIT-1
+        .WORD OKX-1
+        .WORD ERRX-1
+IRQVEC  .WORD IRQHND
+OLDIRQ  .WORD 000
+CHAIN   .WORD IRTN
+RETLO   .BYTE 000
+RETHI   .BYTE 000
+SAVEA   .BYTE 000
+SAVE8   .BYTE 000
+FLAG    .BYTE 000
+
+INIT    LDX FLAG
+        BNE DONE
+        INX
+        STX FLAG
+        LDA 0FFFE
+        STA OLDIRQ
+        LDA 0FFFF
+        STA OLDIRQ+1
+        LDA IRQVEC
+        STA 0FFFE
+        LDA IRQVEC+1
+        STA 0FFFF
+DONE    JMP RET0
+
+ERRX    LDX #081
+        JMP RESTN
+
+IRQHND  STA SAVEA
+        PLA
+        PHA
+        AND #010
+        BNE BRKIRQ
+        LDA SAVEA
+        PHA
+        TXA
+        PHA
+        TYA
+        PHA
+        LDA 0D400
+        BNE PHALC
+        LDA 0D401
+        BNE PHALC
+        LDA 0D402
+PHALC   PHA
+        LDA 0C08B
+        LDA CHAIN+1
+        PHA
+        LDA CHAIN
+        PHA
+        BIT 0BF31
+        BPL NOIIE
+        LDA 0C01C
+        STA 0C054
+        ASL A
+        LDA 0C015
+NOIIE   PHP
+        LDA 007F8
+        STA SAVE8
+        STA 0C006
+        JMP @OLDIRQ
+BRKIRQ  JMP @0FFFC
+
+IRTN    PLA
+        BNE NOLC
+        LDA 0C083
+NOLC    PHP
+        BIT 0BF31
+        BPL NOTIIE
+        PLP
+        BCC NOPG2
+        STA 0C055
+NOPG2   BPL RESTU
+        STA 0C007
+        BMI RESTU
+NOTIIE  PLP
+RESTU   LDA SAVE8
+        STA SLOTLD+2
+        LDA 0CFFF
+SLOTLD  LDA 0C0FF
+        PLA
+        TAY
+        PLA
+        TAX
+        PLA
+        RTI
+
+        .END

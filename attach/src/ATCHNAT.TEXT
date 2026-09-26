@@ -4,17 +4,18 @@
 ;
 ; The linker copies these in source order. That order
 ; is the order of their addresses in the shipped
-; segment: DOCLI, IRQOLD, IRQNEW, STUBF4, LCPATCH,
-; RELOCAT, CALLTR.
+; 1.3 segment: DOCLI, IRQOLD, IRQNEW, STUBF4, OLDII,
+; LCPATCH, RELOCAT, CALLTR.
 ;
 ; RELOCAT walks a self-relative list and adds a base.
 ; LCPATCH copies three bytes, flipping the language
 ; card when $BF22 does not already show it. DOCLI is
-; CLI. IRQOLD saves the IRQ vector minus 3. IRQNEW
-; points IRQ at $FE05 and $03FB at $FE00. STUBF4
-; plants LDA $C08B / LDA $C08B / JMP at $03F4 and
-; points $03FE at it. CALLTR plants its argument in
-; its own JSR and calls it.
+; CLI. IRQOLD writes the IRQ vector through the IIe
+; aux/main switches. IRQNEW points IRQ at $FE02.
+; STUBF4 copies a 23-byte stub to $03E7 and points
+; $03FE at it. OLDII is true for a II/II+ or an
+; original IIe ($FBB3<>6 or $FBC0=$EA). CALLTR
+; plants its argument in its own JSR and calls it.
 
 P00     .EQU 000
 P01     .EQU 001
@@ -35,53 +36,98 @@ P0D     .EQU 00D
 
         .PROC IRQOLD,0
         .TITLE "IRQOLD Procedure"
-        SEC
+        LDA 0C089
+        LDA 0C089
         LDA 0FFFE
-        SBC #003
-        STA 003FB
+        STA 0FFFE
         LDA 0FFFF
-        SBC #000
-        STA 003FC
+        STA 0FFFF
+        STA 0C009
+        LDA 0FFFE
+        STA 0FFFE
+        LDA 0FFFF
+        STA 0FFFF
+        STA 0C008
+        LDA 0C08B
+        LDA 0C08B
         RTS
+        .BYTE 000
 
         .PROC IRQNEW,0
         .TITLE "IRQNEW Procedure"
         LDA 0FFFE
-        STA 0FE03
+        STA 0FE00
         LDA 0FFFF
-        STA 0FE04
-        LDA #005
+        STA 0FE01
+        LDA #002
         STA 0FFFE
         LDA #0FE
         STA 0FFFF
-        LDA #000
-        STA 003FB
-        LDA #0FE
-        STA 003FC
         RTS
         .BYTE 000
 
         .PROC STUBF4,0
         .TITLE "STUBF4 Procedure"
-        LDA #0AD
-        STA 003F4
-        LDA #08B
-        STA 003F5
-        LDA #0C0
-        STA 003F6
-        LDA #0AD
-        STA 003F7
-        LDA #08B
-        STA 003F8
-        LDA #0C0
-        STA 003F9
-        LDA #04C
-        STA 003FA
-        LDA #0F4
+        LDX #000
+COPY    LDA PAYLD,X
+        STA 003E7,X
+        INX
+        CPX #017
+        BNE COPY
+        LDA #0E7
         STA 003FE
         LDA #003
         STA 003FF
+        LDA 0FFFE
+        STA 003F5
+        LDA 0FFFF
+        STA 003F6
         RTS
+PAYLD   LDA 0C08B
+        LDA 0C08B
+        LDA #003
+        PHA
+        LDA #0F7
+        PHA
+        PHP
+        .BYTE 04C,000,000
+        LDA 0C089
+        LDA 0C089
+        RTI
+        .BYTE 000
+
+        .FUNC OLDII,0
+        .TITLE "OLDII Function"
+        PLA
+        STA P04
+        PLA
+        STA P05
+        PLA
+        PLA
+        PLA
+        PLA
+        LDA #000
+        PHA
+        LDA 0C08A
+        LDA 0FBB3
+        LDY 0FBC0
+        LDX 0C08B
+        LDX 0C08B
+        CMP #006
+        BNE YES
+        TYA
+        CMP #0EA
+        BEQ YES
+        LDA #000
+        BEQ STORE
+YES     LDA #001
+STORE   PHA
+        LDA P05
+        PHA
+        LDA P04
+        PHA
+        RTS
+        .BYTE 000
 
         .PROC LCPATCH,4
         .TITLE "LCPATCH Procedure"

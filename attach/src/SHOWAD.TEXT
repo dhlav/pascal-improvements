@@ -1,0 +1,138 @@
+PROGRAM ATTACHDA;
+
+{ Apple Pascal ATTACH.DATA Listing Utility [1.3]. Prints each 16-word
+  record of an ATTACH.DATA file. }
+
+TYPE
+  BITSET = SET OF 0..47;
+  NAME8 = PACKED ARRAY [0..7] OF CHAR;
+  DEVREC = PACKED RECORD
+             NM: NAME8;
+             INITU: BITSET;
+             UNITU: BITSET;
+             BOUND: 0..256;
+             PAGE4: BOOLEAN;
+             PAGE2: BOOLEAN;
+             IMFLAG: BOOLEAN;
+             TNM: NAME8;
+             TBOUND: 0..256
+           END;
+
+VAR
+  UNITI: INTEGER;
+  FIRST: BOOLEAN;
+  DATAF: FILE OF DEVREC;
+  FNAME: STRING[80];
+
+PROCEDURE GETNAME;
+BEGIN
+  REPEAT
+    WRITE('=> ');
+    READLN(FNAME);
+    IF LENGTH(FNAME) = 0 THEN
+      EXIT(ATTACHDA);
+    (*$I-*)
+    RESET(DATAF, FNAME);
+    (*$I+*)
+    WRITELN
+  UNTIL IORESULT = 0
+END;
+
+PROCEDURE SHOWTRAN;
+BEGIN
+  WITH DATAF^ DO
+    IF TNM = '        ' THEN
+      WRITELN('Driver does not have transient initialization code.')
+    ELSE
+      BEGIN
+        WRITELN('Name of Driver''s transient initialization code - ', TNM);
+        IF TBOUND = 0 THEN
+          WRITE('Transient initialization code not aligned.')
+        ELSE
+          BEGIN
+            WRITE('Transient initialization code aligned on ');
+            IF TBOUND IN [8, 18, 80..89] THEN
+              WRITELN('an ', TBOUND, ' byte boundary.')
+            ELSE
+              WRITELN('a ', TBOUND, ' byte boundary.')
+          END
+      END
+END;
+
+BEGIN
+  WRITELN('Apple Pascal ATTACH.DATA Listing Utility [1.3]');
+  WRITELN('Copyright Apple Computer, Inc.  1983,1985');
+  WRITELN;
+  WRITELN('Enter name of ATTACH.DATA file (<RETURN> to exit program): ');
+  GETNAME;
+  IF EOF(DATAF) THEN
+    WRITELN('file is empty');
+  WHILE NOT EOF(DATAF) DO
+    BEGIN
+      WITH DATAF^ DO
+        BEGIN
+          WRITE('Driver Name - ', NM);
+          IF BOUND = 0 THEN
+            WRITE('  - Not Aligned')
+          ELSE
+            IF BOUND IN [8, 18, 80..89] THEN
+              WRITE('  - Aligned on an ', BOUND, ' byte boundary')
+            ELSE
+              WRITE('  - Aligned on a ', BOUND, ' byte boundary');
+          WRITELN;
+          IF UNITU = [] THEN
+            WRITELN('Not attached to any unit number')
+          ELSE
+            BEGIN
+              WRITE('Attached to #');
+              FIRST := TRUE;
+              FOR UNITI := 0 TO 36 DO
+                IF UNITI IN UNITU THEN
+                  BEGIN
+                    IF NOT FIRST THEN
+                      WRITE(', ');
+                    IF UNITI <= 20 THEN
+                      WRITE(UNITI)
+                    ELSE
+                      WRITE(UNITI - 21 + 128);
+                    FIRST := FALSE
+                  END;
+              WRITELN
+            END;
+          IF INITU = [] THEN
+            WRITELN('No units to be initialized at boot time')
+          ELSE
+            BEGIN
+              WRITE('Unit #''s to init at boot time - ');
+              FIRST := TRUE;
+              FOR UNITI := 0 TO 36 DO
+                IF UNITI IN INITU THEN
+                  BEGIN
+                    IF NOT FIRST THEN
+                      WRITE(', ');
+                    IF UNITI <= 20 THEN
+                      WRITE(UNITI)
+                    ELSE
+                      WRITE(UNITI - 21 + 128);
+                    FIRST := FALSE
+                  END;
+              WRITELN
+            END;
+          IF PAGE2 THEN
+            WRITELN('This driver CAN be placed in the first HiRes graphics space.')
+          ELSE
+            WRITELN('This driver CANNOT be placed in the first HiRes graphics space.');
+          IF PAGE4 THEN
+            WRITELN('This driver CAN be placed in the second HiRes graphics space.')
+          ELSE
+            WRITELN('This driver CANNOT be placed in the second HiRes graphics space.');
+          IF IMFLAG THEN
+            WRITELN('This driver DOES use interrupts.')
+          ELSE
+            WRITELN('This driver DOES NOT use interrupts.')
+        END;
+      SHOWTRAN;
+      WRITELN;
+      GET(DATAF)
+    END
+END.

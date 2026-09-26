@@ -1,0 +1,132 @@
+(*$I-*)
+PROGRAM CONVAD;
+
+{ Apple Pascal ATTACH.DATA Conversion Utility [1.3]. Copies each 9-word
+  1.1 record into a 16-word 1.3 record, mapping unit bits 13..28 onto
+  21..36 and leaving the interrupt and transient fields clear. }
+
+TYPE
+  BITSET = SET OF 0..47;
+  OLDSET = SET OF 0..31;
+  NAME8 = PACKED ARRAY [0..7] OF CHAR;
+  OLDREC = PACKED RECORD
+             NM: NAME8;
+             INITU: OLDSET;
+             UNITU: OLDSET;
+             BOUND: 0..256;
+             PAGE4: BOOLEAN;
+             PAGE2: BOOLEAN
+           END;
+  DEVREC = PACKED RECORD
+             NM: NAME8;
+             INITU: BITSET;
+             UNITU: BITSET;
+             BOUND: 0..256;
+             PAGE4: BOOLEAN;
+             PAGE2: BOOLEAN;
+             IMFLAG: BOOLEAN;
+             TNM: NAME8;
+             TBOUND: 0..256
+           END;
+  OLDFILE = FILE OF OLDREC;
+  NEWFILE = FILE OF DEVREC;
+
+VAR
+  BIT: BITSET; { words 3-5, so NRECS sits at 6 }
+  NRECS: INTEGER;
+  OLDNAME, NEWNAME: STRING[80];
+  OLDF: OLDFILE;
+  NEWF: NEWFILE;
+
+PROCEDURE IOERR(KIND: INTEGER);
+BEGIN
+  IF IORESULT <> 0 THEN
+    BEGIN
+      CASE KIND OF
+        0: WRITELN('undetected error');
+        1: WRITELN('Source file not found');
+        2: WRITELN('could not open destination file');
+        3, 4, 8: WRITELN('internal file error');
+        5: WRITELN('error reading source file');
+        6: WRITELN('error writing destination file');
+        7: WRITELN('error closing file(s)')
+      END;
+      EXIT(CONVAD)
+    END
+END;
+
+PROCEDURE CONVERT(VAR OLD: OLDFILE; VAR NEWF: NEWFILE);
+
+  PROCEDURE MAPSET(VAR SRC: OLDSET; VAR DEST: BITSET);
+  VAR
+    OLDI: INTEGER;
+    NEWI: INTEGER;
+  BEGIN
+    OLDI := 0;
+    NEWI := 0;
+    DEST := [];
+    REPEAT
+      IF OLDI IN SRC THEN
+        DEST := DEST + [NEWI];
+      IF OLDI <> 28 THEN
+        BEGIN
+          OLDI := OLDI + 1;
+          IF OLDI = 13 THEN
+            NEWI := 21
+          ELSE
+            NEWI := NEWI + 1
+        END
+      ELSE
+        OLDI := 0
+    UNTIL OLDI = 0
+  END;
+
+BEGIN
+  NEWF^.NM := OLD^.NM;
+  NEWF^.BOUND := OLD^.BOUND;
+  NEWF^.PAGE2 := OLD^.PAGE2;
+  NEWF^.PAGE4 := OLD^.PAGE4;
+  MAPSET(OLD^.UNITU, NEWF^.UNITU);
+  MAPSET(OLD^.INITU, NEWF^.INITU);
+  NEWF^.IMFLAG := FALSE;
+  NEWF^.TNM := '        ';
+  NEWF^.TBOUND := 0
+END;
+
+BEGIN
+  WRITELN('Apple Pascal ATTACH.DATA Conversion Utility [1.3]');
+  WRITELN('Copyright Apple Computer, Inc.  1983,1985');
+  WRITELN;
+  WRITELN;
+  REPEAT
+    WRITELN('Enter name of OLD (1.1) ATTACH.DATA file (<RETURN> to exit program): ');
+    WRITE('=> ');
+    READLN(OLDNAME);
+    IF OLDNAME = '' THEN
+      EXIT(CONVAD);
+    RESET(OLDF, OLDNAME);
+    IOERR(1);
+    WRITELN('Enter name of NEW (1.3) ATTACH.DATA file (<RETURN> to exit program):');
+    WRITE('=> ');
+    READLN(NEWNAME);
+    IF NEWNAME = '' THEN
+      EXIT(CONVAD);
+    REWRITE(NEWF, NEWNAME);
+    IOERR(2);
+    NRECS := 0;
+    WHILE NOT EOF(OLDF) DO
+      BEGIN
+        CONVERT(OLDF, NEWF);
+        PUT(NEWF);
+        IOERR(6);
+        GET(OLDF);
+        IOERR(5);
+        NRECS := NRECS + 1
+      END;
+    CLOSE(OLDF);
+    IOERR(7);
+    CLOSE(NEWF, LOCK);
+    IOERR(7);
+    WRITELN(NRECS, '  ATTACH.DATA records converted')
+  UNTIL FALSE
+END.

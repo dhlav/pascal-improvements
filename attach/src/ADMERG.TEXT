@@ -1,0 +1,125 @@
+(*$I-*)
+PROGRAM ADMERG;
+
+{ Apple Pascal ATTACH.DATA File Merge Utility [1.3]. Copies 16-word
+  records from one or more files into a new file. The IM record is
+  held back and written last. }
+
+TYPE
+  BITSET = SET OF 0..47;
+  NAME8 = PACKED ARRAY [0..7] OF CHAR;
+  DEVREC = PACKED RECORD
+             NM: NAME8;
+             INITU: BITSET;
+             UNITU: BITSET;
+             BOUND: 0..256;
+             PAGE4: BOOLEAN;
+             PAGE2: BOOLEAN;
+             IMFLAG: BOOLEAN;
+             TNM: NAME8;
+             TBOUND: 0..256
+           END;
+  DATAFILE = FILE OF DEVREC;
+
+VAR
+  INDATA, OUTDATA: DATAFILE;
+  IMDATA: DATAFILE; { never opened; FINIT's window holds the IM record }
+  GOTIM: BOOLEAN;
+
+FUNCTION YESNO: BOOLEAN;
+VAR
+  DONE: BOOLEAN;
+  CH: CHAR;
+BEGIN
+  DONE := FALSE;
+  REPEAT
+    READ(KEYBOARD, CH);
+    IF NOT (CH IN ['N', 'Y', 'n', 'y']) THEN
+      WRITE(CHR(7))
+    ELSE
+      DONE := TRUE
+  UNTIL DONE;
+  WRITELN;
+  YESNO := CH IN ['Y', 'y']
+END;
+
+PROCEDURE IOERR(KIND: INTEGER);
+VAR
+  MSG: STRING[80];
+BEGIN
+  IF IORESULT <> 0 THEN
+    BEGIN
+      CASE KIND OF
+        0: MSG := 'reading data from file';
+        1: MSG := 'writing data to file';
+        2: MSG := 'closing NEW data file'
+      END;
+      MSG := CONCAT('I/O error ', MSG);
+      WRITELN(MSG);
+      WRITELN('Program terminated');
+      EXIT(ADMERG)
+    END
+END;
+
+PROCEDURE GETFILE(VAR F: DATAFILE; CREATING: BOOLEAN);
+VAR
+  S: STRING[80];
+BEGIN
+  REPEAT
+    WRITE('=> ');
+    READLN(S);
+    IF LENGTH(S) = 0 THEN
+      BEGIN
+        WRITELN('Program terminated');
+        EXIT(ADMERG)
+      END;
+    IF CREATING THEN
+      REWRITE(F, S)
+    ELSE
+      RESET(F, S);
+    WRITELN
+  UNTIL IORESULT = 0
+END;
+
+BEGIN
+  WRITELN('Apple Pascal ATTACH.DATA File Merge Utility [1.3]');
+  WRITELN('Copyright Apple Computer, Inc.  1981,1983,1985 ');
+  WRITELN;
+  WRITELN;
+  REPEAT
+    WRITELN('Enter name of NEW file to create (<RETURN> to exit program): ');
+    GETFILE(OUTDATA, TRUE);
+    GOTIM := FALSE;
+    REPEAT
+      WRITELN('Enter name of file to get Attach.data records FROM (<RETURN> to exit program):');
+      GETFILE(INDATA, FALSE);
+      WHILE NOT EOF(INDATA) DO
+        BEGIN
+          IF INDATA^.NM = 'IM      ' THEN
+            BEGIN
+              IMDATA^ := INDATA^;
+              GOTIM := TRUE
+            END
+          ELSE
+            BEGIN
+              OUTDATA^ := INDATA^;
+              PUT(OUTDATA);
+              IOERR(1)
+            END;
+          GET(INDATA);
+          IOERR(0)
+        END;
+      CLOSE(INDATA);
+      WRITE('Another Input file? (Y/N)  ')
+    UNTIL NOT YESNO;
+    IF GOTIM THEN
+      BEGIN
+        OUTDATA^ := IMDATA^;
+        PUT(OUTDATA);
+        IOERR(1)
+      END;
+    CLOSE(OUTDATA, LOCK);
+    IOERR(2);
+    WRITE('Create another NEW file? (Y/N)  ')
+  UNTIL NOT YESNO
+END.
