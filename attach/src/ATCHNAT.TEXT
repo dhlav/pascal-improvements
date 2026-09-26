@@ -1,0 +1,218 @@
+; SYSATCH natives. EXTERNAL in SYSATCH.TEXT. Zero page
+; is .EQU so those addresses are not relocated; a label
+; inside a procedure is procedure-relative.
+;
+; The linker copies these in source order. That order
+; is the order of their addresses in the shipped
+; segment: DOCLI, IRQOLD, IRQNEW, STUBF4, LCPATCH,
+; RELOCAT, CALLTR.
+;
+; RELOCAT walks a self-relative list and adds a base.
+; LCPATCH copies three bytes, flipping the language
+; card when $BF22 does not already show it. DOCLI is
+; CLI. IRQOLD saves the IRQ vector minus 3. IRQNEW
+; points IRQ at $FE05 and $03FB at $FE00. STUBF4
+; plants LDA $C08B / LDA $C08B / JMP at $03F4 and
+; points $03FE at it. CALLTR plants its argument in
+; its own JSR and calls it.
+
+P00     .EQU 000
+P01     .EQU 001
+P04     .EQU 004
+P05     .EQU 005
+P06     .EQU 006
+P07     .EQU 007
+P08     .EQU 008
+P0A     .EQU 00A
+P0B     .EQU 00B
+P0C     .EQU 00C
+P0D     .EQU 00D
+
+        .PROC DOCLI,0
+        .TITLE "DOCLI Procedure"
+        CLI
+        RTS
+
+        .PROC IRQOLD,0
+        .TITLE "IRQOLD Procedure"
+        SEC
+        LDA 0FFFE
+        SBC #003
+        STA 003FB
+        LDA 0FFFF
+        SBC #000
+        STA 003FC
+        RTS
+
+        .PROC IRQNEW,0
+        .TITLE "IRQNEW Procedure"
+        LDA 0FFFE
+        STA 0FE03
+        LDA 0FFFF
+        STA 0FE04
+        LDA #005
+        STA 0FFFE
+        LDA #0FE
+        STA 0FFFF
+        LDA #000
+        STA 003FB
+        LDA #0FE
+        STA 003FC
+        RTS
+        .BYTE 000
+
+        .PROC STUBF4,0
+        .TITLE "STUBF4 Procedure"
+        LDA #0AD
+        STA 003F4
+        LDA #08B
+        STA 003F5
+        LDA #0C0
+        STA 003F6
+        LDA #0AD
+        STA 003F7
+        LDA #08B
+        STA 003F8
+        LDA #0C0
+        STA 003F9
+        LDA #04C
+        STA 003FA
+        LDA #0F4
+        STA 003FE
+        LDA #003
+        STA 003FF
+        RTS
+
+        .PROC LCPATCH,4
+        .TITLE "LCPATCH Procedure"
+        PLA
+        STA P04
+        PLA
+        STA P05
+        PLA
+        STA P08
+        PLA
+        PLA
+        STA P07
+        PLA
+        PLA
+        STA P06
+        PLA
+        PLA
+        STA P00
+        PLA
+        STA P01
+        LDA 0BF22
+        AND #021
+        EOR #021
+        BEQ COPY3
+        LDA 0C083
+COPY3   LDY #002
+; LDA P06,Y must be absolute. Zero-page ,Y is a
+; different opcode, and a label here would relocate.
+ABS6    .BYTE 0B9,006,000
+        STA @P00,Y
+        DEY
+        BPL ABS6
+        LDA 0BF22
+        AND #021
+        EOR #021
+        BEQ BACK
+        LDA 0C08B
+BACK    LDA P05
+        PHA
+        LDA P04
+        PHA
+        RTS
+        .BYTE 000
+
+        .FUNC RELOCAT,2
+        .TITLE "RELOCAT Function"
+        PLA
+        STA P04
+        PLA
+        STA P05
+        PLA
+        PLA
+        PLA
+        PLA
+        PLA
+        STA P0C
+        PLA
+        STA P0D
+        PLA
+        STA P06
+        PLA
+        STA P07
+        LDY #000
+        LDA @P06,Y
+        TAX
+        INX
+        INY
+        LDA @P06,Y
+        STA P08
+        JMP STEP
+FIX     LDY #000
+        SEC
+        LDA P06
+        SBC @P06,Y
+        STA P0A
+        INY
+        LDA P07
+        SBC @P06,Y
+        STA P0B
+        CLC
+        DEY
+        LDA @P0A,Y
+        ADC P0C
+        STA @P0A,Y
+        INY
+        LDA @P0A,Y
+        ADC P0D
+        STA @P0A,Y
+STEP    LDA P06
+        SEC
+        SBC #002
+        STA P06
+        BCS NODEC
+        DEC P07
+NODEC   DEX
+        BNE FIX
+        DEC P08
+        BPL FIX
+        CLC
+        LDA P06
+        ADC #002
+        TAX
+        LDA P07
+        ADC #000
+        PHA
+        TXA
+        PHA
+        LDA P05
+        PHA
+        LDA P04
+        PHA
+        RTS
+        .BYTE 000
+
+        .PROC CALLTR,2
+        .TITLE "CALLTR Procedure"
+        PLA
+        STA RETLO
+        PLA
+        STA RETHI
+        PLA
+        STA PLANT+1
+        PLA
+        STA PLANT+2
+PLANT   JSR PLANT
+        LDA RETHI
+        PHA
+        LDA RETLO
+        PHA
+        RTS
+RETLO   .BYTE 000
+RETHI   .BYTE 000
+
+        .END

@@ -1,0 +1,904 @@
+(*$U-*)
+(* SYSTEM.ATTACH as a segment of a 1.2-layout system program.
+   The host exists so SYSATCH can call segment 0 by procedure
+   number and can see SYSCOM, EMPTYHEAP, SYVID, DKVID, UNITABLE,
+   FILENAME and WHAT_H2 at the words the 1.2 binary uses.
+   Apple's linker drops this host; the shipped file is the
+   segment alone. *)
+PROGRAM ATCHSYS;
+
+  CONST
+    MMAXINT  = 32767;
+    MAXUNIT  = 20;
+    MAXDIR   = 77;
+    VIDLENG  = 7;
+    TIDLENG  = 15;
+    MAX_SEG  = 63;
+    FBLKSIZE = 512;
+    DIRBLK   = 2;
+    AGELIMIT = 300;
+    EOL      = 13;
+    DLE      = 16;
+    NAME_LEN = 23;
+    FILL_LEN = 11;
+
+  TYPE
+    IORSLTWD = (INOERROR, IBADBLOCK, IBADUNIT, IBADMODE, ITIMEOUT,
+                ILOSTUNIT, ILOSTFILE, IBADTITLE, INOROOM, INOUNIT,
+                INOFILE, IDUPFILE, INOTCLOSED, INOTOPEN, IBADFORMAT,
+                ISTRGOVFL);
+    CMDSTATE = (HALTINIT, DEBUGCALL,
+                UPROGNOU, UPROGUOK, SYSPROG,
+                COMPONLY, COMPANDGO, COMPDEBUG,
+                LINKANDGO, LINKDEBUG, CMDST10);
+    SYSFILE = (ASSMBLER, COMPILER, EDITOR, FILER, LINKER);
+    DATEREC = PACKED RECORD
+                MONTH: 0..12;
+                DAY: 0..31;
+                YEAR: 0..100
+              END;
+    UNITNUM = 0..MAXUNIT;
+    VID = STRING[VIDLENG];
+    DIRRANGE = 0..MAXDIR;
+    TID = STRING[TIDLENG];
+    FULL_ID = STRING[NAME_LEN];
+    FILL_STR = STRING[FILL_LEN];
+    FILE_TABLE = ARRAY [SYSFILE] OF FULL_ID;
+    FILEKIND = (UNTYPEDFILE, XDSKFILE, CODEFILE, TEXTFILE,
+                INFOFILE, DATAFILE, GRAFFILE, FOTOFILE, SECUREDIR);
+    DIRENTRY = PACKED RECORD
+                 DFIRSTBLK: INTEGER;
+                 DLASTBLK: INTEGER;
+                 CASE DFKIND: FILEKIND OF
+                   SECUREDIR,
+                   UNTYPEDFILE:
+                     (FILLER1: 0..2048;
+                      DVID: VID;
+                      DEOVBLK: INTEGER;
+                      DNUMFILES: DIRRANGE;
+                      DLOADTIME: INTEGER;
+                      DLASTBOOT: DATEREC);
+                   XDSKFILE, CODEFILE, TEXTFILE, INFOFILE,
+                   DATAFILE, GRAFFILE, FOTOFILE:
+                     (FILLER2: 0..2048;
+                      DTID: TID;
+                      DLASTBYTE: 1..FBLKSIZE;
+                      DACCESS: DATEREC)
+               END;
+    DIRP = ^DIRECTORY;
+    DIRECTORY = ARRAY [DIRRANGE] OF DIRENTRY;
+    CLOSETYPE = (CNORMAL, CLOCK, CPURGE, CCRUNCH);
+    WINDOWP = ^WINDOW;
+    WINDOW = PACKED ARRAY [0..0] OF CHAR;
+    ANYFILE = FILE;
+    BLOCK = PACKED ARRAY [0..511] OF CHAR;
+    EXBUFP = ^EXBUF;
+    EXBUF = PACKED ARRAY [0..511] OF CHAR;
+    FIBP = ^FIB;
+    FIB = RECORD
+            FWINDOW: WINDOWP;
+            FEOF, FEOLN: BOOLEAN;
+            FSTATE: (FJANDW, FNEEDCHAR, FGOTCHAR);
+            FRECSIZE: INTEGER;
+            CASE FISOPEN: BOOLEAN OF
+              TRUE: (FISBLKD: BOOLEAN;
+                     FUNIT: UNITNUM;
+                     FVID: VID;
+                     FREPTCNT,
+                     FNXTBLK,
+                     FMAXBLK: INTEGER;
+                     FMODIFIED: BOOLEAN;
+                     FHEADER: DIRENTRY;
+                     CASE FSOFTBUF: BOOLEAN OF
+                       TRUE: (FNXTBYTE, FMAXBYTE: INTEGER;
+                              FBUFCHNGD: BOOLEAN;
+                              FBUFFER: PACKED ARRAY [0..FBLKSIZE] OF CHAR))
+          END;
+    INFOREC = RECORD
+                SYMFIBP, CODEFIBP: FIBP;
+                ERRSYM, ERRBLK, ERRNUM: INTEGER;
+                SLOWTERM, STUPID: BOOLEAN;
+                ALTMODE: CHAR;
+                GOTSYM, GOTCODE: BOOLEAN;
+                WORKVID, SYMVID, CODEVID: VID;
+                WORKTID, SYMTID, CODETID: TID
+              END;
+    SEG_RANGE = 0..MAX_SEG;
+    SEG_DESC = RECORD
+                 DISKADDR: INTEGER;
+                 CODELENG: INTEGER
+               END;
+    BYTERANGE = 0..255;
+    TRICKARRAY = RECORD
+                   CASE BOOLEAN OF
+                     TRUE: (WORD: ARRAY [0..0] OF INTEGER);
+                     FALSE: (BYTE: PACKED ARRAY [0..0] OF BYTERANGE)
+                 END;
+    MSCWP = ^MSCW;
+    MSCW = RECORD
+             STATLINK: MSCWP;
+             DYNLINK: MSCWP;
+             MSSEG, MSJTAB: ^TRICKARRAY;
+             MSIPC: INTEGER;
+             LOCALDATA: TRICKARRAY
+           END;
+    SEG_ENTRY = RECORD
+                  CODEUNIT: UNITNUM;
+                  CODEDESC: SEG_DESC
+                END;
+    SYSCOMREC = RECORD
+                  IORSLT: IORSLTWD;
+                  XEQERR: INTEGER;
+                  SYSUNIT: UNITNUM;
+                  BUGSTATE: INTEGER;
+                  GDIRP: DIRP;
+                  LASTMP, STKBASE, BOMBP: MSCWP;
+                  MEMTOP, SEG, JTAB: INTEGER;
+                  BOMBIPC: INTEGER;
+                  HLTLINE: INTEGER;
+                  BRKPTS: ARRAY [0..3] OF INTEGER;
+                  RETRIES: INTEGER;
+                  EXPANSION: ARRAY [0..8] OF INTEGER;
+                  HIGHTIME, LOWTIME: INTEGER;
+                  MISCINFO: PACKED RECORD
+                              NOBREAK, STUPID, SLOWTERM,
+                              HASXYCRT, HASLCCRT, HAS8510A, HASCLOCK: BOOLEAN;
+                              USERKIND: (NORMAL, AQUIZ, BOOKER, PQUIZ);
+                              WORD_MACH, IS_FLIPT: BOOLEAN
+                            END;
+                  CRTTYPE: INTEGER;
+                  CRTCTRL: PACKED RECORD
+                             RLF, NDFS, ERASEEOL, ERASEEOS, HOME,
+                             ESCAPE: CHAR;
+                             BACKSPACE: CHAR;
+                             FILLCOUNT: 0..255;
+                             CLEARSCREEN, CLEARLINE: CHAR;
+                             PREFIXED: PACKED ARRAY [0..15] OF BOOLEAN
+                           END;
+                  CRTINFO: PACKED RECORD
+                             WIDTH, HEIGHT: INTEGER;
+                             RIGHT, LEFT, DOWN, UP: CHAR;
+                             BADCH, CHARDEL, STOP, BREAK, FLUSH, EOFCH: CHAR;
+                             ALTMODE, LINEDEL: CHAR;
+                             ALPHA_LOCK, ETX, PREFIX: CHAR;
+                             PREFIXED: PACKED ARRAY [0..15] OF BOOLEAN
+                           END;
+                  SEGTABLE: ARRAY [SEG_RANGE] OF SEG_ENTRY
+                END;
+
+  VAR
+    SYSCOM: ^SYSCOMREC;
+    GFILES: ARRAY [0..5] OF FIBP;
+    USERINFO: INFOREC;
+    EMPTYHEAP: ^INTEGER;
+    INPUTFIB, OUTPUTFIB,
+    SYSTERM, SWAPFIB: FIBP;
+    SYVID, DKVID: VID;
+    THEDATE: DATEREC;
+    DEBUGINFO: ^INTEGER;
+    STATE: CMDSTATE;
+    PL: STRING;
+    IPOT: ARRAY [0..4] OF INTEGER;
+    FILLER: FILL_STR;
+    DIGITS: SET OF '0'..'9';
+    UNITABLE: ARRAY [UNITNUM] OF
+                RECORD
+                  UVID: VID;
+                  CASE UISBLKD: BOOLEAN OF
+                    TRUE: (UEOVBLK: INTEGER)
+                END;
+    FILENAME: ARRAY [0..4] OF FULL_ID;
+    CONFIG_CHAR: SET OF CHAR;
+    CHAIN_NAME: STRING[NAME_LEN];
+    CHAIN_MSG: STRING;
+    EXBUFPTR: EXBUFP;
+    EXEC_MARK: ^INTEGER;
+    EXEC_CH_NUM: INTEGER;
+    EXEC_END: INTEGER;
+    EXEC_BLK: BOOLEAN;
+    R_EXEC_FLG: BOOLEAN;
+    W_EXEC_FLG: BOOLEAN;
+    SWAP_ON: BOOLEAN;
+    SWAP_1_ON: BOOLEAN;
+    SWAP_2_ON: BOOLEAN;
+    JUST_BOOT: BOOLEAN;
+    WHAT_H1: BOOLEAN;
+    WHAT_H2: BOOLEAN;
+
+  PROCEDURE EXECERROR; FORWARD;
+  PROCEDURE FINIT(VAR F: FIB; WINDOW: WINDOWP; RECWORDS: INTEGER); FORWARD;
+  PROCEDURE FRESET(VAR F: FIB); FORWARD;
+  PROCEDURE FOPEN(VAR F: FIB; VAR FTITLE: STRING;
+                  FOPENOLD: BOOLEAN; JUNK: FIBP); FORWARD;
+  PROCEDURE FCLOSE(VAR F: FIB; FTYPE: CLOSETYPE); FORWARD;
+  PROCEDURE FGET(VAR F: FIB); FORWARD;
+  PROCEDURE FPUT(VAR F: FIB); FORWARD;
+  PROCEDURE XSEEK; FORWARD;
+  FUNCTION FEOF(VAR F: FIB): BOOLEAN; FORWARD;
+  FUNCTION FEOLN(VAR F: FIB): BOOLEAN; FORWARD;
+  PROCEDURE FREADINT(VAR F: FIB; VAR I: INTEGER); FORWARD;
+  PROCEDURE FWRITEINT(VAR F: FIB; I, RLENG: INTEGER); FORWARD;
+  PROCEDURE XREADREAL; FORWARD;
+  PROCEDURE XWRITEREAL; FORWARD;
+  PROCEDURE FREADCHAR(VAR F: FIB; VAR CH: CHAR); FORWARD;
+  PROCEDURE FWRITECHAR(VAR F: FIB; CH: CHAR; RLENG: INTEGER); FORWARD;
+  PROCEDURE FREADSTRING(VAR F: FIB; VAR S: STRING; SLENG: INTEGER); FORWARD;
+  PROCEDURE FWRITESTRING(VAR F: FIB; VAR S: STRING; SLENG: INTEGER); FORWARD;
+  PROCEDURE FWRITEBYTES(VAR F: FIB; VAR A: WINDOW;
+                        NBYTES, BLOCKNUM, RLENG: INTEGER); FORWARD;
+  PROCEDURE FREADLN(VAR F: FIB); FORWARD;
+  PROCEDURE FWRITELN(VAR F: FIB); FORWARD;
+  PROCEDURE SCONCAT(VAR DEST, SRC: STRING; DESTLENG: INTEGER); FORWARD;
+  PROCEDURE SINSERT(VAR SRC, DEST: STRING; DESTLENG, INSINX: INTEGER);
+    FORWARD;
+  PROCEDURE SCOPY(VAR SRC, DEST: STRING; SRCINX, COPYLENG: INTEGER); FORWARD;
+  PROCEDURE SDELETE(VAR DEST: STRING; DELINX, DELLENG: INTEGER); FORWARD;
+  FUNCTION SPOS(VAR TARGET, SRC: STRING): INTEGER; FORWARD;
+  FUNCTION FBLOCKIO(VAR F: ANYFILE; VAR A: BLOCK; I: INTEGER;
+                    NBLOCKS, RBLOCK: INTEGER; DOREAD: BOOLEAN): INTEGER;
+    FORWARD;
+  PROCEDURE FGOTOXY(X, Y: INTEGER); FORWARD;
+  FUNCTION VOLSEARCH(VAR FVID: VID; LOOKHARD: BOOLEAN;
+                     VAR FDIR: DIRP): UNITNUM; FORWARD;
+  PROCEDURE WRITEDIR(FUNIT: UNITNUM; FDIR: DIRP); FORWARD;
+  FUNCTION DIRSEARCH(VAR FTID: TID; FINDPERM: BOOLEAN;
+                     FDIR: DIRP): DIRRANGE; FORWARD;
+  FUNCTION SCANTITLE(FTITLE: STRING; VAR FVID: VID; VAR FTID: TID;
+                     VAR FSEGS: INTEGER; VAR FKIND: FILEKIND): BOOLEAN;
+    FORWARD;
+  PROCEDURE DELENTRY(FINX: DIRRANGE; FDIR: DIRP); FORWARD;
+  PROCEDURE INSENTRY(VAR FENTRY: DIRENTRY;
+                     FINX: DIRRANGE; FDIR: DIRP); FORWARD;
+  PROCEDURE HOMECURSOR; FORWARD;
+  PROCEDURE CLEARSCREEN; FORWARD;
+  PROCEDURE CLEARLINE; FORWARD;
+  PROCEDURE PROMPT; FORWARD;
+  FUNCTION SPACEWAIT(FLUSH: BOOLEAN): BOOLEAN; FORWARD;
+  FUNCTION GETCHAR(FLUSH: BOOLEAN): CHAR; FORWARD;
+  FUNCTION FETCHDIR(FUNIT: UNITNUM): BOOLEAN; FORWARD;
+
+  SEGMENT PROCEDURE SYSATCH;
+    TYPE
+      NAME8 = PACKED ARRAY [0..7] OF CHAR;
+      BITS48 = PACKED ARRAY [0..47] OF BOOLEAN;
+      NIB4 = PACKED ARRAY [1..4] OF 0..15;
+      PAIR = PACKED ARRAY [1..2] OF 0..255;
+      BLOCKP = ^BLOCK;
+      BYTEARR = PACKED ARRAY [0..0] OF 0..255;
+      BYTEP = ^BYTEARR;
+      BITARR = PACKED ARRAY [0..15] OF BOOLEAN;
+      BITP = ^BITARR;
+      WORDV = RECORD
+                CASE INTEGER OF
+                  0: (W: INTEGER);
+                  1: (P: PAIR);
+                  2: (N: NIB4);
+                  3: (HP: ^INTEGER);
+                  4: (BP: BLOCKP)
+              END;
+      ATTREC = PACKED RECORD
+                 NM: NAME8;
+                 INITB: BITS48;
+                 UNITB: BITS48;
+                 BOUND: 0..511;
+                 IMFLAG, PAGE2, PAGE4: BOOLEAN;
+                 PAD12: 0..15;
+                 TNM: NAME8;
+                 TBOUND: 0..511
+               END;
+      TRSLOT = RECORD
+                 TNM: NAME8;
+                 TEXTRA, TBOUND: INTEGER
+               END;
+      MEMREC = RECORD
+                 CASE INTEGER OF
+                   0: (W: INTEGER);
+                   1: (B: PAIR);
+                   2: (BP: BYTEP);
+                   3: (FP: BITP)
+               END;
+    VAR
+      FLAG1: BOOLEAN;
+      FLAG2: BOOLEAN;
+      ADDR3: MEMREC;
+      HEX: PACKED ARRAY [0..15] OF CHAR;
+      UNITS: BITS48;
+      BIOS66: PACKED ARRAY [0..65] OF CHAR;
+      BIOS48: PACKED ARRAY [0..47] OF CHAR;
+      BIOS24: PACKED ARRAY [0..23] OF CHAR;
+      ADRLO: STRING[4];
+      ADRHI: STRING[4];
+      DICT: RECORD
+              CASE INTEGER OF
+                0: (DSC: ARRAY [0..15] OF SEG_DESC;
+                    NAM: ARRAY [0..15] OF NAME8;
+                    PAD: ARRAY [0..159] OF INTEGER);
+                1: (BUF: BLOCK)
+            END;
+      DATAF: FILE OF ATTREC;
+      DRVF: FILE;
+      UNUM: INTEGER;
+      TRTAB: ARRAY [0..7] OF TRSLOT;
+      NTR: INTEGER;
+      IMBITS: BITS48;
+      HASIM: BOOLEAN;
+      NEEDIM: BOOLEAN;
+      LCSTAT: BOOLEAN;
+      PAD758, PAD759: INTEGER;
+      ULAST: INTEGER;
+
+    FUNCTION RELOCAT(A: INTEGER; B: BLOCKP): INTEGER; EXTERNAL;
+    PROCEDURE LCPATCH(A, B, C, D: INTEGER); EXTERNAL;
+    PROCEDURE DOCLI; EXTERNAL;
+    PROCEDURE IRQOLD; EXTERNAL;
+    PROCEDURE IRQNEW; EXTERNAL;
+    PROCEDURE STUBF4; EXTERNAL;
+
+    PROCEDURE SAYERR(MSG: STRING);
+    BEGIN
+      WRITE('ERROR => ');
+      WRITE(MSG);
+      WRITELN;
+      WRITE('<RETURN> to exit program.');
+      READLN;
+      EXIT(SYSATCH)
+    END;
+
+    PROCEDURE OPENFIL;
+      VAR
+        I: INTEGER;
+
+      PROCEDURE SCANDAT;
+        VAR
+          ALL10, ALL9: BOOLEAN;
+      BEGIN
+        IF EOF(DATAF) THEN
+          SAYERR('No records in ATTACH.DATA')
+        ELSE
+          BEGIN
+            ALL10 := TRUE;
+            ALL9 := TRUE;
+            WHILE NOT EOF(DATAF) DO
+              BEGIN
+                IF NOT DATAF^.PAGE2 THEN ALL10 := FALSE;
+                IF NOT DATAF^.PAGE4 THEN ALL9 := FALSE;
+                GET(DATAF)
+              END;
+            RESET(DATAF);
+            IF ALL10 AND ALL9 THEN
+              BEGIN
+                ADRHI := '6000';
+                ADRLO := '6000';
+                FLAG2 := TRUE
+              END
+            ELSE
+              BEGIN
+                FLAG2 := FALSE;
+                IF ALL10 THEN
+                  BEGIN
+                    ADRHI := '4000';
+                    ADRLO := '6000'
+                  END
+                ELSE
+                  BEGIN
+                    ADRHI := '2000';
+                    IF ALL9 THEN ADRLO := '4000'
+                    ELSE ADRLO := '6000'
+                  END
+              END
+          END
+      END;
+
+    BEGIN
+      FOR I := 0 TO 36 DO
+        UNITS[I] := FALSE;
+      RESET(DATAF, 'ATTACH.DATA');
+      IF IORESULT <> 0 THEN
+        SAYERR('ATTACH.DATA needed by SYSTEM.ATTACH');
+      RESET(DRVF, 'ATTACH.DRIVERS');
+      IF IORESULT <> 0 THEN
+        SAYERR('ATTACH.DRIVERS needed by SYSTEM.ATTACH');
+      IF FBLOCKIO(DRVF, DICT.BUF, 0, 1, 0, TRUE) <> 1 THEN
+        SAYERR('Reading segment dictionary of ATTACH.DRIVERS');
+      FLAG1 := FALSE;
+      HEX[0] := '0'; HEX[1] := '1'; HEX[2] := '2'; HEX[3] := '3';
+      HEX[4] := '4'; HEX[5] := '5'; HEX[6] := '6'; HEX[7] := '7';
+      HEX[8] := '8'; HEX[9] := '9'; HEX[10] := 'A'; HEX[11] := 'B';
+      HEX[12] := 'C'; HEX[13] := 'D'; HEX[14] := 'E'; HEX[15] := 'F';
+      SCANDAT
+    END;
+
+    FUNCTION GEADDR(VAR A, B: PAIR): BOOLEAN;
+      VAR
+        LA, LB: PAIR;
+    BEGIN
+      LA := A;
+      LB := B;
+      IF LA[2] > LB[2] THEN GEADDR := TRUE
+      ELSE
+        IF LA[2] = LB[2] THEN
+          IF LA[1] >= LB[1] THEN GEADDR := TRUE
+          ELSE GEADDR := FALSE
+        ELSE GEADDR := FALSE
+    END;
+
+    PROCEDURE HEXNIB(S: STRING; VAR N: NIB4);
+      VAR
+        CH: CHAR;
+        POS, I: INTEGER;
+    BEGIN
+      I := 1;
+      FOR POS := 4 DOWNTO 1 DO
+        BEGIN
+          CH := S[I];
+          IF (CH >= '0') AND (CH <= '9') THEN
+            N[POS] := ORD(CH) - ORD('0')
+          ELSE
+            IF (CH >= 'A') AND (CH <= 'F') THEN
+              N[POS] := ORD(CH) - ORD('A') + 10
+            ELSE
+              SAYERR('IN HEX CHAR');
+          I := I + 1
+        END
+    END;
+
+    FUNCTION SETHIP(MARKP: PAIR): BOOLEAN;
+      VAR
+        HI, LO: WORDV;
+    BEGIN
+      SETHIP := FALSE;
+      IF NOT FLAG2 THEN
+        BEGIN
+          HEXNIB(ADRHI, HI.N);
+          IF GEADDR(MARKP, HI.P) THEN
+            BEGIN
+              FLAG2 := TRUE;
+              HEXNIB(ADRLO, LO.N);
+              RELEASE(LO.HP);
+              SETHIP := TRUE
+            END
+        END
+    END;
+
+    PROCEDURE HEXTOA(S: STRING; VAR DEST: INTEGER);
+      VAR
+        N: WORDV;
+    BEGIN
+      HEXNIB(S, N.N);
+      MOVELEFT(N.BP^, DEST, 2)
+    END;
+
+    PROCEDURE ATOHEX(VAR SRC: INTEGER; S: STRING);
+      VAR
+        N: WORDV;
+    BEGIN
+      HEXNIB(S, N.N);
+      MOVELEFT(SRC, N.BP^, 2)
+    END;
+
+    PROCEDURE PRHEX(N: NIB4);
+      VAR
+        I: INTEGER;
+    BEGIN
+      FOR I := 4 DOWNTO 1 DO
+        WRITE(HEX[N[I]])
+    END;
+
+    PROCEDURE GETBIOS;
+      VAR
+        A3, A2, A1: WORDV;
+    BEGIN
+      A2.HP := EMPTYHEAP;
+      HEXNIB(ADRLO, A1.N);
+      IF GEADDR(A2.P, A1.P) THEN FLAG2 := TRUE
+      ELSE
+        BEGIN
+          A1.W := A2.W + 66;
+          IF SETHIP(A1.P) THEN MARK(A2.HP)
+        END;
+      HEXTOA('00EE', A3.W);
+      MOVELEFT(A3.BP^, A2.BP^, 66);
+      MOVELEFT(A3.BP^, BIOS66, 66);
+      ATOHEX(A2.W, '00E2');
+      A2.W := A2.W + 66;
+      RELEASE(A2.HP);
+      HEXTOA('00EA', A3.W);
+      MOVELEFT(A3.BP^, BIOS24, 24);
+      HEXTOA('00E8', A3.W);
+      MOVELEFT(A3.BP^, BIOS48, 48)
+    END;
+
+    PROCEDURE WALKDRV;
+      VAR
+        I: INTEGER;
+        FOUND: BOOLEAN;
+        MARKP, ADDR: WORDV;
+
+      PROCEDURE LOADDRV;
+        VAR
+          BLKS: INTEGER;
+          LEN: INTEGER;
+          N: INTEGER;
+          BUF: BLOCKP;
+          LIM: INTEGER;
+
+        PROCEDURE MARKALN;
+          PROCEDURE ALIGNIT;
+          BEGIN
+            IF DATAF^.BOUND <> 0 THEN
+              WHILE (MARKP.P[1] MOD DATAF^.BOUND) <> 0 DO
+                MARKP.W := MARKP.W + 1
+          END;
+        BEGIN
+          MARK(MARKP.HP);
+          ALIGNIT;
+          ADDR.W := MARKP.W + LEN
+        END;
+
+      BEGIN
+        LEN := DICT.DSC[I].CODELENG;
+        BLKS := LEN DIV 512;
+        IF (LEN MOD 512) > 0 THEN BLKS := BLKS + 1;
+        MARKALN;
+        IF SETHIP(ADDR.P) THEN MARKALN;
+        N := 1;
+        LIM := BLKS;
+        WHILE N <= LIM DO
+          BEGIN
+            NEW(BUF);
+            N := N + 1
+          END;
+        NEW(BUF);
+        IF FBLOCKIO(DRVF, MARKP.BP^, 0, BLKS,
+                    DICT.DSC[I].DISKADDR, TRUE) <> BLKS THEN
+          SAYERR('reading driver,');
+        ADDR.W := RELOCAT(ADDR.W - 14, MARKP.BP);
+        RELEASE(ADDR.HP);
+        MARK(EMPTYHEAP)
+      END;
+
+      PROCEDURE BINDUN;
+        VAR
+          LIM, J: INTEGER;
+          FLAG: BOOLEAN;
+          OFF: INTEGER;
+
+        PROCEDURE PATCH4(A, B, C, D: INTEGER);
+          VAR
+            SRC: INTEGER;
+        BEGIN
+          SRC := MARKP.W;
+          IF FLAG THEN SRC := SRC + 3;
+          MOVELEFT(SRC, BIOS66[A], 2);
+          MOVELEFT(SRC, BIOS66[B], 2);
+          MOVELEFT(SRC, BIOS66[C], 2);
+          MOVELEFT(SRC, BIOS66[D], 2)
+        END;
+
+      BEGIN
+        FLAG := FALSE;
+        FOR J := 1 TO 36 DO
+          IF DATAF^.UNITB[J] THEN
+            BEGIN
+              CASE J OF
+                1, 2: BEGIN
+                        FLAG := TRUE;
+                        FLAG1 := TRUE;
+                        PATCH4(7, 1, 4, 43);
+                        ADDR3.W := MARKP.W
+                      END;
+                6: PATCH4(13, 40, 10, 46);
+                7, 8: PATCH4(31, 25, 28, 52);
+                4, 5, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20:
+                  BEGIN
+                    LIM := (J - 1) * 2;
+                    OFF := MARKP.W - 1;
+                    MOVELEFT(OFF, BIOS24[LIM], 2)
+                  END;
+                21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36:
+                  BEGIN
+                    LIM := ((J - 21) * 3) + 1;
+                    MOVELEFT(MARKP.W, BIOS48[LIM], 2)
+                  END
+              END;
+              IF DATAF^.INITB[J] THEN UNITS[J] := TRUE
+            END
+      END;
+
+    BEGIN
+      NEEDIM := FALSE;
+      HASIM := FALSE;
+      NTR := 0;
+      WHILE NOT EOF(DATAF) DO
+        BEGIN
+          I := 0;
+          FOUND := FALSE;
+          REPEAT
+            IF DATAF^.NM = DICT.NAM[I] THEN FOUND := TRUE
+            ELSE I := I + 1
+          UNTIL FOUND OR (I = 16);
+          WITH DATAF^ DO
+            IF FOUND THEN
+              BEGIN
+                IF NOT (LCSTAT AND (NM = 'IM      ')) THEN
+                  BEGIN
+                    IF NM = 'IM      ' THEN
+                      BEGIN
+                        HASIM := TRUE;
+                        IMBITS := UNITB
+                      END;
+                    LOADDRV;
+                    BINDUN;
+                    IF IMFLAG THEN NEEDIM := TRUE;
+                    IF TNM <> '        ' THEN
+                      BEGIN
+                        TRTAB[NTR].TNM := TNM;
+                        TRTAB[NTR].TBOUND := TBOUND;
+                        TRTAB[NTR].TEXTRA := MARKP.W;
+                        NTR := NTR + 1
+                      END
+                  END
+              END
+            ELSE
+              IF NM <> 'IM      ' THEN
+                SAYERR('A needed driver is not in ATTACH.DRIVERS');
+          GET(DATAF)
+        END;
+      IF NEEDIM AND (NOT HASIM) AND (NOT LCSTAT) THEN
+        SAYERR('The Interrupt Manager (IM) driver is not in ATTACH.DRIVERS')
+    END;
+
+    PROCEDURE PUTBIOS;
+      VAR
+        A1: WORDV;
+        EXTRA: INTEGER;
+    BEGIN
+      HEXTOA('00EE', A1.W);
+      MOVELEFT(BIOS66, A1.BP^, 66);
+      HEXTOA('00EA', A1.W);
+      MOVELEFT(BIOS24, A1.BP^, 24);
+      HEXTOA('00E8', A1.W);
+      MOVELEFT(BIOS48, A1.BP^, 48);
+      IF FLAG1 THEN
+        BEGIN
+          MOVELEFT(BIOS66[55], A1.W, 2);
+          LCPATCH(A1.W, 76, ADDR3.B[1], ADDR3.B[2])
+        END
+    END;
+
+    PROCEDURE CLRUNIT;
+      VAR
+        SAVED, I: INTEGER;
+    BEGIN
+      FOR I := 1 TO 36 DO
+        IF UNITS[I] THEN
+          IF I < 21 THEN UNITCLEAR(I)
+          ELSE
+            IF HASIM AND IMBITS[I] THEN SAVED := I
+            ELSE UNITCLEAR(I + 107);
+      IF HASIM THEN UNITCLEAR(SAVED + 107)
+    END;
+
+    PROCEDURE CALLTR(A, B: INTEGER); EXTERNAL;
+
+    PROCEDURE WALKTR;
+      VAR
+        RES: WORDV;
+        ADDR: WORDV;
+        HEAP: WORDV;
+        SEG, I: INTEGER;
+        FOUND: BOOLEAN;
+
+      PROCEDURE LOADTR;
+        VAR
+          BLKS: INTEGER;
+          LEN: INTEGER;
+          N: INTEGER;
+          BUF: BLOCKP;
+          LIM: INTEGER;
+
+        PROCEDURE MARKTR;
+          PROCEDURE ALINTR;
+          BEGIN
+            IF TRTAB[I].TBOUND <> 0 THEN
+              WHILE (ADDR.P[1] MOD TRTAB[I].TBOUND) <> 0 DO
+                ADDR.W := ADDR.W + 1
+          END;
+        BEGIN
+          MARK(ADDR.HP);
+          ALINTR;
+          RES.W := ADDR.W + LEN
+        END;
+
+      BEGIN
+        LEN := DICT.DSC[SEG].CODELENG;
+        BLKS := LEN DIV 512;
+        IF (LEN MOD 512) > 0 THEN BLKS := BLKS + 1;
+        MARKTR;
+        IF SETHIP(RES.P) THEN MARKTR;
+        N := 1;
+        LIM := BLKS;
+        WHILE N <= LIM DO
+          BEGIN
+            NEW(BUF);
+            N := N + 1
+          END;
+        NEW(BUF);
+        IF FBLOCKIO(DRVF, ADDR.BP^, 0, BLKS,
+                    DICT.DSC[SEG].DISKADDR, TRUE) <> BLKS THEN
+          SAYERR('reading transient,');
+        RES.W := RELOCAT(RES.W - 14, ADDR.BP);
+        RELEASE(RES.HP)
+      END;
+
+    BEGIN
+      MARK(HEAP.HP);
+      FOR I := 0 TO NTR - 1 DO
+        BEGIN
+          SEG := 0;
+          FOUND := FALSE;
+          REPEAT
+            IF TRTAB[I].TNM = DICT.NAM[SEG] THEN FOUND := TRUE
+            ELSE SEG := SEG + 1
+          UNTIL FOUND OR (SEG = 16);
+          IF FOUND THEN
+            BEGIN
+              LOADTR;
+              CALLTR(TRTAB[I].TEXTRA, ADDR.W);
+              RELEASE(HEAP.HP)
+            END
+          ELSE
+            SAYERR('A needed transient is not in ATTACH.DRIVERS')
+        END
+    END;
+
+    PROCEDURE BINDNM(U: INTEGER; S: VID);
+    BEGIN
+      UNITCLEAR(U);
+      IF IORESULT = 0 THEN
+        UNITABLE[U].UVID := S
+    END;
+
+    PROCEDURE DOVOL(U: INTEGER);
+      VAR
+        DPTR: DIRP;
+        OPENED: BOOLEAN;
+        F: FIB;
+        IX: INTEGER;
+        NAMES: ARRAY [0..4] OF FULL_ID;
+        SEEN: SET OF 0..4;
+        TITLE: STRING[40];
+    BEGIN
+      FINIT(F, NIL, -1);
+      WITH UNITABLE[U] DO
+        BEGIN
+          UVID := '';
+          UISBLKD := TRUE;
+          UEOVBLK := 32767;
+          UNITCLEAR(U);
+          IF IORESULT = 0 THEN
+            IF FETCHDIR(U) THEN
+              BEGIN
+                UVID := SYSCOM^.GDIRP^[0].DVID;
+                IF U = SYSCOM^.SYSUNIT THEN
+                  BEGIN
+                    SYVID := UVID;
+                    TITLE := '*SYSTEM.STARTUP';
+                    FOPEN(F, TITLE, TRUE, NIL);
+                    OPENED := F.FISOPEN;
+                    FCLOSE(F, CNORMAL)
+                  END;
+                FOR IX := 0 TO 4 DO
+                  IF (U = SYSCOM^.SYSUNIT) OR (IX IN SEEN) THEN
+                    BEGIN
+                      TITLE := CONCAT(UVID, NAMES[IX]);
+                      FOPEN(F, TITLE, TRUE, NIL);
+                      IF F.FISOPEN THEN
+                        BEGIN
+                          FILENAME[IX] := TITLE;
+                          SEEN := SEEN - [IX]
+                        END;
+                      FCLOSE(F, CNORMAL)
+                    END
+              END
+        END;
+      IF WHAT_H2 THEN DKVID := SYVID;
+      U := VOLSEARCH(SYVID, FALSE, DPTR);
+      IF DPTR = NIL THEN HALT
+    END;
+
+    PROCEDURE STDUNIT;
+    BEGIN
+      BINDNM(1, 'CONSOLE');
+      BINDNM(2, 'SYSTERM');
+      BINDNM(3, 'GRAPHIC');
+      BINDNM(6, 'PRINTER');
+      BINDNM(7, 'REMIN');
+      BINDNM(8, 'REMOUT')
+    END;
+
+    PROCEDURE VERCHK;
+      VAR
+        M: MEMREC;
+    BEGIN
+      M.W := -16607;
+      IF M.BP^[0] <> 3 THEN
+        BEGIN
+          WRITELN;
+          WRITELN;
+          WRITE('Version 1.2 of SYSTEM.ATTACH cannot run');
+          WRITELN;
+          WRITE('with a non-1.2 version of SYSTEM.PASCAL');
+          WRITELN;
+          EXIT(SYSATCH)
+        END;
+      M.W := -16606;
+      LCSTAT := M.FP^[6]
+    END;
+
+  BEGIN
+    VERCHK;
+    OPENFIL;
+    GETBIOS;
+    WALKDRV;
+    PUTBIOS;
+    STUBF4;
+    CLRUNIT;
+    IF LCSTAT THEN IRQNEW ELSE IRQOLD;
+    WALKTR;
+    UNUM := 4;
+    ULAST := 20;
+    WHILE UNUM <= ULAST DO
+      BEGIN
+        IF UNUM = 6 THEN UNUM := 9;
+        IF DATAF^.UNITB[UNUM] THEN DOVOL(UNUM);
+        UNUM := UNUM + 1
+      END;
+    STDUNIT;
+    IF NEEDIM THEN DOCLI
+  END;
+
+  PROCEDURE EXECERROR; BEGIN END;
+  PROCEDURE FINIT; BEGIN END;
+  PROCEDURE FRESET; BEGIN END;
+  PROCEDURE FOPEN; BEGIN END;
+  PROCEDURE FCLOSE; BEGIN END;
+  PROCEDURE FGET; BEGIN END;
+  PROCEDURE FPUT; BEGIN END;
+  PROCEDURE XSEEK; BEGIN END;
+  FUNCTION FEOF; BEGIN FEOF := FALSE END;
+  FUNCTION FEOLN; BEGIN FEOLN := FALSE END;
+  PROCEDURE FREADINT; BEGIN END;
+  PROCEDURE FWRITEINT; BEGIN END;
+  PROCEDURE XREADREAL; BEGIN END;
+  PROCEDURE XWRITEREAL; BEGIN END;
+  PROCEDURE FREADCHAR; BEGIN END;
+  PROCEDURE FWRITECHAR; BEGIN END;
+  PROCEDURE FREADSTRING; BEGIN END;
+  PROCEDURE FWRITESTRING; BEGIN END;
+  PROCEDURE FWRITEBYTES; BEGIN END;
+  PROCEDURE FREADLN; BEGIN END;
+  PROCEDURE FWRITELN; BEGIN END;
+  PROCEDURE SCONCAT; BEGIN END;
+  PROCEDURE SINSERT; BEGIN END;
+  PROCEDURE SCOPY; BEGIN END;
+  PROCEDURE SDELETE; BEGIN END;
+  FUNCTION SPOS; BEGIN SPOS := 0 END;
+  FUNCTION FBLOCKIO; BEGIN FBLOCKIO := 0 END;
+  PROCEDURE FGOTOXY; BEGIN END;
+  FUNCTION VOLSEARCH; BEGIN VOLSEARCH := 0 END;
+  PROCEDURE WRITEDIR; BEGIN END;
+  FUNCTION DIRSEARCH; BEGIN DIRSEARCH := 0 END;
+  FUNCTION SCANTITLE; BEGIN SCANTITLE := FALSE END;
+  PROCEDURE DELENTRY; BEGIN END;
+  PROCEDURE INSENTRY; BEGIN END;
+  PROCEDURE HOMECURSOR; BEGIN END;
+  PROCEDURE CLEARSCREEN; BEGIN END;
+  PROCEDURE CLEARLINE; BEGIN END;
+  PROCEDURE PROMPT; BEGIN END;
+  FUNCTION SPACEWAIT; BEGIN SPACEWAIT := FALSE END;
+  FUNCTION GETCHAR; BEGIN GETCHAR := ' ' END;
+  FUNCTION FETCHDIR; BEGIN FETCHDIR := FALSE END;
+
+BEGIN
+END.
