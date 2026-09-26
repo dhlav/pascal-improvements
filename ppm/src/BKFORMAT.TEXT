@@ -1,0 +1,541 @@
+;---------------------------------------------------
+; BKFORMAT -- BACKUP.DATA, the Disk II formatter
+; overlay BACKUP loads at 01300. DOBACKUP LOADCODE
+; BLOCKREADs the three blocks onto the heap after
+; RELEASE to 4864, then FORMDISK indexes a table and
+; JSR 1300. Same 1082-byte formatter as ASMFORMAT
+; (FORMATTER.DATA blocks 0-2, origin 03D00) with
+; origin 01300 and STOR0 010 instead of 0E.
+;
+; Labels keep the F3Dxx/F40xx names from ASMFORMAT;
+; they are names, not addresses. DELAY and the
+; STOR*/TMP* cells are .EQU at origin+offset so the
+; assembler's stale tail (block 2 bytes 024A-03FF
+; repeating block 1) holds resolved 017xx words,
+; the same evidence FORMATTER.DATA has at 041xx.
+;
+; Apple's 1.3 assembler writes the three blocks;
+; BACKUP.DATA is those blocks (codefile block 0 is
+; the dictionary and is dropped).
+;---------------------------------------------------
+
+        .ABSOLUTE
+        .PROC   BKFORMAT
+        .ORG    1300
+DELAY   .EQU 170E
+STOR0   .EQU 171F
+STOR1   .EQU 1720
+STOR2   .EQU 1721
+STOR3   .EQU 1722
+SLOTSH   .EQU 1723
+TMPA   .EQU 1724
+TMPB   .EQU 1725
+TMPC   .EQU 1726
+TMPD   .EQU 1736
+TMPE   .EQU 1737
+TMPF   .EQU 1738
+TMPG   .EQU 1739
+        JSR  FORMGO
+        CMP  #00
+        BNE  ERR2B
+        CLC
+        RTS
+ERR2B   CMP  #02
+        BNE  ERR1B
+        LDA  #2B
+        JMP  ERROUT
+ERR1B   CMP  #01
+        BNE  ERRN
+        LDA  #27
+        JMP  ERROUT
+ERRN   CLC
+        ADC  #30
+        JMP  ERROUT
+ERROUT   SEC
+        RTS
+SETUP   ASL  A
+        ASL  TMPA
+        STA  TMPD
+        TXA
+        LSR  A
+        LSR  A
+        LSR  A
+        LSR  A
+        TAY
+        LDA  TMPD
+        JSR  F3EC6
+        LSR  TMPA
+        RTS
+FORMGO   TAX
+        AND  #70
+        STA  SLOTSH
+        TXA
+        LDX  SLOTSH
+        ROL  A
+        LDA  #00
+        ROL  A
+        BNE  F3D50
+        LDA  0C08A,X
+        JMP  F3D53
+F3D50   LDA  0C08B,X
+F3D53   LDA  0C089,X
+        LDA  #0D7
+        STA  0A
+        LDA  #50
+        STA  TMPA
+        LDA  #00
+        JSR  SETUP
+F3D64   LDA  0A
+        BEQ  F3D6E
+        JSR  F403A
+        JMP  F3D64
+F3D6E   LDA  #01
+        STA  03
+        LDA  #0AA
+        STA  00
+        LDA  STOR1
+        CLC
+        ADC  #02
+        STA  04
+        LDA  #00
+        STA  01
+F3D82   LDA  01
+        LDX  SLOTSH
+        JSR  SETUP
+        LDX  SLOTSH
+        LDA  0C08D,X
+        LDA  0C08E,X
+        TAY
+        LDA  0C08E,X
+        LDA  0C08C,X
+        TYA
+        BPL  F3DA2
+        LDA  #02
+        JMP  F3DF9
+F3DA2   JSR  F4063
+        BCC  F3DB5
+        LDA  #01
+        LDY  04
+        CPY  STOR0
+        BCS  F3DB2
+        LDA  #04
+F3DB2   JMP  F3DF9
+F3DB5   LDY  04
+        CPY  STOR0
+        BCS  F3DC1
+        LDA  #04
+        JMP  F3DF9
+F3DC1   CPY  STOR1
+        BCC  F3DCB
+        LDA  #03
+        JMP  F3DF9
+F3DCB   LDA  STOR3
+        STA  TMPB
+F3DD1   DEC  TMPB
+        BNE  F3DDB
+        LDA  #01
+        JMP  F3DF9
+F3DDB   LDX  SLOTSH
+        JSR  F3E6A
+        BCS  F3DD1
+        LDA  08
+        BNE  F3DD1
+        LDX  SLOTSH
+        JSR  F3E07
+        BCS  F3DD1
+        INC  01
+        LDA  01
+        CMP  #23
+        BCC  F3D82
+        LDA  #00
+F3DF9   PHA
+        LDX  SLOTSH
+        LDA  0C088,X
+        LDA  #00
+        JSR  SETUP
+        PLA
+        RTS
+F3E07   LDY  #20
+F3E09   DEY
+        BEQ  F3E68
+F3E0C   LDA  0C08C,X
+        BPL  F3E0C
+F3E11   EOR  #0D5
+        BNE  F3E09
+        NOP
+F3E16   LDA  0C08C,X
+        BPL  F3E16
+        CMP  #0AA
+        BNE  F3E11
+        LDY  #56
+F3E21   LDA  0C08C,X
+        BPL  F3E21
+        CMP  #0AD
+        BNE  F3E11
+        LDA  #00
+F3E2C   DEY
+        STY  05
+F3E2F   LDA  0C08C,X
+        BPL  F3E2F
+        CMP  #96
+        BNE  F3E68
+        LDY  05
+        BNE  F3E2C
+F3E3C   STY  05
+F3E3E   LDA  0C08C,X
+        BPL  F3E3E
+        CMP  #96
+        BNE  F3E68
+        LDY  05
+        INY
+        BNE  F3E3C
+F3E4C   LDA  0C08C,X
+        BPL  F3E4C
+        CMP  #96
+        BNE  F3E68
+F3E55   LDA  0C08C,X
+        BPL  F3E55
+        CMP  #0DE
+        BNE  F3E68
+        NOP
+F3E5F   LDA  0C08C,X
+        BPL  F3E5F
+        CMP  #0AA
+        BEQ  F3EC4
+F3E68   SEC
+        RTS
+F3E6A   LDY  #0FC
+        STY  0C
+F3E6E   INY
+        BNE  F3E75
+        INC  0C
+        BEQ  F3E68
+F3E75   LDA  0C08C,X
+        BPL  F3E75
+F3E7A   CMP  #0D5
+        BNE  F3E6E
+        NOP
+F3E7F   LDA  0C08C,X
+        BPL  F3E7F
+        CMP  #0AA
+        BNE  F3E7A
+        LDY  #03
+F3E8A   LDA  0C08C,X
+        BPL  F3E8A
+        CMP  #96
+        BNE  F3E7A
+        LDA  #00
+F3E95   STA  0B
+F3E97   LDA  0C08C,X
+        BPL  F3E97
+        ROL  A
+        STA  0D
+F3E9F   LDA  0C08C,X
+        BPL  F3E9F
+        AND  0D
+        STA  0007,Y
+        EOR  0B
+        DEY
+        BPL  F3E95
+        TAY
+        BNE  F3E68
+F3EB1   LDA  0C08C,X
+        BPL  F3EB1
+        CMP  #0DE
+        BNE  F3E68
+        NOP
+F3EBB   LDA  0C08C,X
+        BPL  F3EBB
+        CMP  #0AA
+        BNE  F3E68
+F3EC4   CLC
+        RTS
+F3EC6   STX  TMPE
+        STA  TMPD
+        CMP  TMPA
+        BEQ  F3F2D
+        LDA  #00
+        STA  TMPF
+F3ED6   LDA  TMPA
+        STA  TMPG
+        SEC
+        SBC  TMPD
+        BEQ  F3F19
+        BCS  F3EEB
+        EOR  #0FF
+        INC  TMPA
+        BCC  F3EF0
+F3EEB   ADC  #0FE
+        DEC  TMPA
+F3EF0   CMP  TMPF
+        BCC  F3EF8
+        LDA  TMPF
+F3EF8   CMP  #0C
+        BCS  F3EFD
+        TAY
+F3EFD   SEC
+        JSR  F3F1D
+        LDA  F404B,Y
+        JSR  F403A
+        LDA  TMPG
+        CLC
+        JSR  F3F20
+        LDA  F4057,Y
+        JSR  F403A
+        INC  TMPF
+        BNE  F3ED6
+F3F19   JSR  F403A
+        CLC
+F3F1D   LDA  TMPA
+F3F20   AND  #03
+        ROL  A
+        ORA  TMPE
+        TAX
+        LDA  0C080,X
+        LDX  TMPE
+F3F2D   RTS
+F3F2E   JSR  DELAY
+        LDA  0C08D,X
+        LDA  0C08E,X
+        LDA  #0FF
+        STA  0C08F,X
+        CMP  0C08C,X
+        PHA
+        PLA
+        NOP
+        LDY  #04
+F3F44   PHA
+        PLA
+        JSR  F3FA5
+        DEY
+        BNE  F3F44
+        LDA  #0D5
+        JSR  F3FA4
+        LDA  #0AA
+        JSR  F3FA4
+        LDA  #0AD
+        JSR  F3FA4
+        LDY  #56
+        NOP
+        NOP
+        NOP
+        BNE  F3F65
+F3F62   JSR  DELAY
+F3F65   NOP
+        NOP
+        LDA  #96
+        STA  0C08D,X
+        CMP  0C08C,X
+        DEY
+        BNE  F3F62
+        BIT  00
+        NOP
+F3F75   JSR  DELAY
+        LDA  #96
+        STA  0C08D,X
+        CMP  0C08C,X
+        LDA  #96
+        NOP
+        INY
+        BNE  F3F75
+        JSR  F3FA4
+        LDA  #0DE
+        JSR  F3FA4
+        LDA  #0AA
+        JSR  F3FA4
+        LDA  #0EB
+        JSR  F3FA4
+        LDA  #0FF
+        JSR  F3FA4
+        LDA  0C08E,X
+        LDA  0C08C,X
+        RTS
+F3FA4   NOP
+F3FA5   PHA
+        PLA
+        STA  0C08D,X
+        CMP  0C08C,X
+        RTS
+F3FAE   SEC
+        LDA  0C08D,X
+        LDA  0C08E,X
+        BMI  F4015
+        LDA  #0FF
+        STA  0C08F,X
+        CMP  0C08C,X
+        PHA
+        PLA
+F3FC1   JSR  F401B
+        JSR  F401B
+        STA  0C08D,X
+        CMP  0C08C,X
+        NOP
+        DEY
+        BNE  F3FC1
+        LDA  #0D5
+        JSR  F402D
+        LDA  #0AA
+        JSR  F402D
+        LDA  #96
+        JSR  F402D
+        LDA  03
+        JSR  F401C
+        LDA  01
+        JSR  F401C
+        LDA  02
+        JSR  F401C
+        LDA  03
+        EOR  01
+        EOR  02
+        PHA
+        LSR  A
+        ORA  00
+        STA  0C08D,X
+        LDA  0C08C,X
+        PLA
+        ORA  #0AA
+        JSR  F402C
+        LDA  #0DE
+        JSR  F402D
+        LDA  #0AA
+        JSR  F402D
+        LDA  #0EB
+        JSR  F402D
+        CLC
+F4015   LDA  0C08E,X
+        LDA  0C08C,X
+F401B   RTS
+F401C   PHA
+        LSR  A
+        ORA  00
+        STA  0C08D,X
+        CMP  0C08C,X
+        PLA
+        NOP
+        NOP
+        NOP
+        ORA  #0AA
+F402C   NOP
+F402D   NOP
+        PHA
+        PLA
+        STA  0C08D,X
+        CMP  0C08C,X
+        RTS
+        .BYTE 00,00,00
+F403A   LDX  #11
+F403C   DEX
+        BNE  F403C
+        INC  09
+        BNE  F4045
+        INC  0A
+F4045   SEC
+        SBC  #01
+        BNE  F403A
+        RTS
+F404B   .BYTE 01,30,28,24,20,1E,1D,1C
+        .BYTE 1C,1C,1C,1C
+F4057   .BYTE 70,2C,26,22,1F,1E,1D,1C
+        .BYTE 1C,1C,1C,1C
+F4063   LDA  STOR2
+        STA  06
+F4068   LDY  #80
+        LDA  #00
+        STA  02
+        JMP  F4073
+F4071   LDY  04
+F4073   LDX  SLOTSH
+        JSR  F3FAE
+        BCC  F407E
+        JMP  DELAY
+F407E   LDX  SLOTSH
+        JSR  F3F2E
+        INC  02
+        LDA  02
+        CMP  #10
+        BCC  F4071
+        LDY  #0F
+        STY  02
+        LDA  STOR3
+        STA  TMPB
+F4096   STA  TMPC,Y
+        DEY
+        BPL  F4096
+        LDA  04
+        SEC
+        SBC  #05
+        TAY
+F40A2   JSR  DELAY
+        JSR  DELAY
+        PHA
+        PLA
+        NOP
+        NOP
+        DEY
+        BNE  F40A2
+        LDX  SLOTSH
+        JSR  F3E6A
+        BCS  F40F3
+        LDA  08
+        BEQ  F40CE
+        DEC  04
+        LDA  04
+        CMP  STOR0
+        BCS  F40F3
+        SEC
+        RTS
+F40C6   LDX  SLOTSH
+        JSR  F3E6A
+        BCS  F40E8
+F40CE   LDX  SLOTSH
+        JSR  F3E07
+        BCS  F40E8
+        LDY  08
+        LDA  TMPC,Y
+        BMI  F40E8
+        LDA  #0FF
+        STA  TMPC,Y
+        DEC  02
+        BPL  F40C6
+        CLC
+        RTS
+F40E8   DEC  TMPB
+        BNE  F40C6
+        DEC  06
+        BNE  F40F3
+        SEC
+        RTS
+F40F3   LDA  STOR3
+        ASL  A
+        STA  TMPB
+F40FA   LDX  SLOTSH
+        JSR  F3E6A
+        BCS  F4108
+        LDA  08
+        CMP  #0F
+        BEQ  F410F
+F4108   DEC  TMPB
+        BNE  F40FA
+        SEC
+        RTS
+F410F   LDX  #0D6
+F4111   JSR  DELAY
+        JSR  DELAY
+        BIT  00
+        DEX
+        BNE  F4111
+        JMP  F4068
+        .BYTE 10
+        .BYTE 1B
+        .BYTE 03
+        .BYTE 10
+        .BYTE 00
+        .BYTE 00
+        .BYTE 00
+        .BYTE 00,00,00,00,00,00,00,00
+        .BYTE 00,00,00,00,00,00,00,00
+        .BYTE 00
+        .BYTE 00
+        .BYTE 00
+        .BYTE 00
+        .END

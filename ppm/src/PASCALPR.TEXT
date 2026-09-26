@@ -36,7 +36,7 @@ VOLUMEMA;
     IF (IORESULT <> 0) OR (ERRNUM <> 0) THEN
       BEGIN
         IOERR := IORESULT;
-        V22;
+        SHOWERR;
         IOFAIL := TRUE
       END
     ELSE IOFAIL := FALSE
@@ -63,28 +63,28 @@ VOLUMEMA;
   { Dividend is the first parameter. Names in one group are
     allocated downward, and a function reserves REALSIZE
     words for its result before them. }
-  FUNCTION P04(DVND, DVSR: INTEGER): INTEGER;
+  FUNCTION SAFEDIV(DVND, DVSR: INTEGER): INTEGER;
   VAR T: INTEGER;
   BEGIN
     IF DVND >= 0 THEN
-      P04 := DVND DIV DVSR
+      SAFEDIV := DVND DIV DVSR
     ELSE
       BEGIN
         T := (DVND + 32767) + 1;
-        P04 := ((T DIV DVSR) + (32767 DIV DVSR))
+        SAFEDIV := ((T DIV DVSR) + (32767 DIV DVSR))
                + ((((T MOD DVSR) + (32767 MOD DVSR)) + 1) DIV DVSR)
       END
   END;
 
-  FUNCTION P05(DVND, DVSR: INTEGER): INTEGER;
+  FUNCTION SAFEMOD(DVND, DVSR: INTEGER): INTEGER;
   VAR T: INTEGER;
   BEGIN
     IF DVND >= 0 THEN
-      P05 := DVND MOD DVSR
+      SAFEMOD := DVND MOD DVSR
     ELSE
       BEGIN
         T := (DVND + 32767) + 1;
-        P05 := (((T MOD DVSR) + (32767 MOD DVSR)) + 1) MOD DVSR
+        SAFEMOD := (((T MOD DVSR) + (32767 MOD DVSR)) + 1) MOD DVSR
       END
   END;
 
@@ -97,7 +97,7 @@ VOLUMEMA;
   { ProDOS name: length nibble, first character, then the
     other fourteen. The array arrives by value, so the
     compiler copies it before this body. }
-  PROCEDURE P07(LEN: INTEGER; CH: CHAR; NAME: NAMEREST;
+  PROCEDURE MKPDSTR(LEN: INTEGER; CH: CHAR; NAME: NAMEREST;
                 VAR DEST: STRING);
   VAR I: INTEGER;
   BEGIN
@@ -114,9 +114,9 @@ VOLUMEMA;
       END
   END;
 
-  FUNCTION P08(N: DRVNUM): INTEGER;
+  FUNCTION DRVCTL(N: DRVNUM): INTEGER;
   BEGIN
-    P08 := 2 + N * 8192
+    DRVCTL := 2 + N * 8192
   END;
 
   { Line editor. Backspace and delete erase a character;
@@ -125,7 +125,7 @@ VOLUMEMA;
     No string-index checks: the length byte is stored
     directly, and a checked index of 0 would fault. }
   (*$R-*)
-  FUNCTION P09(VAR S: ANYSTR; LIM: INTEGER;
+  FUNCTION EDITLINE(VAR S: ANYSTR; LIM: INTEGER;
                DIGITS: BOOLEAN): BOOLEAN;
   VAR N: INTEGER;
       CH: CHAR;
@@ -162,58 +162,58 @@ VOLUMEMA;
                 WRITE(CHR(7))
     UNTIL EOLN(KEYBOARD) OR (CH = CHR(27));
     S[0] := CHR(N);
-    P09 := CH = CHR(27)
+    EDITLINE := CH = CHR(27)
   END;
   (*$R+*)
 
   { Read up to five digits into N. True means escape. }
-  FUNCTION P10(VAR N: INTEGER): BOOLEAN;
+  FUNCTION READNUM(VAR N: INTEGER): BOOLEAN;
   VAR BUF: STRING[5];
       ESC: BOOLEAN;
       I: INTEGER;
   BEGIN
-    ESC := P09(BUF, 5, TRUE);
-    P10 := ESC;
+    ESC := EDITLINE(BUF, 5, TRUE);
+    READNUM := ESC;
     N := 0;
     IF NOT ESC THEN
       FOR I := 1 TO LENGTH(BUF) DO
         N := N * 10 + ORD(BUF[I]) - ORD('0')
   END;
-  FUNCTION P11(N: INTEGER): INTEGER;
+  FUNCTION VOLIDX(N: INTEGER): INTEGER;
   BEGIN
     IF N IN [4, 5] THEN
-      P11 := N - 3
+      VOLIDX := N - 3
     ELSE
       IF N IN [9..20] THEN
-        P11 := N - 6
+        VOLIDX := N - 6
       ELSE
-        P11 := (N - 128) + 15
+        VOLIDX := (N - 128) + 15
   END;
 
-  FUNCTION P12(N: INTEGER): INTEGER;
+  FUNCTION UNITNUM(N: INTEGER): INTEGER;
   BEGIN
     IF (N = 1) OR (N = 2) THEN
-      P12 := N + 3
+      UNITNUM := N + 3
     ELSE
       IF N IN [3..14] THEN
-        P12 := N + 6
+        UNITNUM := N + 6
       ELSE
-        P12 := (N + 128) - 15
+        UNITNUM := (N + 128) - 15
   END;
 
-  PROCEDURE P13(ROW, NLINES: INTEGER);
+  PROCEDURE BLANKLN(ROW, NLINES: INTEGER);
   VAR I: INTEGER;
   BEGIN
     GOTOXY(0, ROW);
     FOR I := 1 TO NLINES DO
       BEGIN
-        V24;
+        CLRLINE;
         WRITELN
       END;
     GOTOXY(0, ROW)
   END;
 
-  FUNCTION P14: BOOLEAN;
+  FUNCTION YESNO: BOOLEAN;
   VAR CH: CHAR;
       OK: BOOLEAN;
   BEGIN
@@ -227,10 +227,10 @@ VOLUMEMA;
     UNTIL OK;
     IF CH <> CHR(27) THEN
       WRITE(CH);
-    P14 := CH IN ['Y', 'y']
+    YESNO := CH IN ['Y', 'y']
   END;
   { Fold lowercase to upper, then remove every space. }
-  PROCEDURE P15(VAR S: STRING);
+  PROCEDURE CLEANNM(VAR S: STRING);
   VAR AT: INTEGER;
       I: INTEGER;
   BEGIN
@@ -245,44 +245,44 @@ VOLUMEMA;
   END;
   { Pascal volume name: one to seven characters, from
     space through 'z', except space, '$', ',', '=' and '?'. }
-  FUNCTION P16(NAME: ANYSTR): BOOLEAN;
+  FUNCTION PVVALID(NAME: ANYSTR): BOOLEAN;
   VAR I: INTEGER;
   BEGIN
-    P16 := FALSE;
+    PVVALID := FALSE;
     IF LENGTH(NAME) IN [1..7] THEN
       BEGIN
         FOR I := 1 TO LENGTH(NAME) DO
           IF (NOT (NAME[I] IN [' '..'z']))
              OR (NAME[I] IN [' ', '$', ',', '=', '?']) THEN
-            EXIT(P16);
-        P16 := TRUE
+            EXIT(PVVALID);
+        PVVALID := TRUE
       END
   END;
 
   { ProDOS name: one to fifteen characters. The first is
     'A'..'Z'; the rest may also be a digit or a period. }
-  FUNCTION P17(NAME: STRING): BOOLEAN;
+  FUNCTION PDVALID(NAME: STRING): BOOLEAN;
   VAR I: INTEGER;
   BEGIN
-    P17 := TRUE;
+    PDVALID := TRUE;
     IF LENGTH(NAME) IN [1..15] THEN
       BEGIN
         IF NOT (NAME[1] IN ['A'..'Z']) THEN
-          P17 := FALSE;
+          PDVALID := FALSE;
         FOR I := 2 TO LENGTH(NAME) DO
           IF NOT (NAME[I] IN ['.', '0'..'9', 'A'..'Z']) THEN
-            P17 := FALSE
+            PDVALID := FALSE
       END
     ELSE
-      P17 := FALSE
+      PDVALID := FALSE
   END;
   { Block 2 of the ProFile is the ProDOS volume directory.
     Byte 35 is the entry length, byte 36 the entries per
     block. IORESULT is kept, so checking stays off. }
-  PROCEDURE P18(VAR BUF: DIRBLOCK; VAR ENTLEN, ENTS: INTEGER);
+  PROCEDURE READDIR(VAR BUF: DIRBLOCK; VAR ENTLEN, ENTS: INTEGER);
   BEGIN
     (*$I-*)
-    UNITREAD(W5, BUF, 512, 2, P08(DRIVE));
+    UNITREAD(PFUNIT, BUF, 512, 2, DRVCTL(DRIVE));
     IOERR := IORESULT;
     (*$I+*)
     ENTLEN := ORD(BUF[35]);
@@ -291,16 +291,16 @@ VOLUMEMA;
   { Step to the next ProDOS directory entry. A count of
     zero reads block 2 first. The entry's byte offset is
     4 plus its slot times the entry length. }
-  FUNCTION P19(VAR BUF: DIRBLOCK; VAR N, BLK, OFF, ENTLEN,
+  FUNCTION NEXTENT(VAR BUF: DIRBLOCK; VAR N, BLK, OFF, ENTLEN,
                ENTS: INTEGER): BOOLEAN;
   VAR IX: INTEGER;
   BEGIN
-    P19 := TRUE;
+    NEXTENT := TRUE;
     IF N = 0 THEN
       BEGIN
-        P18(BUF, ENTLEN, ENTS);
+        READDIR(BUF, ENTLEN, ENTS);
         IF IORESULT <> 0 THEN
-          EXIT(P19);
+          EXIT(NEXTENT);
         BLK := 2
       END;
     N := N + 1;
@@ -311,70 +311,70 @@ VOLUMEMA;
         IF BLK <> 0 THEN
           BEGIN
             (*$I-*)
-            UNITREAD(W5, BUF, 512, BLK, P08(DRIVE));
+            UNITREAD(PFUNIT, BUF, 512, BLK, DRVCTL(DRIVE));
             IOERR := IORESULT;
             IF IORESULT <> 0 THEN
-              EXIT(P19)
+              EXIT(NEXTENT)
             (*$I+*)
           END
         ELSE
-          P19 := FALSE
+          NEXTENT := FALSE
       END;
     OFF := 4 + IX * ENTLEN
   END;
 
   { Find the file PASCAL.AREA. Returns its key block, or
     zero with ERRNUM set. }
-  FUNCTION P20(VAR BUF: DIRBLOCK; VAR N, BLK, OFF: INTEGER): INTEGER;
+  FUNCTION FINDPAS(VAR BUF: DIRBLOCK; VAR N, BLK, OFF: INTEGER): INTEGER;
   VAR ENTLEN, ENTS: INTEGER;
       ENTRY: DIRENT;
       S: STRING[15];
   BEGIN
-    P20 := 0;
+    FINDPAS := 0;
     N := 0;
-    WHILE P19(BUF, N, BLK, OFF, ENTLEN, ENTS) DO
+    WHILE NEXTENT(BUF, N, BLK, OFF, ENTLEN, ENTS) DO
       BEGIN
         IF IORESULT <> 0 THEN
-          EXIT(P20);
+          EXIT(FINDPAS);
         MOVELEFT(BUF[OFF], ENTRY, 40);
-        P07(ENTRY.NAMELEN, ENTRY.FIRST, ENTRY.REST, S);
+        MKPDSTR(ENTRY.NAMELEN, ENTRY.FIRST, ENTRY.REST, S);
         IF S = 'PASCAL.AREA' THEN
           IF ENTRY.STORTYPE <> 4 THEN
             BEGIN
               ERRNUM := 17;
-              EXIT(P20)
+              EXIT(FINDPAS)
             END
           ELSE
             BEGIN
-              P20 := ENTRY.KEYHI * 256 + ENTRY.KEYLO;
-              EXIT(P20)
+              FINDPAS := ENTRY.KEYHI * 256 + ENTRY.KEYLO;
+              EXIT(FINDPAS)
             END
       END;
     ERRNUM := 11
   END;
 
   { Find a free directory slot, a storage byte of zero. }
-  FUNCTION P21(VAR BUF: DIRBLOCK; VAR N, BLK, OFF: INTEGER): BOOLEAN;
+  FUNCTION FREESLOT(VAR BUF: DIRBLOCK; VAR N, BLK, OFF: INTEGER): BOOLEAN;
   VAR ENTLEN, ENTS: INTEGER;
       ENTRY: DIRENT;
       S: STRING[15];
   BEGIN
-    P21 := FALSE;
+    FREESLOT := FALSE;
     N := 0;
-    WHILE P19(BUF, N, BLK, OFF, ENTLEN, ENTS) DO
+    WHILE NEXTENT(BUF, N, BLK, OFF, ENTLEN, ENTS) DO
       BEGIN
         IF IORESULT <> 0 THEN
-          EXIT(P21);
+          EXIT(FREESLOT);
         IF BUF[OFF] = 0 THEN
           BEGIN
-            P21 := TRUE;
-            EXIT(P21)
+            FREESLOT := TRUE;
+            EXIT(FREESLOT)
           END
       END
   END;
 
   { Ask which attached drive. Escape stores -1 and leaves. }
-  PROCEDURE P22(PROMPT: STRING; VAR CHOICE: INTEGER;
+  PROCEDURE ASKDRIVE(PROMPT: STRING; VAR CHOICE: INTEGER;
                 AVAIL: DRVSET);
   VAR I: INTEGER;
       { Word 46. The body never reads it; the name string
@@ -385,7 +385,7 @@ VOLUMEMA;
     { Volume name of one drive, from block 2. '<no name>'
       until the header byte says it is a volume directory
       and the name passes the ProDOS check. }
-    PROCEDURE P23(DRV: INTEGER; VAR NM: STRING);
+    PROCEDURE GETVNAME(DRV: INTEGER; VAR NM: STRING);
     VAR IMG: RECORD
                CASE INTEGER OF
                  0: (BLK: DIRBLOCK);
@@ -395,17 +395,17 @@ VOLUMEMA;
     BEGIN
       NM := '<no name>';
       (*$I-*)
-      UNITREAD(W5, IMG.BLK, 512, 2, P08(DRV));
+      UNITREAD(PFUNIT, IMG.BLK, 512, 2, DRVCTL(DRV));
       (*$I+*)
       IF IOFAIL THEN
-        EXIT(P23);
+        EXIT(GETVNAME);
       { The length byte shares its word with the storage
         type. A checked index of 0 would fault. }
       (*$R-*)
       IF ORD(IMG.VOL[0]) DIV 16 = 15 THEN
         BEGIN
           IMG.VOL[0] := CHR(ORD(IMG.VOL[0]) MOD 16);
-          IF P17(IMG.VOL) THEN
+          IF PDVALID(IMG.VOL) THEN
             NM := IMG.VOL
         END
       (*$R+*)
@@ -413,61 +413,61 @@ VOLUMEMA;
 
   BEGIN
     GOTOXY(0, 6);
-    P13(6, 13);
+    BLANKLN(6, 13);
     WRITELN('  Drive Number      ProDOS Volume Name');
     WRITELN;
     FOR I := 0 TO 7 DO
       IF I IN AVAIL THEN
         BEGIN
-          P23(I, NM);
+          GETVNAME(I, NM);
           WRITE(I:8);
           WRITE('            ');
           WRITELN(NM)
         END;
     REPEAT
       GOTOXY(0, 1);
-      V24;
+      CLRLINE;
       WRITE(PROMPT);
       WRITE(' which drive? (Enter number) ');
-      IF P10(CHOICE) THEN
+      IF READNUM(CHOICE) THEN
         BEGIN
           CHOICE := -1;
-          EXIT(P22)
+          EXIT(ASKDRIVE)
         END;
       IF NOT (CHOICE IN AVAIL) THEN
         ERROR(7);
       PAUSE := FALSE
     UNTIL CHOICE IN AVAIL;
     GOTOXY(0, CURROW);
-    V24
+    CLRLINE
   END;
 
   { Split a block count into the global base plus a
     quotient, and the remainder as a word and a byte. }
-  PROCEDURE P24(N: INTEGER; VAR QUOT, HI, LO: INTEGER);
+  PROCEDURE SPLIT(N: INTEGER; VAR QUOT, HI, LO: INTEGER);
   BEGIN
-    QUOT := W908 + P04(N, 8 * 512);
-    HI := P05(N, 8 * 512) DIV 8;
-    LO := P05(N, 8 * 512) MOD 8
+    QUOT := HOSTMAP + SAFEDIV(N, 8 * 512);
+    HI := SAFEMOD(N, 8 * 512) DIV 8;
+    LO := SAFEMOD(N, 8 * 512) MOD 8
   END;
   { Unsigned less-than. A negative INTEGER is past 32767. }
-  FUNCTION P25(A, B: INTEGER): BOOLEAN;
+  FUNCTION ULESS(A, B: INTEGER): BOOLEAN;
   BEGIN
     IF A >= 0 THEN
       IF B >= 0 THEN
-        P25 := A < B
+        ULESS := A < B
       ELSE
-        P25 := TRUE
+        ULESS := TRUE
     ELSE
       IF B >= 0 THEN
-        P25 := FALSE
+        ULESS := FALSE
       ELSE
-        P25 := A < B
+        ULESS := A < B
   END;
   { Set every bitmap bit from LOBLK through HIBLK.
     One bitmap block holds 4096 bits, and the bit in
     each byte is stored backwards. }
-  PROCEDURE P26(HIBLK, LOBLK: INTEGER; FLAG: BOOLEAN);
+  PROCEDURE SETBITS(HIBLK, LOBLK: INTEGER; FLAG: BOOLEAN);
   VAR LOQB, LOHB, LOLB: INTEGER;
       HIQB, HIHB, HILB: INTEGER;
       BUF: BITBUF;
@@ -475,17 +475,17 @@ VOLUMEMA;
       BOT: INTEGER;
       TOP: INTEGER;
   BEGIN
-    IF P25(HIBLK, LOBLK) THEN
-      EXIT(P26);
-    P24(HIBLK, HIQB, HIHB, HILB);
-    P24(LOBLK, LOQB, LOHB, LOLB);
+    IF ULESS(HIBLK, LOBLK) THEN
+      EXIT(SETBITS);
+    SPLIT(HIBLK, HIQB, HIHB, HILB);
+    SPLIT(LOBLK, LOQB, LOHB, LOLB);
     TOP := HIHB * 8 + HILB;
     BOT := 0;
     REPEAT
       (*$I-*)
-      UNITREAD(W5, BUF, 512, HIQB, P08(DRIVE));
+      UNITREAD(PFUNIT, BUF, 512, HIQB, DRVCTL(DRIVE));
       IF IORESULT <> 0 THEN
-        EXIT(P26);
+        EXIT(SETBITS);
       (*$I+*)
       IF HIQB = LOQB THEN
         BOT := LOHB * 8 + LOLB;
@@ -495,20 +495,20 @@ VOLUMEMA;
         BUF[ORD(ODD(BIT) AND ODD(4088))
             + (7 - ORD(ODD(BIT) AND ODD(7)))] := FLAG;
       (*$I-*)
-      UNITWRITE(W5, BUF, 512, HIQB, P08(DRIVE));
+      UNITWRITE(PFUNIT, BUF, 512, HIQB, DRVCTL(DRIVE));
       IF IORESULT <> 0 THEN
-        EXIT(P26);
+        EXIT(SETBITS);
       (*$I+*)
       TOP := 4095;
       HIQB := HIQB - 1
-    UNTIL P25(HIQB, LOQB)
+    UNTIL ULESS(HIQB, LOQB)
   END;
 
   { Count bitmap bits from the block below HIBLK for
     LOBLK blocks. Returns false, and stops, on a bit
     that is not FLAG. LOBLK of zero leaves the count
     at zero. }
-  FUNCTION P27(HIBLK, LOBLK: INTEGER; VAR COUNT: INTEGER;
+  FUNCTION ALLBITS(HIBLK, LOBLK: INTEGER; VAR COUNT: INTEGER;
                FLAG: BOOLEAN): BOOLEAN;
   VAR QUOTL, HIL, LOL: INTEGER;
       QUOTH, HIH, LOH: INTEGER;
@@ -518,25 +518,25 @@ VOLUMEMA;
       BOT: INTEGER;
       TOP: INTEGER;
   BEGIN
-    P27 := TRUE;
+    ALLBITS := TRUE;
     COUNT := 0;
     IF LOBLK = 0 THEN
-      EXIT(P27);
+      EXIT(ALLBITS);
     SPAN := HIBLK - LOBLK + 1;
-    IF P25(HIBLK, SPAN) THEN
+    IF ULESS(HIBLK, SPAN) THEN
       BEGIN
         SPAN := 0;
-        P27 := FALSE
+        ALLBITS := FALSE
       END;
-    P24(HIBLK, QUOTH, HIH, LOH);
-    P24(SPAN, QUOTL, HIL, LOL);
+    SPLIT(HIBLK, QUOTH, HIH, LOH);
+    SPLIT(SPAN, QUOTL, HIL, LOL);
     TOP := HIH * 8 + LOH;
     BOT := 0;
     REPEAT
       (*$I-*)
-      UNITREAD(W5, BUF, 512, QUOTH, P08(DRIVE));
+      UNITREAD(PFUNIT, BUF, 512, QUOTH, DRVCTL(DRIVE));
       IF IORESULT <> 0 THEN
-        EXIT(P27);
+        EXIT(ALLBITS);
       (*$I+*)
       IF QUOTH = QUOTL THEN
         BOT := HIL * 8 + LOL;
@@ -545,14 +545,14 @@ VOLUMEMA;
           IF BUF[ORD(ODD(BIT) AND ODD(4088))
                  + (7 - ORD(ODD(BIT) AND ODD(7)))] <> FLAG THEN
             BEGIN
-              P27 := FALSE;
-              EXIT(P27)
+              ALLBITS := FALSE;
+              EXIT(ALLBITS)
             END;
           COUNT := COUNT + 1
         END;
       QUOTH := QUOTH - 1;
       TOP := 4095
-    UNTIL P25(QUOTH, QUOTL)
+    UNTIL ULESS(QUOTH, QUOTL)
   END;
 
   PROCEDURE DELETEPA;
@@ -564,35 +564,35 @@ VOLUMEMA;
     { Clear the PASCAL.AREA directory slot and drop the
       volume's file count by one. The key block is left
       in the caller's KEY. }
-    FUNCTION P29: BOOLEAN;
+    FUNCTION DROPPA: BOOLEAN;
     VAR NFILES: INTEGER;
         BUF: DIRBLOCK;
         N, BLK, OFF: INTEGER;
     BEGIN
-      P29 := FALSE;
+      DROPPA := FALSE;
       (*$I-*)
-      KEY := P20(BUF, N, BLK, OFF);
+      KEY := FINDPAS(BUF, N, BLK, OFF);
       IF IOFAIL THEN
-        EXIT(P29);
+        EXIT(DROPPA);
       BUF[OFF] := 0;
-      UNITWRITE(W5, BUF, 512, BLK, P08(DRIVE));
+      UNITWRITE(PFUNIT, BUF, 512, BLK, DRVCTL(DRIVE));
       IF IOFAIL THEN
-        EXIT(P29);
-      UNITREAD(W5, BUF, 512, 2, P08(DRIVE));
+        EXIT(DROPPA);
+      UNITREAD(PFUNIT, BUF, 512, 2, DRVCTL(DRIVE));
       IF IOFAIL THEN
-        EXIT(P29);
-      W908 := BUF[40] * 256 + BUF[39];
+        EXIT(DROPPA);
+      HOSTMAP := BUF[40] * 256 + BUF[39];
       NFILES := BUF[38] * 256 + BUF[37] - 1;
       BUF[38] := NFILES DIV 256;
       BUF[37] := NFILES MOD 256;
-      UNITWRITE(W5, BUF, 512, 2, P08(DRIVE));
+      UNITWRITE(PFUNIT, BUF, 512, 2, DRVCTL(DRIVE));
       IF NOT IOFAIL THEN
-        P29 := TRUE
+        DROPPA := TRUE
       (*$I+*)
     END;
 
   BEGIN
-    V23;
+    CLRSCRN;
     CLRERR;
     WRITE('Delete the Pascal Area...');
     GOTOXY(3, 3);
@@ -600,17 +600,17 @@ VOLUMEMA;
       ERROR(1)
     ELSE
       BEGIN
-        P22('Delete Pascal Area on', CHOICE, MARKED);
+        ASKDRIVE('Delete Pascal Area on', CHOICE, MARKED);
         IF CHOICE < 0 THEN
           EXIT(DELETEPA);
-        V08(CHOICE);
+        MOUNTDRV(CHOICE);
         IF IOFAIL THEN
           EXIT(DELETEPA);
         IF DRVS[0].EXTRA <> 0 THEN
           BEGIN
             WRITE(CHR(7));
             WRITE('Do you wish to delete all volumes in the Pascal Area (Y/N)? ');
-            IF NOT P14 THEN
+            IF NOT YESNO THEN
               EXIT(DELETEPA)
           END;
         IF IOFAIL THEN
@@ -618,10 +618,10 @@ VOLUMEMA;
         FOR I := 1 TO 30 DO
           IF VOLS[I].DV = DRIVE THEN
             IF VOLS[I].BUSY THEN
-              V05(P12(I));
-        IF P29 THEN
+              FREEUNIT(UNITNUM(I));
+        IF DROPPA THEN
           BEGIN
-            P26(KEY + DRVS[0].MAPLO - 1, KEY, TRUE);
+            SETBITS(KEY + DRVS[0].MAPLO - 1, KEY, TRUE);
             MARKED := MARKED - [CHOICE];
             IF IOFAIL THEN BEGIN END
           END
@@ -646,7 +646,7 @@ VOLUMEMA;
 
     { A new PASCAL.AREA directory entry. The block count
       in SPAN is stored in the key-pointer bytes. }
-    PROCEDURE P31(VAR ENT: FILEENT);
+    PROCEDURE MKPAENT(VAR ENT: FILEENT);
     BEGIN
       FILLCHAR(ENT, 40, CHR(0));
       WITH ENT DO
@@ -655,29 +655,29 @@ VOLUMEMA;
           STORTYPE := 4;
           FIRST := 'P';
           REST := 'ASCAL.AREA    ';
-          B16 := 239;
-          B17 := P05(SPAN, 256);
-          B18 := P04(SPAN, 256);
-          B19 := 2;
-          B30 := 0;
-          B37 := 2;
-          B38 := 0
+          FTYPE := 239;
+          KEYLO := SAFEMOD(SPAN, 256);
+          KEYHI := SAFEDIV(SPAN, 256);
+          USEDLO := 2;
+          ACCBYTE := 0;
+          TOTLO := 2;
+          TOTHI := 0
         END
     END;
 
   BEGIN
-    V23;
+    CLRSCRN;
     CLRERR;
     WRITE('Create a Pascal Area ...');
     GOTOXY(0, 3);
-    V24;
+    CLRLINE;
     AVAIL := UNITS - MARKED;
     IF AVAIL = [] THEN
       BEGIN
         ERROR(8);
         EXIT(CREATEPA)
       END;
-    P22('Create Pascal Area on', CHOICE, AVAIL);
+    ASKDRIVE('Create Pascal Area on', CHOICE, AVAIL);
     IF CHOICE < 0 THEN
       EXIT(CREATEPA);
     { DRVNUM would be checked 0..7. The shipped store has
@@ -686,11 +686,11 @@ VOLUMEMA;
     DRIVE := CHOICE;
     (*$R+*)
     (*$I-*)
-    UNITREAD(W5, BUF, 512, 2, P08(CHOICE));
+    UNITREAD(PFUNIT, BUF, 512, 2, DRVCTL(CHOICE));
     IF IOFAIL THEN
       EXIT(CREATEPA);
     MOVELEFT(BUF[4], HDR, 40);
-    IF P20(BUF, N, BLK, OFF) <> 0 THEN
+    IF FINDPAS(BUF, N, BLK, OFF) <> 0 THEN
       BEGIN
         ERROR(3);
         EXIT(CREATEPA)
@@ -702,54 +702,54 @@ VOLUMEMA;
       EXIT(CREATEPA);
     { Factor order is the order the 1.3 compiler emits.
       Both words are low byte, then high byte. }
-    BLOCKS := 256 * HDR.B38 + HDR.B37;
-    W908 := HDR.B35 + 256 * HDR.B36;
-    IF NOT P27(BLOCKS - 1, 2, COUNT, TRUE) THEN
+    BLOCKS := 256 * HDR.TOTHI + HDR.TOTLO;
+    HOSTMAP := HDR.BMPLO + 256 * HDR.BMPHI;
+    IF NOT ALLBITS(BLOCKS - 1, 2, COUNT, TRUE) THEN
       BEGIN
         IF NOT IOFAIL THEN
           ERROR(4);
         EXIT(CREATEPA)
       END;
-    IF NOT P21(BUF, N, BLK, OFF) THEN
+    IF NOT FREESLOT(BUF, N, BLK, OFF) THEN
       BEGIN
         IF IOFAIL THEN
           EXIT(CREATEPA);
         ERRNUM := 14;
-        V22;
+        SHOWERR;
         EXIT(CREATEPA)
       END;
     SPAN := BLOCKS - 2;
-    P31(ENTRY);
-    MOVELEFT(ENTRY, BUF[OFF], HDR.B31);
-    UNITWRITE(W5, BUF, 512, BLK, P08(CHOICE));
+    MKPAENT(ENTRY);
+    MOVELEFT(ENTRY, BUF[OFF], HDR.ELEN);
+    UNITWRITE(PFUNIT, BUF, 512, BLK, DRVCTL(CHOICE));
     IF IOFAIL THEN
       EXIT(CREATEPA);
-    NFILES := HDR.B34 * 256 + HDR.B33 + 1;
-    HDR.B33 := NFILES MOD 256;
-    HDR.B34 := NFILES DIV 256;
-    UNITREAD(W5, BUF, 512, 2, P08(CHOICE));
+    NFILES := HDR.FCNTHI * 256 + HDR.FCNTLO + 1;
+    HDR.FCNTLO := NFILES MOD 256;
+    HDR.FCNTHI := NFILES DIV 256;
+    UNITREAD(PFUNIT, BUF, 512, 2, DRVCTL(CHOICE));
     IF IOFAIL THEN
       EXIT(CREATEPA);
-    MOVELEFT(HDR, BUF[4], HDR.B31);
-    UNITWRITE(W5, BUF, 512, 2, P08(CHOICE));
+    MOVELEFT(HDR, BUF[4], HDR.ELEN);
+    UNITWRITE(PFUNIT, BUF, 512, 2, DRVCTL(CHOICE));
     IF IOFAIL THEN
       EXIT(CREATEPA);
-    P26(BLOCKS - 1, SPAN, FALSE);
+    SETBITS(BLOCKS - 1, SPAN, FALSE);
     IF IOFAIL THEN
       EXIT(CREATEPA);
-    FILLCHAR(DRVS, W13, CHR(0));
+    FILLCHAR(DRVS, TBLLEN, CHR(0));
     WITH DRVS[0] DO
       BEGIN
         MAPLO := 2;
         EXTRA := 0;
         DNAME := 'PPM'
       END;
-    UNITWRITE(W5, DRVS, W13, SPAN, P08(CHOICE));
+    UNITWRITE(PFUNIT, DRVS, TBLLEN, SPAN, DRVCTL(CHOICE));
     IF IOFAIL THEN
       EXIT(CREATEPA);
     (*$I+*)
     MARKED := MARKED + [CHOICE];
-    V08(CHOICE);
+    MOUNTDRV(CHOICE);
     IF IOFAIL THEN
       DRVS[0].EXTRA := 0
   END;
@@ -776,7 +776,7 @@ VOLUMEMA;
 
 BEGIN
   PAUSE := FALSE;
-  W8 := 1;
+  ERRHERE := 1;
   IF UNITS = [] THEN
     BEGIN
       GOTOXY(0, 3);
@@ -787,7 +787,7 @@ BEGIN
     END;
   SETMENU;
   REPEAT
-    V23;
+    CLRSCRN;
     WRITELN('Pascal ProFile Manager    Copyright 1983 Apple Computer, Inc.  Version 1.0.1');
     { The dashes are WRITE, not WRITELN. GOTOXY places what follows. }
     WRITE('----------------------------------------------------------------------------');
@@ -801,9 +801,9 @@ BEGIN
       END;
     REPEAT
       GOTOXY(0, CURROW);
-      V24;
+      CLRLINE;
       GOTOXY(0, 2);
-      V24;
+      CLRLINE;
       WRITE('Type the first letter to select an option.  Option?  ');
       READ(CH);
       IF CH IN ['a'..'z'] THEN
@@ -817,7 +817,7 @@ BEGIN
                CLRERR;
                SETCVAL('%ppm.code');
                SETCHAIN('%FILER.CODE');
-               V23;
+               CLRSCRN;
                EXIT(PASCALPR)
              END
            ELSE ERROR(5);
@@ -827,7 +827,7 @@ BEGIN
                CLRERR;
                SETCVAL('%ppm.code');
                SETCHAIN('%BACKUP.CODE');
-               V23;
+               CLRSCRN;
                EXIT(PASCALPR)
              END
            ELSE ERROR(6);
@@ -839,7 +839,7 @@ BEGIN
       BEGIN
         REPEAT
           GOTOXY(0, 4);
-          V24;
+          CLRLINE;
           WRITE(CHR(15));
           WRITE('   Press SPACE to Continue ');
           WRITE(CHR(14));

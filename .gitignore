@@ -12,5 +12,10 @@ ppm/work/*.txt
 ppm/work/PPMLINK.CODE
 ppm/work/FILEHAND.CODE
 ppm/work/BKLINK.CODE
+ppm/work/BKFORMAT.CODE
 ppm/work/VOLLINK.CODE
 ppm/work/VOLPROBE.CODE
+attach/work/ATTACHUD.CODE
+attach/work/SYSATCH.CODE
+attach/work/ATCHLNK.CODE
+attach/work/PROBE.CODE

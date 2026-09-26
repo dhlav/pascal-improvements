@@ -6,22 +6,22 @@
   here is lex 1, and procedure 1 returns with RNP, which
   is the unit initialisation UNITBODY builds (finding 232).
 
-  Screen helpers (PUTCRT, HOMECURSOR, V23, V24, P27) load
+  Screen helpers (PUTCRT, HOMECURSOR, CLRSCRN, CLRLINE, LOADCRT) load
   SYSCOM as LOD 2,1. 1.3 does not predefine SYSCOM, so this
   file is compiled (*$U-*) with SYSCOM declared at level 0
   before the unit. (*$NS 7*) keeps the unit on segment 7.
   (*$R+*) and (*$I+*) put back the checks (*$U-*) cleared.
 
-  V22's "Pascal System" error string ships with a high-ASCII
+  SHOWERR's "Pascal System" error string ships with a high-ASCII
   space (byte 160) between the two words. Parked: the source
   keeps a normal space and we will change it later. Until
   then ppm/work/stage_vmgr.py can write the shipped byte;
   stagefile.py is ASCII-only.
 
   Three 1.3-vs-1.1 leftovers, same class as FILEHAND's six
-  version bytes: P58 WHILE AND is LAND then one FJP (1.1
-  chained two FJPs); P66's match-arm UJP is +7 (1.1 omitted
-  skip-else after GOTO, so +5); P77's last jump-table word
+  version bytes: TRIMEND WHILE AND is LAND then one FJP (1.1
+  chained two FJPs); KEYVOL's match-arm UJP is +7 (1.1 omitted
+  skip-else after GOTO, so +5); SLIDE's last jump-table word
   is IC-JTAB (1.1 self-rel is off by data_size 24). }
 (*$U-*)
 (*$NS 7*)
@@ -103,36 +103,40 @@ TYPE
                    AUX: INTEGER)
            END;
   { Forty bytes. Bytes 0..1 are the name header, 2..15
-    the rest of the name, and 16..39 are plain bytes. }
+    the rest of the name. KEYLO/KEYHI are the key block,
+    USEDLO/USEDHI the blocks used. In a volume header,
+    ELEN/FCNTLO/BMPLO/TOTLO are entry length, file count,
+    bitmap pointer and total blocks; TOTLO/TOTHI are the
+    header pointer when the same bytes are a file entry. }
   FILEENT = PACKED RECORD
               NAMELEN: 0..15;
               STORTYPE: 0..15;
               FIRST: CHAR;
               REST: NAMEREST;
-              B16: 0..255;
-              B17: 0..255;
-              B18: 0..255;
-              B19: 0..255;
-              B20: 0..255;
-              B21: 0..255;
-              B22: 0..255;
-              B23: 0..255;
-              B24: 0..255;
-              B25: 0..255;
-              B26: 0..255;
-              B27: 0..255;
-              B28: 0..255;
-              B29: 0..255;
-              B30: 0..255;
-              B31: 0..255;
-              B32: 0..255;
-              B33: 0..255;
-              B34: 0..255;
-              B35: 0..255;
-              B36: 0..255;
-              B37: 0..255;
-              B38: 0..255;
-              B39: 0..255
+              FTYPE: 0..255;
+              KEYLO: 0..255;
+              KEYHI: 0..255;
+              USEDLO: 0..255;
+              USEDHI: 0..255;
+              PAD21: 0..255;
+              PAD22: 0..255;
+              PAD23: 0..255;
+              PAD24: 0..255;
+              PAD25: 0..255;
+              PAD26: 0..255;
+              PAD27: 0..255;
+              PAD28: 0..255;
+              PAD29: 0..255;
+              ACCBYTE: 0..255;
+              ELEN: 0..255;
+              PAD32: 0..255;
+              FCNTLO: 0..255;
+              FCNTHI: 0..255;
+              BMPLO: 0..255;
+              BMPHI: 0..255;
+              TOTLO: 0..255;
+              TOTHI: 0..255;
+              PAD39: 0..255
             END;
   ANYSTR = STRING[255];
   VOLNAME = STRING[7];
@@ -144,22 +148,22 @@ TYPE
   BAP = ^BYTEARR;
   DRVTABLE = ARRAY [0..31] OF DRVREC;
   NAMETBL = ARRAY [0..31] OF STRING[7];
-  { One name per group so offsets ascend: W0 at 0, NM at 3,
-    R1 at 7, R2 at 8 (0..77 so the store emits CHK), DAT at 10. }
+  { One name per group so offsets ascend: FIRSTB at 0, NM at 3,
+    NBLKS at 7, NFILES at 8 (0..77 so the store emits CHK), DAT at 10. }
   PAENT = RECORD
-            W0: INTEGER;
-            W1: INTEGER;
-            W2: INTEGER;
+            FIRSTB: INTEGER;
+            LASTB: INTEGER;
+            PAD2: INTEGER;
             NM: STRING[7];
-            R1: INTEGER;
-            R2: 0..77;
-            R3: INTEGER;
+            NBLKS: INTEGER;
+            NFILES: 0..77;
+            PAD3: INTEGER;
             DAT: PACKED RECORD
                    MONTH: 0..12;
                    DAY: 0..31;
                    YEAR: 0..100
                  END;
-            R5, R6: INTEGER
+            PAD5, PAD6: INTEGER
           END;
   DRVSET = SET OF 0..15;
   BITBUF = PACKED ARRAY [0..4095] OF BOOLEAN;
@@ -183,20 +187,20 @@ TYPE
 VAR
   UNITS: SET OF 0..15;
   MARKED: SET OF 0..15;
-  W5: INTEGER;
+  PFUNIT: INTEGER;
   CURROW: INTEGER;
-  W7: INTEGER;
-  W8: INTEGER;
+  ERRSW: INTEGER;
+  ERRHERE: INTEGER;
   ERRNUM: INTEGER;
   IOERR: INTEGER;
-  { INTEGER so V13's DRIVE := VOLS[1].STAT keeps CHK 1..30
+  { INTEGER so INITDRV's DRIVE := VOLS[1].STAT keeps CHK 1..30
     and skips the 0..7 store check 1.1 omitted on a matching
     subrange. DRVNUM would emit both. }
   DRIVE: INTEGER;
-  W12: INTEGER;
-  W13: INTEGER;
+  HILITE: INTEGER;
+  TBLLEN: INTEGER;
   VOLS: ARRAY [1..30] OF VOLREC;
-  W104: INTEGER;
+  SAVU12: INTEGER;
   DRVS: DRVTABLE;
   { Description fields, 32 slots of STRING[15], words
     233..488. }
@@ -211,54 +215,54 @@ VAR
   BAKRES: INTEGER;
   FILRES: INTEGER;
   F: FILE;
-  W908: INTEGER;
+  HOSTMAP: INTEGER;
   PAUSE: BOOLEAN;
   NOPT: INTEGER;
   XPOS: INTEGER;
   YPOS: INTEGER;
-  W913: INTEGER;
+  DRVMAP: INTEGER;
   SETA: SET OF CHAR;
-  W930: INTEGER;
-  W931: INTEGER;
-  W932: INTEGER;
-  W933: INTEGER;
-  W934: INTEGER;
-  W935: INTEGER;
-  W936: INTEGER;
-  W937: INTEGER;
+  ETXCH: INTEGER;
+  GAPEND: INTEGER;
+  SELIX: INTEGER;
+  NEWSLOT: INTEGER;
+  LEFTCH: INTEGER;
+  LNDEL: INTEGER;
+  RIGHTCH: INTEGER;
+  SCRW: INTEGER;
   PADIR: ARRAY [0..77] OF PAENT;
   PAKEY: INTEGER;
   SETB: SET OF CHAR;
-  W1969: INTEGER;
-  W1970: INTEGER;
-  W1971: INTEGER;
+  SCRH: INTEGER;
+  DRVADR: INTEGER;
+  ALTCH: INTEGER;
   PABUF: DIRBLOCK;
-  W2228: INTEGER;
+  CHDEL: INTEGER;
 
-  FUNCTION V02(VAR NM: STRING; VAR DS: STRING;
+  FUNCTION ADDVOL(VAR NM: STRING; VAR DS: STRING;
                N: INTEGER): INTEGER;
-  PROCEDURE V03(N: INTEGER; FLAG: BOOLEAN);
-  PROCEDURE V04(A, B: INTEGER);
-  PROCEDURE V05(N: INTEGER);
-  PROCEDURE V06(N: INTEGER; FLAG: BOOLEAN);
-  PROCEDURE V07;
-  PROCEDURE V08(N: INTEGER);
-  PROCEDURE V09(N: INTEGER; VAR NM: STRING; VAR DS: STRING);
-  FUNCTION V10(NM: VOLNAME; DS: VOLDESC): INTEGER;
-  PROCEDURE V11(VAR TBL: DRVTABLE; VAR NAMES: NAMETBL; DRV: DRVNUM);
-  PROCEDURE V12(VAR BUF: INTEGER);
-  PROCEDURE V13;
-  PROCEDURE V14(N: INTEGER; FLAG: BOOLEAN);
-  PROCEDURE V15(N: INTEGER; NM: VOLNAME);
-  PROCEDURE V16(N: INTEGER; DS: VOLDESC);
-  PROCEDURE V17(N: INTEGER; U: INTEGER);
-  PROCEDURE V18(N: INTEGER);
-  PROCEDURE V19;
-  PROCEDURE V20;
-  FUNCTION V21: INTEGER;
-  PROCEDURE V22;
-  PROCEDURE V23;
-  PROCEDURE V24;
+  PROCEDURE REMVOL(N: INTEGER; FLAG: BOOLEAN);
+  PROCEDURE BINDUNIT(A, B: INTEGER);
+  PROCEDURE FREEUNIT(N: INTEGER);
+  PROCEDURE SETWP(N: INTEGER; FLAG: BOOLEAN);
+  PROCEDURE KRUNCHPA;
+  PROCEDURE MOUNTDRV(N: INTEGER);
+  PROCEDURE RENAVOL(N: INTEGER; VAR NM: STRING; VAR DS: STRING);
+  FUNCTION FINDBYNM(NM: VOLNAME; DS: VOLDESC): INTEGER;
+  PROCEDURE LOADTBL(VAR TBL: DRVTABLE; VAR NAMES: NAMETBL; DRV: DRVNUM);
+  PROCEDURE RDSTATUS(VAR BUF: INTEGER);
+  PROCEDURE INITDRV;
+  PROCEDURE DRAWWP(N: INTEGER; FLAG: BOOLEAN);
+  PROCEDURE DRAWNAME(N: INTEGER; NM: VOLNAME);
+  PROCEDURE DRAWDESC(N: INTEGER; DS: VOLDESC);
+  PROCEDURE DRAWUNIT(N: INTEGER; U: INTEGER);
+  PROCEDURE DRAWROW(N: INTEGER);
+  PROCEDURE DRAWHEAD;
+  PROCEDURE REDRAW;
+  FUNCTION CHOOSE: INTEGER;
+  PROCEDURE SHOWERR;
+  PROCEDURE CLRSCRN;
+  PROCEDURE CLRLINE;
 IMPLEMENTATION
   { Emission order is declaration order. Private
     procedures 25..53 sit here before most of the
@@ -285,7 +289,7 @@ IMPLEMENTATION
     PUTCRT(4, SYSCOM^.CRTCTRL.HOME)
   END;
 
-  PROCEDURE V23;
+  PROCEDURE CLRSCRN;
   BEGIN
     HOMECURSOR;
     WITH SYSCOM^, CRTCTRL DO
@@ -295,7 +299,7 @@ IMPLEMENTATION
         PUTCRT(6, CLEARSCREEN)
   END;
 
-  PROCEDURE V24;
+  PROCEDURE CLRLINE;
   VAR I: INTEGER;
   BEGIN
     (*$I-*)
@@ -316,20 +320,20 @@ IMPLEMENTATION
     (*$I+*)
   END;
 
-  PROCEDURE P27;
+  PROCEDURE LOADCRT;
   BEGIN
     WITH SYSCOM^ DO
       BEGIN
-        W937 := CRTINFO.WIDTH;
-        W1969 := CRTINFO.HEIGHT;
-        W2228 := ORD(CRTINFO.CHARDEL);
-        W935 := ORD(CRTINFO.LINEDEL);
-        W930 := ORD(CRTINFO.ETX);
-        W1971 := ORD(CRTINFO.ALTMODE);
+        SCRW := CRTINFO.WIDTH;
+        SCRH := CRTINFO.HEIGHT;
+        CHDEL := ORD(CRTINFO.CHARDEL);
+        LNDEL := ORD(CRTINFO.LINEDEL);
+        ETXCH := ORD(CRTINFO.ETX);
+        ALTCH := ORD(CRTINFO.ALTMODE);
         SETB := [CHR(11), CHR(15)];
         SETA := [CHR(10), CHR(12)];
-        W936 := ORD(CRTINFO.RIGHT);
-        W934 := ORD(CRTINFO.LEFT)
+        RIGHTCH := ORD(CRTINFO.RIGHT);
+        LEFTCH := ORD(CRTINFO.LEFT)
       END
   END;
 
@@ -339,28 +343,28 @@ IMPLEMENTATION
     IOFAIL := (IORESULT <> 0) OR (ERRNUM <> 0)
   END;
 
-  FUNCTION P04(DVND, DVSR: INTEGER): INTEGER;
+  FUNCTION SAFEDIV(DVND, DVSR: INTEGER): INTEGER;
   VAR T: INTEGER;
   BEGIN
     IF DVND >= 0 THEN
-      P04 := DVND DIV DVSR
+      SAFEDIV := DVND DIV DVSR
     ELSE
       BEGIN
         T := (DVND + 32767) + 1;
-        P04 := ((T DIV DVSR) + (32767 DIV DVSR))
+        SAFEDIV := ((T DIV DVSR) + (32767 DIV DVSR))
                + ((((T MOD DVSR) + (32767 MOD DVSR)) + 1) DIV DVSR)
       END
   END;
 
-  FUNCTION P05(DVND, DVSR: INTEGER): INTEGER;
+  FUNCTION SAFEMOD(DVND, DVSR: INTEGER): INTEGER;
   VAR T: INTEGER;
   BEGIN
     IF DVND >= 0 THEN
-      P05 := DVND MOD DVSR
+      SAFEMOD := DVND MOD DVSR
     ELSE
       BEGIN
         T := (DVND + 32767) + 1;
-        P05 := (((T MOD DVSR) + (32767 MOD DVSR)) + 1) MOD DVSR
+        SAFEMOD := (((T MOD DVSR) + (32767 MOD DVSR)) + 1) MOD DVSR
       END
   END;
 
@@ -370,7 +374,7 @@ IMPLEMENTATION
     ERRNUM := 0
   END;
 
-  PROCEDURE P07(LEN: INTEGER; CH: CHAR; NAME: NAMEREST;
+  PROCEDURE MKPDSTR(LEN: INTEGER; CH: CHAR; NAME: NAMEREST;
                 VAR DEST: STRING);
   VAR I: INTEGER;
   BEGIN
@@ -385,14 +389,14 @@ IMPLEMENTATION
       END
   END;
 
-  FUNCTION P08(N: DRVNUM): INTEGER;
+  FUNCTION DRVCTL(N: DRVNUM): INTEGER;
   BEGIN
-    P08 := 2 + N * 8192
+    DRVCTL := 2 + N * 8192
   END;
 
   (*$I-*)
   (*$R-*)
-  FUNCTION P09(VAR S: ANYSTR; LIM: INTEGER;
+  FUNCTION EDITLINE(VAR S: ANYSTR; LIM: INTEGER;
                DIGITS: BOOLEAN): BOOLEAN;
   VAR N: INTEGER;
       CH: CHAR;
@@ -429,60 +433,60 @@ IMPLEMENTATION
                 WRITE(CHR(7))
     UNTIL EOLN(KEYBOARD) OR (CH = CHR(27));
     S[0] := CHR(N);
-    P09 := CH = CHR(27)
+    EDITLINE := CH = CHR(27)
   END;
   (*$R+*)
   (*$I+*)
 
-  FUNCTION P10(VAR N: INTEGER): BOOLEAN;
+  FUNCTION READNUM(VAR N: INTEGER): BOOLEAN;
   VAR BUF: STRING[5];
       ESC: BOOLEAN;
       I: INTEGER;
   BEGIN
-    ESC := P09(BUF, 5, TRUE);
-    P10 := ESC;
+    ESC := EDITLINE(BUF, 5, TRUE);
+    READNUM := ESC;
     N := 0;
     IF NOT ESC THEN
       FOR I := 1 TO LENGTH(BUF) DO
         N := N * 10 + ORD(BUF[I]) - ORD('0')
   END;
 
-  FUNCTION P11(N: INTEGER): INTEGER;
+  FUNCTION VOLIDX(N: INTEGER): INTEGER;
   BEGIN
     IF N IN [4, 5] THEN
-      P11 := N - 3
+      VOLIDX := N - 3
     ELSE
       IF N IN [9..20] THEN
-        P11 := N - 6
+        VOLIDX := N - 6
       ELSE
-        P11 := (N - 128) + 15
+        VOLIDX := (N - 128) + 15
   END;
 
-  FUNCTION P12(N: INTEGER): INTEGER;
+  FUNCTION UNITNUM(N: INTEGER): INTEGER;
   BEGIN
     IF (N = 1) OR (N = 2) THEN
-      P12 := N + 3
+      UNITNUM := N + 3
     ELSE
       IF N IN [3..14] THEN
-        P12 := N + 6
+        UNITNUM := N + 6
       ELSE
-        P12 := (N + 128) - 15
+        UNITNUM := (N + 128) - 15
   END;
 
   (*$I-*)
-  PROCEDURE P13(ROW, NLINES: INTEGER);
+  PROCEDURE BLANKLN(ROW, NLINES: INTEGER);
   VAR I: INTEGER;
   BEGIN
     GOTOXY(0, ROW);
     FOR I := 1 TO NLINES DO
       BEGIN
-        V24;
+        CLRLINE;
         WRITELN
       END;
     GOTOXY(0, ROW)
   END;
 
-  FUNCTION P14: BOOLEAN;
+  FUNCTION YESNO: BOOLEAN;
   VAR CH: CHAR;
       OK: BOOLEAN;
   BEGIN
@@ -496,11 +500,11 @@ IMPLEMENTATION
     UNTIL OK;
     IF CH <> CHR(27) THEN
       WRITE(CH);
-    P14 := CH IN ['Y', 'y']
+    YESNO := CH IN ['Y', 'y']
   END;
   (*$I+*)
 
-  PROCEDURE P15(VAR S: STRING);
+  PROCEDURE CLEANNM(VAR S: STRING);
   VAR AT: INTEGER;
       I: INTEGER;
   BEGIN
@@ -514,56 +518,56 @@ IMPLEMENTATION
       UNTIL POS(' ', S) = 0
   END;
 
-  FUNCTION P16(NAME: ANYSTR): BOOLEAN;
+  FUNCTION PVVALID(NAME: ANYSTR): BOOLEAN;
   VAR I: INTEGER;
   BEGIN
-    P16 := FALSE;
+    PVVALID := FALSE;
     IF LENGTH(NAME) IN [1..7] THEN
       BEGIN
         FOR I := 1 TO LENGTH(NAME) DO
           IF (NOT (NAME[I] IN [' '..'z']))
              OR (NAME[I] IN [' ', '$', ',', '=', '?']) THEN
-            EXIT(P16);
-        P16 := TRUE
+            EXIT(PVVALID);
+        PVVALID := TRUE
       END
   END;
 
-  FUNCTION P17(NAME: STRING): BOOLEAN;
+  FUNCTION PDVALID(NAME: STRING): BOOLEAN;
   VAR I: INTEGER;
   BEGIN
-    P17 := TRUE;
+    PDVALID := TRUE;
     IF LENGTH(NAME) IN [1..15] THEN
       BEGIN
         IF NOT (NAME[1] IN ['A'..'Z']) THEN
-          P17 := FALSE;
+          PDVALID := FALSE;
         FOR I := 2 TO LENGTH(NAME) DO
           IF NOT (NAME[I] IN ['.', '0'..'9', 'A'..'Z']) THEN
-            P17 := FALSE
+            PDVALID := FALSE
       END
     ELSE
-      P17 := FALSE
+      PDVALID := FALSE
   END;
 
-  PROCEDURE P18(VAR BUF: DIRBLOCK; VAR ENTLEN, ENTS: INTEGER);
+  PROCEDURE READDIR(VAR BUF: DIRBLOCK; VAR ENTLEN, ENTS: INTEGER);
   BEGIN
     (*$I-*)
-    UNITREAD(W5, BUF, 512, 2, P08(DRIVE));
+    UNITREAD(PFUNIT, BUF, 512, 2, DRVCTL(DRIVE));
     IOERR := IORESULT;
     (*$I+*)
     ENTLEN := ORD(BUF[35]);
     ENTS := ORD(BUF[36])
   END;
 
-  FUNCTION P19(VAR BUF: DIRBLOCK; VAR N, BLK, OFF, ENTLEN,
+  FUNCTION NEXTENT(VAR BUF: DIRBLOCK; VAR N, BLK, OFF, ENTLEN,
                ENTS: INTEGER): BOOLEAN;
   VAR IX: INTEGER;
   BEGIN
-    P19 := TRUE;
+    NEXTENT := TRUE;
     IF N = 0 THEN
       BEGIN
-        P18(BUF, ENTLEN, ENTS);
+        READDIR(BUF, ENTLEN, ENTS);
         IF IORESULT <> 0 THEN
-          EXIT(P19);
+          EXIT(NEXTENT);
         BLK := 2
       END;
     N := N + 1;
@@ -574,70 +578,70 @@ IMPLEMENTATION
         IF BLK <> 0 THEN
           BEGIN
             (*$I-*)
-            UNITREAD(W5, BUF, 512, BLK, P08(DRIVE));
+            UNITREAD(PFUNIT, BUF, 512, BLK, DRVCTL(DRIVE));
             IOERR := IORESULT;
             IF IORESULT <> 0 THEN
-              EXIT(P19)
+              EXIT(NEXTENT)
             (*$I+*)
           END
         ELSE
-          P19 := FALSE
+          NEXTENT := FALSE
       END;
     OFF := 4 + IX * ENTLEN
   END;
 
-  FUNCTION P20(VAR BUF: DIRBLOCK; VAR N, BLK, OFF: INTEGER): INTEGER;
+  FUNCTION FINDPAS(VAR BUF: DIRBLOCK; VAR N, BLK, OFF: INTEGER): INTEGER;
   VAR ENTLEN, ENTS: INTEGER;
       ENTRY: DIRENT;
       S: STRING[15];
   BEGIN
-    P20 := 0;
+    FINDPAS := 0;
     N := 0;
-    WHILE P19(BUF, N, BLK, OFF, ENTLEN, ENTS) DO
+    WHILE NEXTENT(BUF, N, BLK, OFF, ENTLEN, ENTS) DO
       BEGIN
         IF IORESULT <> 0 THEN
-          EXIT(P20);
+          EXIT(FINDPAS);
         MOVELEFT(BUF[OFF], ENTRY, 40);
-        P07(ENTRY.NAMELEN, ENTRY.FIRST, ENTRY.REST, S);
+        MKPDSTR(ENTRY.NAMELEN, ENTRY.FIRST, ENTRY.REST, S);
         IF S = 'PASCAL.AREA' THEN
           IF ENTRY.STORTYPE <> 4 THEN
             BEGIN
               ERRNUM := 17;
-              EXIT(P20)
+              EXIT(FINDPAS)
             END
           ELSE
             BEGIN
-              P20 := ENTRY.KEYHI * 256 + ENTRY.KEYLO;
-              EXIT(P20)
+              FINDPAS := ENTRY.KEYHI * 256 + ENTRY.KEYLO;
+              EXIT(FINDPAS)
             END
       END;
     ERRNUM := 11
   END;
 
-  FUNCTION P21(VAR BUF: DIRBLOCK; VAR N, BLK, OFF: INTEGER): BOOLEAN;
+  FUNCTION FREESLOT(VAR BUF: DIRBLOCK; VAR N, BLK, OFF: INTEGER): BOOLEAN;
   VAR ENTLEN, ENTS: INTEGER;
       ENTRY: DIRENT;
       S: STRING[15];
   BEGIN
-    P21 := FALSE;
+    FREESLOT := FALSE;
     N := 0;
-    WHILE P19(BUF, N, BLK, OFF, ENTLEN, ENTS) DO
+    WHILE NEXTENT(BUF, N, BLK, OFF, ENTLEN, ENTS) DO
       BEGIN
         IF IORESULT <> 0 THEN
-          EXIT(P21);
+          EXIT(FREESLOT);
         IF BUF[OFF] = 0 THEN
           BEGIN
-            P21 := TRUE;
-            EXIT(P21)
+            FREESLOT := TRUE;
+            EXIT(FREESLOT)
           END
       END
   END;
 
   PROCEDURE SPLIT(N: INTEGER; VAR QUOT, HI, LO: INTEGER);
   BEGIN
-    QUOT := W913 + P04(N, 8 * 512);
-    HI := P05(N, 8 * 512) DIV 8;
-    LO := P05(N, 8 * 512) MOD 8
+    QUOT := DRVMAP + SAFEDIV(N, 8 * 512);
+    HI := SAFEMOD(N, 8 * 512) DIV 8;
+    LO := SAFEMOD(N, 8 * 512) MOD 8
   END;
 
   FUNCTION ULESS(A, B: INTEGER): BOOLEAN;
@@ -670,7 +674,7 @@ IMPLEMENTATION
     BOT := 0;
     REPEAT
       (*$I-*)
-      UNITREAD(W5, BUF, 512, HIQB, P08(DRIVE));
+      UNITREAD(PFUNIT, BUF, 512, HIQB, DRVCTL(DRIVE));
       IF IORESULT <> 0 THEN
         EXIT(SETBITS);
       (*$I+*)
@@ -680,7 +684,7 @@ IMPLEMENTATION
         BUF[ORD(ODD(BIT) AND ODD(4088))
             + (7 - ORD(ODD(BIT) AND ODD(7)))] := FLAG;
       (*$I-*)
-      UNITWRITE(W5, BUF, 512, HIQB, P08(DRIVE));
+      UNITWRITE(PFUNIT, BUF, 512, HIQB, DRVCTL(DRIVE));
       IF IORESULT <> 0 THEN
         EXIT(SETBITS);
       (*$I+*)
@@ -715,7 +719,7 @@ IMPLEMENTATION
     BOT := 0;
     REPEAT
       (*$I-*)
-      UNITREAD(W5, BUF, 512, QUOTH, P08(DRIVE));
+      UNITREAD(PFUNIT, BUF, 512, QUOTH, DRVCTL(DRIVE));
       IF IORESULT <> 0 THEN
         EXIT(ALLBITS);
       (*$I+*)
@@ -736,44 +740,44 @@ IMPLEMENTATION
     UNTIL ULESS(QUOTH, QUOTL)
   END;
 
-  FUNCTION P51(N: INTEGER): BOOLEAN;
+  FUNCTION BADVOL(N: INTEGER): BOOLEAN;
   BEGIN
     IF (N >= 1) AND (N <= DRVS[0].EXTRA) THEN
-      P51 := FALSE
+      BADVOL := FALSE
     ELSE
       BEGIN
-        P51 := TRUE;
+        BADVOL := TRUE;
         ERRNUM := 1
       END
   END;
 
-  FUNCTION P52(N: INTEGER): BOOLEAN;
+  FUNCTION HASPPM(N: INTEGER): BOOLEAN;
   VAR SLOT, BLK, OFF: INTEGER;
   BEGIN
-    P52 := FALSE;
+    HASPPM := FALSE;
     IF N IN UNITS THEN
       BEGIN
         (*$R-*)
         DRIVE := N;
         (*$R+*)
-        PAKEY := P20(PABUF, SLOT, BLK, OFF);
+        PAKEY := FINDPAS(PABUF, SLOT, BLK, OFF);
         IF (ERRNUM <> 0) OR (IOERR <> 0) THEN
-          EXIT(P52);
+          EXIT(HASPPM);
         (*$I-*)
-        UNITREAD(W5, DRVS, W13, PAKEY, P08(N));
+        UNITREAD(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(N));
         IF IORESULT <> 0 THEN
-          EXIT(P52);
+          EXIT(HASPPM);
         (*$I+*)
         IF DRVS[0].DNAME <> 'PPM' THEN
-          EXIT(P52);
-        P52 := TRUE;
-        EXIT(P52)
+          EXIT(HASPPM);
+        HASPPM := TRUE;
+        EXIT(HASPPM)
       END
     ELSE
-      EXIT(P52)
+      EXIT(HASPPM)
   END;
 
-  PROCEDURE P53(N: INTEGER);
+  PROCEDURE VOLCELL(N: INTEGER);
   BEGIN
     IF (N <= 16) OR ((N >= 33) AND (N <= 48)) THEN
       XPOS := 2
@@ -794,24 +798,24 @@ IMPLEMENTATION
   END;
 
   (*$I-*)
-  PROCEDURE V14;
+  PROCEDURE DRAWWP;
   BEGIN
     CLRERR;
-    IF P51(N) THEN
-      EXIT(V14);
-    P53(N);
+    IF BADVOL(N) THEN
+      EXIT(DRAWWP);
+    VOLCELL(N);
     GOTOXY(XPOS, YPOS);
     IF FLAG THEN
       WRITE('*  ')
     ELSE
       WRITE('   ')
   END;
-  PROCEDURE V15;
+  PROCEDURE DRAWNAME;
   BEGIN
     CLRERR;
-    IF P51(N) THEN
-      EXIT(V15);
-    P53(N);
+    IF BADVOL(N) THEN
+      EXIT(DRAWNAME);
+    VOLCELL(N);
     XPOS := XPOS + 3;
     GOTOXY(XPOS, YPOS);
     WRITE('        ');
@@ -819,12 +823,12 @@ IMPLEMENTATION
     WRITE(NM);
     WRITE(' ')
   END;
-  PROCEDURE V16;
+  PROCEDURE DRAWDESC;
   BEGIN
     CLRERR;
-    IF P51(N) THEN
-      EXIT(V16);
-    P53(N);
+    IF BADVOL(N) THEN
+      EXIT(DRAWDESC);
+    VOLCELL(N);
     XPOS := XPOS + 11;
     GOTOXY(XPOS, YPOS);
     WRITE('                ');
@@ -832,12 +836,12 @@ IMPLEMENTATION
     WRITE(DS);
     WRITE(' ')
   END;
-  PROCEDURE V17;
+  PROCEDURE DRAWUNIT;
   BEGIN
     CLRERR;
-    IF P51(N) THEN
-      EXIT(V17);
-    P53(N);
+    IF BADVOL(N) THEN
+      EXIT(DRAWUNIT);
+    VOLCELL(N);
     XPOS := XPOS + 27;
     GOTOXY(XPOS, YPOS);
     WRITE('    ');
@@ -850,25 +854,25 @@ IMPLEMENTATION
     ELSE
       WRITE('    ')
   END;
-  PROCEDURE V18;
+  PROCEDURE DRAWROW;
   BEGIN
     CLRERR;
-    IF P51(N) THEN
-      EXIT(V18);
-    V14(N, DRVS[N].ATTRIB.WPROT);
-    V15(N, VNAMES[N]);
-    V16(N, DESCS[N]);
-    V17(N, DRVS[N].ATTRIB.UNITNO)
+    IF BADVOL(N) THEN
+      EXIT(DRAWROW);
+    DRAWWP(N, DRVS[N].ATTRIB.WPROT);
+    DRAWNAME(N, VNAMES[N]);
+    DRAWDESC(N, DESCS[N]);
+    DRAWUNIT(N, DRVS[N].ATTRIB.UNITNO)
   END;
-  PROCEDURE V19;
+  PROCEDURE DRAWHEAD;
   BEGIN
     CLRERR;
     GOTOXY(0, 7-2);
-    V24;
+    CLRLINE;
     WRITE('ProFile drive: ');
     WRITE(DRIVE);
     GOTOXY(0, 7-1);
-    V24;
+    CLRLINE;
     GOTOXY(2, 7-1);
     WRITE('WP Name    Description     Unit');
     IF DRVS[0].EXTRA > 16 THEN
@@ -877,105 +881,105 @@ IMPLEMENTATION
         WRITE('WP Name    Description     Unit')
       END
   END;
-  PROCEDURE V20;
+  PROCEDURE REDRAW;
   VAR LAST: INTEGER;
   BEGIN
     CLRERR;
-    P13(7-3, 20);
-    V19;
-    W932 := 1;
+    BLANKLN(7-3, 20);
+    DRAWHEAD;
+    SELIX := 1;
     LAST := DRVS[0].EXTRA;
-    WHILE W932 <= LAST DO
+    WHILE SELIX <= LAST DO
       BEGIN
-        V18(W932);
-        W932 := W932 + 1
+        DRAWROW(SELIX);
+        SELIX := SELIX + 1
       END;
-    W12 := 0
+    HILITE := 0
   END;
 
-  FUNCTION V21;
+  FUNCTION CHOOSE;
   VAR CH: CHAR;
-    PROCEDURE P54;
+    PROCEDURE INVOFF;
     BEGIN
       WRITE(CHR(14))
     END;
-    PROCEDURE P55;
+    PROCEDURE INVON;
     BEGIN
       WRITE(CHR(15))
     END;
-    PROCEDURE P56;
+    PROCEDURE SHOWMARK;
     BEGIN
-      P53(W12);
+      VOLCELL(HILITE);
       GOTOXY(XPOS-2, YPOS);
       WRITE('->')
     END;
-    PROCEDURE P57;
+    PROCEDURE HIDEMARK;
     BEGIN
-      P53(W12);
+      VOLCELL(HILITE);
       GOTOXY(XPOS-2, YPOS);
       WRITE('  ')
     END;
   BEGIN
     CLRERR;
-    V21 := 0;
+    CHOOSE := 0;
     IF DRVS[0].EXTRA = 0 THEN
-      EXIT(V21);
-    IF W12 <> 0 THEN
+      EXIT(CHOOSE);
+    IF HILITE <> 0 THEN
       BEGIN
-        P57;
-        P54;
-        V18(W12)
+        HIDEMARK;
+        INVOFF;
+        DRAWROW(HILITE)
       END;
-    W12 := 1;
+    HILITE := 1;
     CH := ' ';
-    P56;
+    SHOWMARK;
     REPEAT
       READ(KEYBOARD, CH);
       IF CH IN SETA THEN
         BEGIN
-          P57;
-          W12 := W12 + 1;
-          IF W12 > DRVS[0].EXTRA THEN
-            W12 := 1;
-          P56
+          HIDEMARK;
+          HILITE := HILITE + 1;
+          IF HILITE > DRVS[0].EXTRA THEN
+            HILITE := 1;
+          SHOWMARK
         END
       ELSE
         IF CH IN SETB THEN
           BEGIN
-            P57;
-            W12 := W12 - 1;
-            IF W12 < 1 THEN
-              W12 := DRVS[0].EXTRA;
-            P56
+            HIDEMARK;
+            HILITE := HILITE - 1;
+            IF HILITE < 1 THEN
+              HILITE := DRVS[0].EXTRA;
+            SHOWMARK
           END
         ELSE
-          IF CH = CHR(W1971) THEN
+          IF CH = CHR(ALTCH) THEN
             BEGIN
-              P57;
-              W12 := 0;
-              V21 := 0;
-              EXIT(V21)
+              HIDEMARK;
+              HILITE := 0;
+              CHOOSE := 0;
+              EXIT(CHOOSE)
             END
           ELSE
-            IF CH = CHR(W936) THEN
+            IF CH = CHR(RIGHTCH) THEN
               BEGIN
-                P55;
-                V18(W12);
-                P54;
-                V21 := W12
+                INVON;
+                DRAWROW(HILITE);
+                INVOFF;
+                CHOOSE := HILITE
               END
             ELSE
               WRITE(CHR(7))
-    UNTIL CH = CHR(W936)
+    UNTIL CH = CHR(RIGHTCH)
   END;
 
-  PROCEDURE V22;
+  PROCEDURE SHOWERR;
   BEGIN
-    IF ODD(W7) THEN
+    IF ODD(ERRSW) THEN
       BEGIN
-        IF ODD(W8) THEN
+        IF ODD(ERRHERE) THEN
           GOTOXY(0, CURROW);
-        V24;
+        CLRLINE;
         WRITE(CHR(7));
         IF ERRNUM <> 0 THEN
           BEGIN
@@ -1044,7 +1048,7 @@ IMPLEMENTATION
                   END;
               16: BEGIN
                     WRITE('Cannot assign ProFile driver unit number, #');
-                    WRITE(W5);
+                    WRITE(PFUNIT);
                     WRITELN
                   END;
               17: BEGIN
@@ -1065,10 +1069,10 @@ IMPLEMENTATION
   END;
   (*$I+*)
 
-  PROCEDURE P58(VAR S: STRING);
+  PROCEDURE TRIMEND(VAR S: STRING);
   VAR I, N: INTEGER;
   BEGIN
-    P15(S);
+    CLEANNM(S);
     (*$R-*)
     N := ORD(S[0]);
     (*$R+*)
@@ -1081,45 +1085,45 @@ IMPLEMENTATION
       END
   END;
   (*$I-*)
-  PROCEDURE P59(VAR TBL: DRVTABLE; N: INTEGER;
+  PROCEDURE RDVOLNM(VAR TBL: DRVTABLE; N: INTEGER;
                 VAR NM: VOLNAME; DRV: DRVNUM);
   BEGIN
-    UNITREAD(W5, PABUF, 25, TBL[N].MAPLO + 2, P08(DRV));
+    UNITREAD(PFUNIT, PABUF, 25, TBL[N].MAPLO + 2, DRVCTL(DRV));
     IF IORESULT = 0 THEN
       BEGIN
         MOVELEFT(PABUF[6], NM, 8);
-        IF P16(NM) THEN
-          P15(NM)
+        IF PVVALID(NM) THEN
+          CLEANNM(NM)
         ELSE
           NM := '<none>'
       END
     ELSE
       NM := 'I/O Err'
   END;
-  PROCEDURE P60(VAR TBL: DRVTABLE; VAR NAMES: NAMETBL; DRV: DRVNUM);
+  PROCEDURE RDNAMES(VAR TBL: DRVTABLE; VAR NAMES: NAMETBL; DRV: DRVNUM);
   VAR LAST, I: INTEGER;
   BEGIN
     I := 1;
     LAST := TBL[0].EXTRA;
     WHILE I <= LAST DO
       BEGIN
-        P59(TBL, I, NAMES[I], DRV);
+        RDVOLNM(TBL, I, NAMES[I], DRV);
         IF IORESULT <> 0 THEN
           IOERR := IORESULT;
         I := I + 1
       END
   END;
-  PROCEDURE P61(NM: VOLNAME; N: INTEGER);
+  PROCEDURE WRVOLNM(NM: VOLNAME; N: INTEGER);
   BEGIN
-    UNITREAD(W5, PADIR, 2028, DRVS[N].MAPLO + 2, P08(DRIVE));
+    UNITREAD(PFUNIT, PADIR, 2028, DRVS[N].MAPLO + 2, DRVCTL(DRIVE));
     IF IORESULT = 0 THEN
       BEGIN
         MOVELEFT(NM, PADIR[0].NM, 8);
-        UNITWRITE(W5, PADIR, 2028, DRVS[N].MAPLO + 2, P08(DRIVE));
+        UNITWRITE(PFUNIT, PADIR, 2028, DRVS[N].MAPLO + 2, DRVCTL(DRIVE));
         IF IORESULT <> 0 THEN
           BEGIN
             IOERR := IORESULT;
-            EXIT(P61)
+            EXIT(WRVOLNM)
           END
         ELSE
           VNAMES[N] := NM
@@ -1129,13 +1133,13 @@ IMPLEMENTATION
   END;
   (*$I+*)
 
-  PROCEDURE V12;
+  PROCEDURE RDSTATUS;
   BEGIN
     CLRERR;
-    UNITSTATUS(W5, BUF, 16384)
+    UNITSTATUS(PFUNIT, BUF, 16384)
   END;
   (*$I-*)
-  PROCEDURE V11;
+  PROCEDURE LOADTBL;
   VAR KEY: INTEGER;
       OLD: INTEGER;
       SLOT, BLK, OFF: INTEGER;
@@ -1144,35 +1148,35 @@ IMPLEMENTATION
     IF NOT (DRV IN [0..7]) THEN
       BEGIN
         ERRNUM := 8;
-        EXIT(V11)
+        EXIT(LOADTBL)
       END;
     IF NOT (DRV IN MARKED) THEN
       BEGIN
         ERRNUM := 7;
-        EXIT(V11)
+        EXIT(LOADTBL)
       END;
     OLD := DRIVE;
     (*$R-*)
     DRIVE := DRV;
     (*$R+*)
-    KEY := P20(PABUF, SLOT, BLK, OFF);
+    KEY := FINDPAS(PABUF, SLOT, BLK, OFF);
     (*$R-*)
     DRIVE := OLD;
     (*$R+*)
     IF IOFAIL THEN
-      EXIT(V11);
-    UNITREAD(W5, TBL, W13, KEY, P08(DRV));
+      EXIT(LOADTBL);
+    UNITREAD(PFUNIT, TBL, TBLLEN, KEY, DRVCTL(DRV));
     IF IOFAIL THEN
-      EXIT(V11);
+      EXIT(LOADTBL);
     IF TBL[0].DNAME <> 'PPM' THEN
       BEGIN
         ERRNUM := 11;
-        EXIT(V11)
+        EXIT(LOADTBL)
       END;
-    P60(TBL, NAMES, DRV)
+    RDNAMES(TBL, NAMES, DRV)
   END;
   (*$I+*)
-  FUNCTION V10;
+  FUNCTION FINDBYNM;
   VAR I: INTEGER;
       N: INTEGER;
       LAST: INTEGER;
@@ -1186,20 +1190,20 @@ IMPLEMENTATION
         IF VNAMES[I] = NM THEN
           BEGIN
             N := N + 1;
-            V10 := I;
+            FINDBYNM := I;
             IF DESCS[I] = DS THEN
-              EXIT(V10)
+              EXIT(FINDBYNM)
           END;
         I := I + 1
       END;
     IF N <> 1 THEN
       BEGIN
         ERRNUM := 1;
-        V10 := 0
+        FINDBYNM := 0
       END
   END;
   (*$I-*)
-  PROCEDURE V09;
+  PROCEDURE RENAVOL;
   VAR
     SD: VOLDESC;
     SN: VOLNAME;
@@ -1208,65 +1212,65 @@ IMPLEMENTATION
     SN := NM;
     SD := DS;
     CLRERR;
-    IF P51(N) THEN
-      EXIT(V09);
+    IF BADVOL(N) THEN
+      EXIT(RENAVOL);
     IF DRVS[N].ATTRIB.WPROT THEN
       BEGIN
         ERRNUM := 10;
-        EXIT(V09)
+        EXIT(RENAVOL)
       END;
     IF SN = '' THEN
       IF SD = '' THEN
-        EXIT(V09)
+        EXIT(RENAVOL)
       ELSE
         BEGIN
-          HIT := V10(VNAMES[N], SD);
+          HIT := FINDBYNM(VNAMES[N], SD);
           IF ERRNUM = 1 THEN
             ERRNUM := 0;
           IF (HIT <> 0) AND (HIT <> N) THEN
             BEGIN
               ERRNUM := 4;
-              EXIT(V09)
+              EXIT(RENAVOL)
             END;
           DESCS[N] := SD;
-          UNITWRITE(W5, DRVS, W13, PAKEY, P08(DRIVE));
+          UNITWRITE(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(DRIVE));
           IOERR := IORESULT;
-          EXIT(V09)
+          EXIT(RENAVOL)
         END
     ELSE
-      IF P16(SN) THEN
+      IF PVVALID(SN) THEN
         BEGIN
           IF SD = '' THEN
-            HIT := V10(SN, DESCS[N])
+            HIT := FINDBYNM(SN, DESCS[N])
           ELSE
-            HIT := V10(SN, SD);
+            HIT := FINDBYNM(SN, SD);
           IF ERRNUM = 1 THEN
             ERRNUM := 0;
           IF HIT <> 0 THEN
             BEGIN
               ERRNUM := 4;
-              EXIT(V09)
+              EXIT(RENAVOL)
             END;
-          P61(SN, N);
+          WRVOLNM(SN, N);
           IF IOFAIL THEN
-            EXIT(V09);
+            EXIT(RENAVOL);
           IF SD <> '' THEN
             BEGIN
               DESCS[N] := SD;
-              UNITWRITE(W5, DRVS, W13, PAKEY, P08(DRIVE));
+              UNITWRITE(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(DRIVE));
               IOERR := IORESULT;
-              EXIT(V09)
+              EXIT(RENAVOL)
             END
         END
       ELSE
         BEGIN
           ERRNUM := 9;
-          EXIT(V09)
+          EXIT(RENAVOL)
         END
   END;
   (*$I+*)
 
-  PROCEDURE P62(N: INTEGER; VAR DEST: INTEGER);
+  PROCEDURE RDUNIT(N: INTEGER; VAR DEST: INTEGER);
   VAR
     T: RECORD
          CASE BOOLEAN OF
@@ -1291,7 +1295,7 @@ IMPLEMENTATION
           MOVELEFT(B.P^^[3 * (N - 128) + 1], DEST, 2)
         END
   END;
-  PROCEDURE P63(N: INTEGER; SRC: INTEGER);
+  PROCEDURE WRUNIT(N: INTEGER; SRC: INTEGER);
   VAR
     T: RECORD
          CASE BOOLEAN OF
@@ -1317,7 +1321,7 @@ IMPLEMENTATION
         END
   END;
 
-  PROCEDURE V13;
+  PROCEDURE INITDRV;
   VAR
     I: INTEGER;
     U: INTEGER;
@@ -1329,11 +1333,11 @@ IMPLEMENTATION
          END;
     PROF: NAME7;
     NM: STRING;
-    PROCEDURE P64(VAR SRC: NAME7; N: INTEGER; VAR DEST: NAME7);
+    PROCEDURE COPYNM(VAR SRC: NAME7; N: INTEGER; VAR DEST: NAME7);
     BEGIN
       MOVELEFT(SRC, DEST, N)
     END;
-    PROCEDURE P65(DRV: INTEGER; VAR NM: STRING);
+    PROCEDURE GETVNAME(DRV: INTEGER; VAR NM: STRING);
     VAR IMG: RECORD
                CASE INTEGER OF
                  0: (BLK: DIRBLOCK);
@@ -1343,45 +1347,45 @@ IMPLEMENTATION
     BEGIN
       NM := '<no name>';
       (*$I-*)
-      UNITREAD(W5, IMG.BLK, 512, 2, P08(DRV));
+      UNITREAD(PFUNIT, IMG.BLK, 512, 2, DRVCTL(DRV));
       (*$I+*)
       IF IOFAIL THEN
-        EXIT(P65);
+        EXIT(GETVNAME);
       (*$R-*)
       IF ORD(IMG.VOL[0]) DIV 16 = 15 THEN
         BEGIN
           IMG.VOL[0] := CHR(ORD(IMG.VOL[0]) MOD 16);
-          IF P17(IMG.VOL) THEN
+          IF PDVALID(IMG.VOL) THEN
             NM := IMG.VOL
         END
       (*$R+*)
     END;
   BEGIN
     CLRERR;
-    W13 := 256 + 512;
+    TBLLEN := 256 + 512;
     CURROW := 3;
-    W8 := 0;
-    W7 := 1;
-    P27;
-    W12 := 0;
-    W1970 := 0;
+    ERRHERE := 0;
+    ERRSW := 1;
+    LOADCRT;
+    HILITE := 0;
+    DRVADR := 0;
     U := 128;
     REPEAT
-      P62(U, VID);
+      RDUNIT(U, VID);
       PUN.A := VID + 3;
-      P64(PUN.Q^, 7, PROF);
+      COPYNM(PUN.Q^, 7, PROF);
       IF PROF = 'PROFILE' THEN
         BEGIN
-          W1970 := VID;
-          W5 := U
+          DRVADR := VID;
+          PFUNIT := U
         END
       ELSE
         U := U + 1
-    UNTIL (W1970 <> 0) OR (U > 143);
-    IF W1970 = 0 THEN
+    UNTIL (DRVADR <> 0) OR (U > 143);
+    IF DRVADR = 0 THEN
       BEGIN
         ERRNUM := 12;
-        EXIT(V13)
+        EXIT(INITDRV)
       END;
     (*$I-*)
     UNITSTATUS(U, VOLS, 16384);
@@ -1389,13 +1393,13 @@ IMPLEMENTATION
     IF IOFAIL THEN
       BEGIN
         ERRNUM := 12;
-        EXIT(V13)
+        EXIT(INITDRV)
       END;
     UNITS := [];
     FOR I := 0 TO 7 DO
       BEGIN
         (*$I-*)
-        UNITREAD(U, PABUF, 2, 2, P08(I));
+        UNITREAD(U, PABUF, 2, 2, DRVCTL(I));
         (*$I+*)
         IF IORESULT = 0 THEN
           UNITS := UNITS + [I]
@@ -1407,11 +1411,11 @@ IMPLEMENTATION
     FOR I := 0 TO 7 DO
       IF I IN UNITS THEN
         BEGIN
-          P65(I, NM);
+          GETVNAME(I, NM);
           IF NM = '<no name>' THEN
             UNITS := UNITS - [I]
           ELSE
-            IF P52(I) THEN
+            IF HASPPM(I) THEN
               MARKED := MARKED + [I];
           ERRNUM := 0
         END;
@@ -1438,7 +1442,7 @@ IMPLEMENTATION
 
   { 1.3 match-arm UJP is +7; 1.1 omitted skip-else after
     GOTO and used +5. Same length, one displacement byte. }
-  FUNCTION P66(KEY: INTEGER): INTEGER;
+  FUNCTION KEYVOL(KEY: INTEGER): INTEGER;
   LABEL 1, 2;
   VAR FOUND, I: INTEGER;
   BEGIN
@@ -1450,7 +1454,7 @@ IMPLEMENTATION
           BEGIN
             IF (DV = DRIVE) AND (B = KEY) THEN
               BEGIN
-                FOUND := P12(I);
+                FOUND := UNITNUM(I);
                 GOTO 2
               END;
             I := I + 1;
@@ -1460,11 +1464,11 @@ IMPLEMENTATION
       I := I + 1;
     1:
     UNTIL (FOUND <> 0) OR (I > 30);
-    P66 := FOUND
+    KEYVOL := FOUND
   END;
 
   (*$I-*)
-  PROCEDURE V08;
+  PROCEDURE MOUNTDRV;
   VAR
     K, U: INTEGER;
     DIRTY, I: INTEGER;
@@ -1476,30 +1480,30 @@ IMPLEMENTATION
     IF NOT (N IN [0..7]) THEN
       BEGIN
         ERRNUM := 8;
-        EXIT(V08)
+        EXIT(MOUNTDRV)
       END;
     IF NOT (N IN MARKED) THEN
       BEGIN
         ERRNUM := 7;
-        EXIT(V08)
+        EXIT(MOUNTDRV)
       END;
     (*$R-*)
     DRIVE := N;
     (*$R+*)
-    W12 := 0;
+    HILITE := 0;
     VOLS[1].STAT := DRIVE;
-    UNITSTATUS(W5, VOLS, 16386);
-    PAKEY := P20(PABUF, SLOT, BLK, OFF);
+    UNITSTATUS(PFUNIT, VOLS, 16386);
+    PAKEY := FINDPAS(PABUF, SLOT, BLK, OFF);
     IF IOFAIL THEN
-      EXIT(V08);
-    UNITREAD(W5, PABUF, 512, 2, P08(N));
+      EXIT(MOUNTDRV);
+    UNITREAD(PFUNIT, PABUF, 512, 2, DRVCTL(N));
     IF IOFAIL THEN
-      EXIT(V08);
-    W913 := 256 * PABUF[40] + PABUF[39];
-    UNITREAD(W5, DRVS, W13, PAKEY, P08(N));
+      EXIT(MOUNTDRV);
+    DRVMAP := 256 * PABUF[40] + PABUF[39];
+    UNITREAD(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(N));
     IF IOFAIL THEN
-      EXIT(V08);
-    P60(DRVS, VNAMES, DRIVE);
+      EXIT(MOUNTDRV);
+    RDNAMES(DRVS, VNAMES, DRIVE);
     DIRTY := 0;
     I := 1;
     LAST := DRVS[0].EXTRA;
@@ -1507,32 +1511,32 @@ IMPLEMENTATION
       BEGIN
         U := DRVS[I].ATTRIB.UNITNO;
         IF U IN [4, 5, 9..20, 128..143] THEN
-          WITH VOLS[P11(U)] DO
+          WITH VOLS[VOLIDX(U)] DO
             IF (NOT BUSY) OR (DV <> DRIVE) OR (B <> DRVS[I].MAPLO) THEN
               BEGIN
                 DRVS[I].ATTRIB.UNITNO := 0;
                 DIRTY := 1
               END;
-        K := P66(DRVS[I].MAPLO);
+        K := KEYVOL(DRVS[I].MAPLO);
         IF K <> 0 THEN
           IF K <> U THEN
             BEGIN
               DRVS[I].ATTRIB.UNITNO := K;
-              DRVS[I].AUX := W1970;
+              DRVS[I].AUX := DRVADR;
               DIRTY := 1
             END;
         I := I + 1
       END;
     IF ODD(DIRTY) THEN
       BEGIN
-        UNITWRITE(W5, DRVS, W13, PAKEY, P08(N));
+        UNITWRITE(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(N));
         IF IOFAIL THEN
-          EXIT(V08)
+          EXIT(MOUNTDRV)
       END
   END;
   (*$I+*)
 
-  FUNCTION P67(U: INTEGER): INTEGER;
+  FUNCTION BYUNIT(U: INTEGER): INTEGER;
   VAR LAST, I: INTEGER;
   BEGIN
     I := 1;
@@ -1541,39 +1545,39 @@ IMPLEMENTATION
       BEGIN
         IF DRVS[I].ATTRIB.UNITNO = U THEN
           BEGIN
-            P67 := I;
-            EXIT(P67)
+            BYUNIT := I;
+            EXIT(BYUNIT)
           END;
         I := I + 1
       END;
-    P67 := -1
+    BYUNIT := -1
   END;
 
   (*$I-*)
-  PROCEDURE V05;
+  PROCEDURE FREEUNIT;
   VAR V, DRV: INTEGER;
-    PROCEDURE P68;
+    PROCEDURE FIXREL;
     BEGIN
       IF N = 12 THEN
-        IF VOLS[P11(4)].BUSY THEN
+        IF VOLS[VOLIDX(4)].BUSY THEN
           BEGIN
-            P62(12, W104);
-            P63(12, DRVS[P67(4)].AUX);
-            UNITSTATUS(W5, VOLS, 16386)
+            RDUNIT(12, SAVU12);
+            WRUNIT(12, DRVS[BYUNIT(4)].AUX);
+            UNITSTATUS(PFUNIT, VOLS, 16386)
           END;
       IF N = 4 THEN
-        IF NOT VOLS[P11(12)].BUSY THEN
-          P63(12, W104)
+        IF NOT VOLS[VOLIDX(12)].BUSY THEN
+          WRUNIT(12, SAVU12)
     END;
   BEGIN
     CLRERR;
     IF NOT (N IN [4, 5, 9..20, 128..143]) THEN
       BEGIN
         ERRNUM := 5;
-        EXIT(V05)
+        EXIT(FREEUNIT)
       END;
-    DRV := P67(N);
-    V := P11(N);
+    DRV := BYUNIT(N);
+    V := VOLIDX(N);
     IF VOLS[V].BUSY THEN
       BEGIN
         VOLS[V].BUSY := FALSE;
@@ -1583,180 +1587,180 @@ IMPLEMENTATION
     ELSE
       BEGIN
         ERRNUM := 6;
-        EXIT(V05)
+        EXIT(FREEUNIT)
       END;
-    P63(N, DRVS[DRV].AUX);
+    WRUNIT(N, DRVS[DRV].AUX);
     DRVS[DRV].ATTRIB.UNITNO := 0;
     DRVS[DRV].AUX := 0;
-    P68;
-    UNITWRITE(W5, DRVS, W13, PAKEY, P08(DRIVE));
+    FIXREL;
+    UNITWRITE(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(DRIVE));
     IF IOFAIL THEN
-      EXIT(V05);
-    UNITSTATUS(W5, VOLS, 16386)
+      EXIT(FREEUNIT);
+    UNITSTATUS(PFUNIT, VOLS, 16386)
   END;
 
-  PROCEDURE V04;
+  PROCEDURE BINDUNIT;
   LABEL 99;
   VAR V, T: INTEGER;
-    PROCEDURE P69;
+    PROCEDURE FIXASN;
     BEGIN
       IF B = 12 THEN
-        IF VOLS[P11(4)].BUSY THEN
-          DRVS[P67(12)].AUX := W104;
+        IF VOLS[VOLIDX(4)].BUSY THEN
+          DRVS[BYUNIT(12)].AUX := SAVU12;
       IF B = 4 THEN
-        IF NOT VOLS[P11(12)].BUSY THEN
+        IF NOT VOLS[VOLIDX(12)].BUSY THEN
           BEGIN
-            P62(12, W104);
-            P63(12, DRVS[P67(4)].AUX);
-            UNITSTATUS(W5, VOLS, 16386)
+            RDUNIT(12, SAVU12);
+            WRUNIT(12, DRVS[BYUNIT(4)].AUX);
+            UNITSTATUS(PFUNIT, VOLS, 16386)
           END
     END;
-    FUNCTION P70: BOOLEAN;
+    FUNCTION CLEARASN: BOOLEAN;
     VAR OK: BOOLEAN;
         OLDDRV: INTEGER;
         V: INTEGER;
     BEGIN
       OK := TRUE;
       OLDDRV := DRIVE;
-      V := P11(B);
+      V := VOLIDX(B);
       IF VOLS[V].BUSY THEN
         BEGIN
           IF VOLS[V].DV <> DRIVE THEN
             BEGIN
               OLDDRV := DRIVE;
-              V08(VOLS[V].DV);
+              MOUNTDRV(VOLS[V].DV);
               IF IOFAIL THEN
-                EXIT(V04)
+                EXIT(BINDUNIT)
             END;
-          V05(B);
+          FREEUNIT(B);
           OK := ERRNUM = 0;
           IF OLDDRV <> DRIVE THEN
             BEGIN
-              V08(OLDDRV);
+              MOUNTDRV(OLDDRV);
               IF IOFAIL THEN
-                EXIT(V04)
+                EXIT(BINDUNIT)
             END
         END;
       IF OK THEN
         IF DRVS[A].ATTRIB.UNITNO IN [4, 5, 9..20, 128..143] THEN
           BEGIN
-            V05(DRVS[A].ATTRIB.UNITNO);
+            FREEUNIT(DRVS[A].ATTRIB.UNITNO);
             OK := ERRNUM = 0
           END;
-      P70 := OK
+      CLEARASN := OK
     END;
   BEGIN
     CLRERR;
     IF NOT (B IN [4, 5, 9..20, 128..143]) THEN
       BEGIN
         ERRNUM := 5;
-        EXIT(V04)
+        EXIT(BINDUNIT)
       END;
-    IF B = W5 THEN
+    IF B = PFUNIT THEN
       BEGIN
         ERRNUM := 16;
-        EXIT(V04)
+        EXIT(BINDUNIT)
       END;
     IF A > DRVS[0].EXTRA THEN
       BEGIN
         ERRNUM := 1;
-        EXIT(V04)
+        EXIT(BINDUNIT)
       END;
-    IF P70 THEN
+    IF CLEARASN THEN
       BEGIN
-        V := P11(B);
+        V := VOLIDX(B);
         VOLS[V].DV := DRIVE;
         VOLS[V].BUSY := TRUE;
         VOLS[V].WPVOL := DRVS[A].ATTRIB.WPROT;
         VOLS[V].B := DRVS[A].MAPLO;
         VOLS[V].A := DRVS[A].EXTRA;
-        P62(B, T);
-        P63(B, W1970);
+        RDUNIT(B, T);
+        WRUNIT(B, DRVADR);
         DRVS[A].AUX := T;
         DRVS[A].ATTRIB.UNITNO := B;
-        P69;
-        UNITWRITE(W5, DRVS, W13, PAKEY, P08(DRIVE));
+        FIXASN;
+        UNITWRITE(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(DRIVE));
         IF IOFAIL THEN
-          EXIT(V04);
-        UNITSTATUS(W5, VOLS, 16386);
+          EXIT(BINDUNIT);
+        UNITSTATUS(PFUNIT, VOLS, 16386);
         GOTO 99
       END;
     IF IOFAIL THEN
-      EXIT(V04);
+      EXIT(BINDUNIT);
   99:
   END;
   (*$I+*)
 
-  FUNCTION P71(N: INTEGER): BOOLEAN;
+  FUNCTION ADJAREA(N: INTEGER): BOOLEAN;
   VAR
     NEWEND, OLDEND: INTEGER;
     ENT: FILEENT;
     BLK: DIRBLOCK;
     SLOT, BLKNO, OFF: INTEGER;
     KEY: INTEGER;
-    PROCEDURE P72;
+    PROCEDURE FAILADJ;
     BEGIN
       IF (IORESULT <> 0) OR (ERRNUM <> 0) THEN
-        EXIT(P71)
+        EXIT(ADJAREA)
     END;
   BEGIN
-    P71 := FALSE;
-    KEY := P20(BLK, SLOT, BLKNO, OFF);
-    P72;
+    ADJAREA := FALSE;
+    KEY := FINDPAS(BLK, SLOT, BLKNO, OFF);
+    FAILADJ;
     MOVELEFT(BLK[OFF], ENT, 40);
-    NEWEND := ENT.B20 * 256 + ENT.B19;
+    NEWEND := ENT.USEDHI * 256 + ENT.USEDLO;
     NEWEND := NEWEND + N;
-    ENT.B20 := P04(NEWEND, 256);
-    ENT.B19 := P05(NEWEND, 256);
+    ENT.USEDHI := SAFEDIV(NEWEND, 256);
+    ENT.USEDLO := SAFEMOD(NEWEND, 256);
     OLDEND := KEY - N;
-    ENT.B18 := P04(OLDEND, 256);
-    ENT.B17 := P05(OLDEND, 256);
+    ENT.KEYHI := SAFEDIV(OLDEND, 256);
+    ENT.KEYLO := SAFEMOD(OLDEND, 256);
     MOVELEFT(ENT, BLK[OFF], 40);
     (*$I-*)
-    UNITWRITE(W5, BLK, 512, BLKNO, P08(DRIVE));
+    UNITWRITE(PFUNIT, BLK, 512, BLKNO, DRVCTL(DRIVE));
     (*$I+*)
-    P72;
-    P71 := TRUE
+    FAILADJ;
+    ADJAREA := TRUE
   END;
 
-  FUNCTION P73(NEED: INTEGER; VAR GOT: INTEGER): BOOLEAN;
-    PROCEDURE P74;
+  FUNCTION ALLOCBLK(NEED: INTEGER; VAR GOT: INTEGER): BOOLEAN;
+    PROCEDURE FAILALC;
     BEGIN
       IF IOFAIL THEN
-        EXIT(P73)
+        EXIT(ALLOCBLK)
     END;
   BEGIN
     CLRERR;
-    P73 := FALSE;
+    ALLOCBLK := FALSE;
     IF ALLBITS(PAKEY - 1, NEED, GOT, TRUE) THEN
       BEGIN
         SETBITS(PAKEY - 1, PAKEY - NEED, FALSE);
-        P74;
-        IF P71(NEED) THEN
-          P73 := TRUE
+        FAILALC;
+        IF ADJAREA(NEED) THEN
+          ALLOCBLK := TRUE
       END;
-    P74
+    FAILALC
   END;
 
-  FUNCTION P75(N: INTEGER): INTEGER;
-    PROCEDURE P76;
+  FUNCTION FREEBLK(N: INTEGER): INTEGER;
+    PROCEDURE FAILFRE;
     BEGIN
       IF IOFAIL THEN
-        EXIT(P75)
+        EXIT(FREEBLK)
     END;
   BEGIN
     CLRERR;
-    P75 := 0;
-    IF P71(-N) THEN
+    FREEBLK := 0;
+    IF ADJAREA(-N) THEN
       SETBITS(PAKEY + N - 1, PAKEY, TRUE);
-    P76;
-    P75 := N
+    FAILFRE;
+    FREEBLK := N
   END;
 
-  PROCEDURE V07;
+  PROCEDURE KRUNCHPA;
     { Last jump-table word is IC-JTAB; 1.1's self-rel is
       off by data_size 24. Instruction stream matches. }
-    PROCEDURE P77;
+    PROCEDURE SLIDE;
     VAR
       ENDPT: INTEGER;
       BASE: INTEGER;
@@ -1770,7 +1774,7 @@ IMPLEMENTATION
       NBLK: INTEGER;
       MARKP: ^INTEGER;
       LIM: INTEGER;
-      PROCEDURE P78;
+      PROCEDURE FILLHEAP;
       VAR P: ^HEAPBLK;
       BEGIN
         NEW(HEAP);
@@ -1783,7 +1787,7 @@ IMPLEMENTATION
       END;
     BEGIN
       MARK(MARKP);
-      P78;
+      FILLHEAP;
       IF NBLK > 0 THEN
         BEGIN
           BASE := PAKEY + DRVS[0].MAPLO;
@@ -1806,24 +1810,24 @@ IMPLEMENTATION
                     END;
                   (*$I-*)
                   REPEAT
-                    UNITREAD(W5, HEAP^, BYTES, ENDPT, P08(DRIVE));
+                    UNITREAD(PFUNIT, HEAP^, BYTES, ENDPT, DRVCTL(DRIVE));
                     IF IOFAIL THEN
-                      EXIT(V07);
-                    UNITWRITE(W5, HEAP^, BYTES, ENDPT + GAP, P08(DRIVE));
+                      EXIT(KRUNCHPA);
+                    UNITWRITE(PFUNIT, HEAP^, BYTES, ENDPT + GAP, DRVCTL(DRIVE));
                     IF IOFAIL THEN
-                      EXIT(V07)
+                      EXIT(KRUNCHPA)
                   UNTIL ENDPT <= MAP;
                   BASE := MAP + GAP;
-                  U := P66(MAP);
+                  U := KEYVOL(MAP);
                   IF U <> 0 THEN
                     BEGIN
-                      VOLS[P11(U)].B := BASE;
-                      UNITSTATUS(W5, VOLS, 16386)
+                      VOLS[VOLIDX(U)].B := BASE;
+                      UNITSTATUS(PFUNIT, VOLS, 16386)
                     END;
                   DRVS[I].MAPLO := BASE;
-                  UNITWRITE(W5, DRVS, W13, PAKEY, P08(DRIVE));
+                  UNITWRITE(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(DRIVE));
                   IF IOFAIL THEN
-                    EXIT(V07)
+                    EXIT(KRUNCHPA)
                 END
               ELSE
                 BASE := MAP;
@@ -1832,7 +1836,7 @@ IMPLEMENTATION
         END;
       RELEASE(MARKP)
     END;
-    PROCEDURE P79;
+    PROCEDURE SHRINK;
     VAR
       FRE: INTEGER;
       HI: INTEGER;
@@ -1844,53 +1848,53 @@ IMPLEMENTATION
         ELSE
           LO := PAKEY + MAPLO - 2;
       HI := LO - PAKEY;
-      FRE := P75(HI);
+      FRE := FREEBLK(HI);
       IF IOFAIL THEN
-        EXIT(V07);
+        EXIT(KRUNCHPA);
       WITH DRVS[0] DO
         MAPLO := MAPLO - FRE;
       PAKEY := LO;
       (*$I-*)
-      UNITWRITE(W5, DRVS, W13, PAKEY, P08(DRIVE));
+      UNITWRITE(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(DRIVE));
       (*$I+*)
       IF IOFAIL THEN
-        EXIT(V07)
+        EXIT(KRUNCHPA)
     END;
   BEGIN
     CLRERR;
-    P77;
-    P79
+    SLIDE;
+    SHRINK
   END;
 
   (*$I-*)
-  PROCEDURE V03;
+  PROCEDURE REMVOL;
   VAR LAST, K, I: INTEGER;
   BEGIN
     CLRERR;
     IF N > DRVS[0].EXTRA THEN
       BEGIN
         ERRNUM := 1;
-        EXIT(V03)
+        EXIT(REMVOL)
       END;
     IF DRVS[N].ATTRIB.WPROT THEN
       BEGIN
         ERRNUM := 10;
-        EXIT(V03)
+        EXIT(REMVOL)
       END;
-    UNITREAD(W5, PADIR, 25, DRVS[N].MAPLO + 2, P08(DRIVE));
+    UNITREAD(PFUNIT, PADIR, 25, DRVS[N].MAPLO + 2, DRVCTL(DRIVE));
     IF IOFAIL THEN
-      EXIT(V03);
-    IF PADIR[0].R2 <> 0 THEN
+      EXIT(REMVOL);
+    IF PADIR[0].NFILES <> 0 THEN
       BEGIN
         ERRNUM := 15;
-        EXIT(V03)
+        EXIT(REMVOL)
       END;
-    K := P66(DRVS[N].MAPLO);
+    K := KEYVOL(DRVS[N].MAPLO);
     IF K <> 0 THEN
       BEGIN
-        V05(K);
+        FREEUNIT(K);
         IF IOFAIL THEN
-          EXIT(V03)
+          EXIT(REMVOL)
       END;
     I := N;
     LAST := DRVS[0].EXTRA - 1;
@@ -1902,21 +1906,21 @@ IMPLEMENTATION
         I := I + 1
       END;
     DRVS[0].EXTRA := DRVS[0].EXTRA - 1;
-    UNITWRITE(W5, DRVS, W13, PAKEY, P08(DRIVE));
+    UNITWRITE(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(DRIVE));
     IF IOFAIL THEN
-      EXIT(V03);
+      EXIT(REMVOL);
     IF FLAG THEN
-      V07
+      KRUNCHPA
   END;
   (*$I+*)
 
-  FUNCTION V02;
+  FUNCTION ADDVOL;
   VAR
     SD: VOLDESC;
     SN: VOLNAME;
     GOT: INTEGER;
     LIM: INTEGER;
-    PROCEDURE P80(NEED: INTEGER; VAR SLOT: INTEGER; VAR BEST: INTEGER);
+    PROCEDURE FINDGAP(NEED: INTEGER; VAR SLOT: INTEGER; VAR BEST: INTEGER);
     VAR ENDPT, BESTG, GAP: INTEGER;
     BEGIN
       SLOT := 0;
@@ -1961,124 +1965,124 @@ IMPLEMENTATION
       ELSE
         BEST := ENDPT
     END;
-    PROCEDURE P81;
+    PROCEDURE NEWVDIR;
     BEGIN
       FILLCHAR(PADIR, 2028, CHR(0));
-      PADIR[0].W0 := 0;
-      PADIR[0].W1 := 6;
+      PADIR[0].FIRSTB := 0;
+      PADIR[0].LASTB := 6;
       MOVELEFT(SN, PADIR[0].NM, 8);
-      PADIR[0].R1 := N;
-      PADIR[0].R2 := 0;
+      PADIR[0].NBLKS := N;
+      PADIR[0].NFILES := 0;
       PADIR[0].DAT.MONTH := THEDATE.MONTH;
       PADIR[0].DAT.DAY := THEDATE.DAY;
       PADIR[0].DAT.YEAR := THEDATE.YEAR;
       (*$I-*)
-      UNITWRITE(W5, PADIR, 26, DRVS[W933].MAPLO + 2, P08(DRIVE));
+      UNITWRITE(PFUNIT, PADIR, 26, DRVS[NEWSLOT].MAPLO + 2, DRVCTL(DRIVE));
       (*$I+*)
       IF IOFAIL THEN
-        EXIT(V02)
+        EXIT(ADDVOL)
     END;
   BEGIN
     SN := NM;
     SD := DS;
     CLRERR;
-    V02 := 0;
-    W933 := 0;
+    ADDVOL := 0;
+    NEWSLOT := 0;
     IF N < 6 THEN
       BEGIN
         ERRNUM := 13;
-        EXIT(V02)
+        EXIT(ADDVOL)
       END;
     IF DRVS[0].EXTRA >= 31 THEN
       BEGIN
         ERRNUM := 3;
-        EXIT(V02)
+        EXIT(ADDVOL)
       END;
-    IF NOT P16(SN) THEN
+    IF NOT PVVALID(SN) THEN
       BEGIN
         ERRNUM := 9;
-        EXIT(V02)
+        EXIT(ADDVOL)
       END;
-    W933 := V10(SN, SD);
+    NEWSLOT := FINDBYNM(SN, SD);
     IF ERRNUM = 1 THEN
       ERRNUM := 0;
-    IF W933 <> 0 THEN
-      IF DESCS[W933] = SD THEN
+    IF NEWSLOT <> 0 THEN
+      IF DESCS[NEWSLOT] = SD THEN
         BEGIN
           ERRNUM := 4;
-          W933 := 0;
-          EXIT(V02)
+          NEWSLOT := 0;
+          EXIT(ADDVOL)
         END;
-    P80(N, W933, W931);
-    IF W933 = 0 THEN
-      IF P73(N, GOT) THEN
+    FINDGAP(N, NEWSLOT, GAPEND);
+    IF NEWSLOT = 0 THEN
+      IF ALLOCBLK(N, GOT) THEN
         BEGIN
           DRVS[0].MAPLO := DRVS[0].MAPLO + N;
           PAKEY := PAKEY - N;
           (*$I-*)
-          UNITWRITE(W5, DRVS, W13, PAKEY, P08(DRIVE));
+          UNITWRITE(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(DRIVE));
           (*$I+*)
           IF IOFAIL THEN
-            EXIT(V02);
-          P80(N, W933, W931)
+            EXIT(ADDVOL);
+          FINDGAP(N, NEWSLOT, GAPEND)
         END;
-    IF W933 = 0 THEN
+    IF NEWSLOT = 0 THEN
       BEGIN
         ERRNUM := 2;
-        EXIT(V02)
+        EXIT(ADDVOL)
       END;
-    W932 := DRVS[0].EXTRA;
-    LIM := W933;
-    WHILE W932 >= LIM DO
+    SELIX := DRVS[0].EXTRA;
+    LIM := NEWSLOT;
+    WHILE SELIX >= LIM DO
       BEGIN
-        DRVS[W932 + 1] := DRVS[W932];
-        VNAMES[W932 + 1] := VNAMES[W932];
-        DESCS[W932 + 1] := DESCS[W932];
-        W932 := W932 - 1
+        DRVS[SELIX + 1] := DRVS[SELIX];
+        VNAMES[SELIX + 1] := VNAMES[SELIX];
+        DESCS[SELIX + 1] := DESCS[SELIX];
+        SELIX := SELIX - 1
       END;
-    DRVS[W933].MAPLO := W931;
-    DRVS[W933].EXTRA := N;
-    DRVS[W933].ATTRIB.UNITNO := 0;
-    DRVS[W933].ATTRIB.FILL7 := 0;
-    DRVS[W933].ATTRIB.WPROT := FALSE;
-    VNAMES[W933] := SN;
-    DESCS[W933] := SD;
+    DRVS[NEWSLOT].MAPLO := GAPEND;
+    DRVS[NEWSLOT].EXTRA := N;
+    DRVS[NEWSLOT].ATTRIB.UNITNO := 0;
+    DRVS[NEWSLOT].ATTRIB.FILL7 := 0;
+    DRVS[NEWSLOT].ATTRIB.WPROT := FALSE;
+    VNAMES[NEWSLOT] := SN;
+    DESCS[NEWSLOT] := SD;
     DRVS[0].EXTRA := DRVS[0].EXTRA + 1;
-    P81;
+    NEWVDIR;
     (*$I-*)
-    UNITWRITE(W5, DRVS, W13, PAKEY, P08(DRIVE));
+    UNITWRITE(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(DRIVE));
     (*$I+*)
     IF IOFAIL THEN
-      W933 := 0;
-    V02 := W933
+      NEWSLOT := 0;
+    ADDVOL := NEWSLOT
   END;
 
   (*$I-*)
-  PROCEDURE V06;
+  PROCEDURE SETWP;
   VAR U: INTEGER;
   BEGIN
     CLRERR;
     IF N > DRVS[0].EXTRA THEN
       BEGIN
         ERRNUM := 1;
-        EXIT(V06)
+        EXIT(SETWP)
       END;
     DRVS[N].ATTRIB.WPROT := FLAG;
-    UNITWRITE(W5, DRVS, W13, PAKEY, P08(DRIVE));
+    UNITWRITE(PFUNIT, DRVS, TBLLEN, PAKEY, DRVCTL(DRIVE));
     IF IOFAIL THEN
-      EXIT(V06);
+      EXIT(SETWP);
     U := DRVS[N].ATTRIB.UNITNO;
     IF U <> 0 THEN
       BEGIN
-        VOLS[P11(U)].WPVOL := FLAG;
-        UNITSTATUS(W5, VOLS, 16386)
+        VOLS[VOLIDX(U)].WPVOL := FLAG;
+        UNITSTATUS(PFUNIT, VOLS, 16386)
       END
   END;
   (*$I+*)
 
 BEGIN
-  V13;
-  V08(DRIVE)
+  INITDRV;
+  MOUNTDRV(DRIVE)
 END;
 
 BEGIN

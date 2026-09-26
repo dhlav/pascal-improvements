@@ -11,7 +11,7 @@
   CRTPRE is the unit's copy of CRTCTRL.PREFIXED; the name
   avoids a clash with SYSCOM^.CRTCTRL.PREFIXED inside WITH.
 
-  U43..U48 are EXTERNAL 6502 in ppm/src/UTILNAT.TEXT. }
+  UPCHAR..RSTSTAT are EXTERNAL 6502 in ppm/src/UTILNAT.TEXT. }
 (*$U-*)
 (*$NS 7*)
 (*$R+*)
@@ -85,12 +85,94 @@ TYPE
             VID: STRING[7];
             REST: ARRAY [1..6] OF INTEGER
           END;
+  NAM7 = STRING[7];
   NAM15 = STRING[15];
   NAM23 = STRING[23];
+  { One word, so a record assignment is MOV 1.
+    HEAP and DOBACKUP's HP overlay the pointer
+    with this so the copy is not a pointer store. }
+  ONEW = RECORD
+           W: INTEGER
+         END;
+  { 13-word Pascal directory entry. FILEREC's D13
+    arm is this type, so a 14-word file slot can
+    be assigned 13 words (MOV 13). }
+  DIRENT13 = RECORD
+               LO: INTEGER;
+               HI: INTEGER;
+               KIND: INTEGER;
+               CASE INTEGER OF
+                 0: (VID: NAM7;
+                     EOV: INTEGER;
+                     NF: 0..77;
+                     REST: ARRAY [1..4] OF INTEGER);
+                 1: (NM: NAM15;
+                     PAD11: INTEGER;
+                     PAD12: INTEGER)
+             END;
   DIR512 = PACKED ARRAY [0..511] OF 0..255;
   BLK256 = PACKED ARRAY [0..255] OF 0..255;
+  BITS32 = PACKED ARRAY [0..31] OF BOOLEAN;
+  { One name per group so A is SIND 0. Word 2 is
+    packed 8+7+1 so DORESTOR R16 can STP zeros. }
+  REC4C = PACKED RECORD
+            B0: 0..255;
+            B1: 0..127;
+            F: BOOLEAN
+          END;
+  REC4 = RECORD
+           A: INTEGER;
+           B: INTEGER;
+           C: REC4C;
+           D: INTEGER
+         END;
+  ARR32 = ARRAY [0..31] OF REC4;
+  NAM7ARR = ARRAY [0..31] OF NAM7;
+  NAM15ARR = ARRAY [0..31] OF NAM15;
+  FILEREC = RECORD
+              CASE INTEGER OF
+                0: (LO: INTEGER;
+                    HI: INTEGER;
+                    PAD2: INTEGER;
+                    NM: NAM15;
+                    PAD11: INTEGER;
+                    DAT: PACKED RECORD
+                           MONTH: 0..15;
+                           DAY: 0..31;
+                           YEAR: 0..127
+                         END;
+                    VOL: INTEGER);
+                1: (D13: DIRENT13)
+            END;
+  FILEARR = ARRAY [1..300] OF FILEREC;
+  HDRREC = RECORD
+             FIRST: INTEGER;
+             LASTB: INTEGER;
+             KIND: PACKED RECORD
+                     K: 0..15;
+                     F: 0..4095
+                   END;
+             VID: NAM7;
+             EOV: INTEGER;
+             NF: 0..77;
+             DLAST: INTEGER;
+             PAD31: INTEGER;
+             PAD32: INTEGER;
+             PAD33: INTEGER;
+             COMMENT: STR80;
+             BKBLKS: INTEGER;
+             NDISKS: INTEGER;
+             DISKNUM: INTEGER;
+             TYP: INTEGER;
+             NVOLS: INTEGER;
+             NFILES: INTEGER
+           END;
+  { DV bits 0..2, STAT 3..5, BUSY bit 15. }
   VOLREC = PACKED RECORD
-             A: 0..32767;
+             DV: 0..7;
+             STAT: 0..7;
+             FILL: 0..255;
+             WPVOL: BOOLEAN;
              BUSY: BOOLEAN;
              B: INTEGER;
              C: INTEGER
@@ -109,166 +191,212 @@ VAR
        END;
   { 9..104: six SET OF CHAR, 16 words each. }
   SETCR: CHARSET;
-  SET125: CHARSET;
+  ECHOSET: CHARSET;
   SETAZ: CHARSET;
   SETALNUM: CHARSET;
   SETDIG: CHARSET;
   SETDASH: CHARSET;
-  W105: KEYSET;
-  W106: INTEGER;
-  W107: INTEGER;
-  W108: INTEGER;
-  HEAP: ^INTEGER;
+  EDITKEYS: KEYSET;
+  LASTKEY: INTEGER;
+  SCRHIGH: INTEGER;
+  SCRWIDE: INTEGER;
+  HEAP: RECORD
+          CASE BOOLEAN OF
+            FALSE: (P: ^INTEGER);
+            TRUE: (R: ONEW)
+        END;
   { 110..5653. Named words are the ones INITIALI
-    addresses; the rest stay pads. }
-  PAD110: INTEGER;
-  W111: INTEGER;
-  PAD112: ARRAY [1..58] OF INTEGER;
+    and the host helpers address; the rest stay pads. }
+  BKTYPE: INTEGER;
+  DRIVE: INTEGER;
+  FILECNT: INTEGER;
+  VOLCNT: INTEGER;
+  ACT: NAM7;
+  FROMTO: STRING[6];
+  PREP2: STRING[6];
+  TITLE: STR80;
+  FILEIX: INTEGER;
+  VOLIX: INTEGER;
+  RESTMODE: INTEGER;
   DASHES: STR80;
   VOLNAM: NAM8;
-  W275: INTEGER;
-  PAD276: ARRAY [1..385] OF INTEGER;
-  BLK661: BLK256;
-  PAD789: ARRAY [1..2] OF INTEGER;
-  W791: INTEGER;
-  PAD792: ARRAY [1..4204] OF INTEGER;
-  W4996: INTEGER;
-  PAD4997: ARRAY [1..2] OF INTEGER;
+  NDRIVES: INTEGER;
+  VOLSIN: INTEGER;
+  VOLTBL: ARR32;
+  DESCS: NAM15ARR;
+  VOLNMS: NAM7ARR;
+  SELBITS: BITS32;
+  LASTIO: INTEGER;
+  VOLNOW: INTEGER;
+  CHOSEN: INTEGER;
+  PAGEFLG: INTEGER;
+  MARKCNT: INTEGER;
+  FILES: FILEARR;
+  FLUNIT: INTEGER;
+  PAD4997: INTEGER;
+  HDRBLKS: INTEGER;
   LISTING: NAM23;
-  PAD5011: ARRAY [1..43] OF INTEGER;
-  W5054: INTEGER;
-  PAD5055: INTEGER;
-  W5056: INTEGER;
-  PAD5057: ARRAY [1..11] OF INTEGER;
+  VERIFY: BOOLEAN;
+  COMMENT: STR80;
+  DATBLKS: INTEGER;
+  FLSIZE: INTEGER;
+  DISKCNT: INTEGER;
+  CONFIRM: BOOLEAN;
+  ONEBLKS: INTEGER;
+  PAD5058: INTEGER;
+  FILEPOS: INTEGER;
+  BLKDONE: INTEGER;
+  FLBLK: INTEGER;
+  SAVFILE: INTEGER;
+  SAVPROG: INTEGER;
+  PAD5064: ARRAY [1..4] OF INTEGER;
   DIRBLK: DIR512;
-  W5324: INTEGER;
-  W5325: INTEGER;
-  W5326: KEYSET;
-  W5327: INTEGER;
+  DRVADDR: INTEGER;
+  PFUNIT: INTEGER;
+  DRVSAVL: KEYSET;
+  STATFLG: INTEGER;
   VOLS: VOLARR;
-  W5418: INTEGER;
+  PAD5418: INTEGER;
   VOLS2: VOLARR;
-  W5509: INTEGER;
-  PAD5510: ARRAY [1..9] OF INTEGER;
-  W5519: INTEGER;
-  PAD5520: ARRAY [1..109] OF INTEGER;
-  W5629: INTEGER;
-  PAD5630: ARRAY [1..23] OF INTEGER;
-  W5653: INTEGER;
-  W5654: INTEGER;
+  PAD5509: INTEGER;
+  DIRAT: INTEGER;
+  MAPBASE: INTEGER;
+  PAKEY: INTEGER;
+  ENTIX: INTEGER;
+  ENTBLK: INTEGER;
+  ENTLEN: INTEGER;
+  ENTS: INTEGER;
+  DISKNO: INTEGER;
+  STATROW: INTEGER;
+  TMP: INTEGER;
+  SRCBLOCK: INTEGER;
+  HDR: HDRREC;
+  UNITSTR: STR80;
+  PAD5622: INTEGER;
+  SHOWIX: INTEGER;
+  SHOWY: INTEGER;
+  PAD5625: INTEGER;
+  AREAKEY: INTEGER;
+  DISKBLKS: INTEGER;
+  AREASZ: INTEGER;
+  REFMT: INTEGER;
+  BKNAME: NAM7;
+  SELFL: PACKED ARRAY [0..300] OF BOOLEAN;
+  FIRSTDRV: INTEGER;
+  PROGUNIT: INTEGER;
   PROGDIR: DIR26;
-  W5668: BOOLEAN;
+  SAWESC: BOOLEAN;
   ESCAPE: CHAR;
   CRTCH: CRTCHRS;
   CRTPRE: PREF16;
-  W5676: INTEGER;
+  DIGIX: INTEGER;
   KEYMAP: PACKED ARRAY [0..255] OF 0..15;
-  W5741: INTEGER;
+  BOOTUNIT: INTEGER;
   BOOTDIR: DIR26;
-  W5755: STRING[1];
-  W5756: BOOLEAN;
-  W5757: INTEGER;
+  ASPACE: STRING[1];
+  ANSOK: BOOLEAN;
+  DIRIO: INTEGER;
   CRTINFOCH: PACKED ARRAY [0..12] OF CHAR;
   INFOPREF: PREF16;
-  W5766: KEYSET;
+  STOPKEY: KEYSET;
 
-  PROCEDURE U02(X, Y: INTEGER);
-  PROCEDURE U03;
-  PROCEDURE U04;
-  PROCEDURE U05;
-  PROCEDURE U06;
-  PROCEDURE U07(VAR CH: CHAR; VALID: CHARSET);
-  PROCEDURE U08;
-  PROCEDURE U09(Y: INTEGER);
-  PROCEDURE U10;
-  PROCEDURE U11(X, Y: INTEGER);
-  PROCEDURE U12;
-  FUNCTION U13(N: INTEGER): BOOLEAN;
-  FUNCTION U14(N: INTEGER): BOOLEAN;
-  FUNCTION U15(VAR CH: CHAR): INTEGER;
-  PROCEDURE U16(VAR S: STR80; N: INTEGER; CH: CHAR);
-  PROCEDURE U17(VAR S: STR80; N: INTEGER; CH: CHAR);
-  PROCEDURE U18(VAR S: STR80);
-  PROCEDURE U19(VAR S: STR80);
-  PROCEDURE U20(VAR S: STR80);
-  PROCEDURE U21(N: INTEGER; VAR S: STR80);
-  FUNCTION U22(S: STR80; VAR N: INTEGER): BOOLEAN;
-  PROCEDURE U23(X, Y: INTEGER);
-  PROCEDURE U24(VAR X, Y: INTEGER);
-  FUNCTION U25: CHAR;
-  FUNCTION U26(VALID: CHARSET; ECHO: BOOLEAN): CHAR;
-  FUNCTION U27(VALID: CHARSET; KEYS: KEYSET;
+  PROCEDURE ERASEOS(X, Y: INTEGER);
+  PROCEDURE BACKSP;
+  PROCEDURE GOHOME;
+  PROCEDURE SENDESC;
+  PROCEDURE LINEFEED;
+  PROCEDURE GETKEY(VAR CH: CHAR; VALID: CHARSET);
+  PROCEDURE CLEARLN;
+  PROCEDURE CLEARY(Y: INTEGER);
+  PROCEDURE NDFWD;
+  PROCEDURE CLREOL(X, Y: INTEGER);
+  PROCEDURE CLRSCR;
+  FUNCTION HASCRT(N: INTEGER): BOOLEAN;
+  FUNCTION HASINFO(N: INTEGER): BOOLEAN;
+  FUNCTION KEYCODE(VAR CH: CHAR): INTEGER;
+  PROCEDURE PADLEFT(VAR S: STR80; N: INTEGER; CH: CHAR);
+  PROCEDURE PADRIGHT(VAR S: STR80; N: INTEGER; CH: CHAR);
+  PROCEDURE TRIMLEAD(VAR S: STR80);
+  PROCEDURE TRIMTAIL(VAR S: STR80);
+  PROCEDURE STRIPSP(VAR S: STR80);
+  PROCEDURE NUMSTR(N: INTEGER; VAR S: STR80);
+  FUNCTION STRNUM(S: STR80; VAR N: INTEGER): BOOLEAN;
+  PROCEDURE MOVETO(X, Y: INTEGER);
+  PROCEDURE GETXY(VAR X, Y: INTEGER);
+  FUNCTION INKEY: CHAR;
+  FUNCTION INSET(VALID: CHARSET; ECHO: BOOLEAN): CHAR;
+  FUNCTION CMDKEY(VALID: CHARSET; KEYS: KEYSET;
                VAR CH: CHAR; ECHO: BOOLEAN): INTEGER;
-  FUNCTION U28: BOOLEAN;
-  FUNCTION U29: BOOLEAN;
-  PROCEDURE U30(X, Y: INTEGER; FLAG: BOOLEAN);
-  PROCEDURE U31(X, Y: INTEGER; VAR FLAG: BOOLEAN);
-  FUNCTION U32(FLAG: BOOLEAN): BOOLEAN;
-  PROCEDURE U33(X, Y: INTEGER; S: STR80);
-  PROCEDURE U34(Y: INTEGER; S: STR80);
-  PROCEDURE U35(X, Y: INTEGER; S: STR80; N: INTEGER);
-  PROCEDURE U36(X, Y: INTEGER; VAR S: STR80; N: INTEGER);
-  PROCEDURE U37(X, Y: INTEGER; VAL, WID: INTEGER);
-  PROCEDURE U38(X, Y: INTEGER; VAR NUM: INTEGER; WID: INTEGER);
-  FUNCTION U39(S: STR80): INTEGER;
-  PROCEDURE U40;
-  PROCEDURE U41;
-  PROCEDURE U42;
-  FUNCTION U43(CH: CHAR): CHAR;
-  PROCEDURE U44(VAR S: STR80);
-  FUNCTION U45(N: INTEGER): INTEGER;
-  PROCEDURE U46;
-  PROCEDURE U47;
-  PROCEDURE U48;
-  PROCEDURE U49;
-  PROCEDURE U50;
+  FUNCTION WASESC: BOOLEAN;
+  FUNCTION WASANS: BOOLEAN;
+  PROCEDURE DRAWYN(X, Y: INTEGER; FLAG: BOOLEAN);
+  PROCEDURE ASKYN(X, Y: INTEGER; VAR FLAG: BOOLEAN);
+  FUNCTION YESNO(FLAG: BOOLEAN): BOOLEAN;
+  PROCEDURE PUTSTR(X, Y: INTEGER; S: STR80);
+  PROCEDURE CENTER(Y: INTEGER; S: STR80);
+  PROCEDURE PUTPAD(X, Y: INTEGER; S: STR80; N: INTEGER);
+  PROCEDURE EDITSTR(X, Y: INTEGER; VAR S: STR80; N: INTEGER);
+  PROCEDURE PUTNUM(X, Y: INTEGER; VAL, WID: INTEGER);
+  PROCEDURE EDITNUM(X, Y: INTEGER; VAR NUM: INTEGER; WID: INTEGER);
+  FUNCTION WAITCODE(S: STR80): INTEGER;
+  PROCEDURE CLRFOOT;
+  PROCEDURE HITSPACE;
+  PROCEDURE BELL;
+  FUNCTION UPCHAR(CH: CHAR): CHAR;
+  PROCEDURE UPSTR(VAR S: STR80);
+  FUNCTION FORMDISK(N: INTEGER): INTEGER;
+  PROCEDURE SAVSTAT;
+  PROCEDURE DISINT;
+  PROCEDURE RSTSTAT;
+  PROCEDURE READDIRS;
+  PROCEDURE NEEDDISK;
 
 IMPLEMENTATION
-  { Emission order is declaration order. U52 is
+  { Emission order is declaration order. INITCRT is
     implementation-only after the interface. Nested
-    U51 lives inside U50. }
+    WAITVOL lives inside NEEDDISK. }
 
   (*$I-*)
   (*$R-*)
-  PROCEDURE U02;
+  PROCEDURE ERASEOS;
   BEGIN
-    U23(X, Y);
+    MOVETO(X, Y);
     IF CRTPRE[2] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[2], 1, 0, 12)
   END;
 
-  PROCEDURE U03;
+  PROCEDURE BACKSP;
   BEGIN
     IF CRTPRE[7] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[7], 1, 0, 12)
   END;
 
-  PROCEDURE U04;
+  PROCEDURE GOHOME;
   BEGIN
     IF CRTPRE[8] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[8], 1, 0, 12)
   END;
 
-  PROCEDURE U05;
+  PROCEDURE SENDESC;
   BEGIN
     IF CRTPRE[5] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[5], 1, 0, 12)
   END;
 
-  PROCEDURE U06;
+  PROCEDURE LINEFEED;
   BEGIN
     UNITWRITE(2, CRTCH[6], 1, 0, 12)
   END;
 
-  PROCEDURE U07;
+  PROCEDURE GETKEY;
   BEGIN
     CH := ' ';
     REPEAT
-      CH := U25;
+      CH := INKEY;
       IF CH IN ['a'..'z'] THEN
         CH := CHR(ORD(CH) - 97 + 65);
       IF NOT (CH IN VALID) THEN
@@ -279,31 +407,31 @@ IMPLEMENTATION
     UNTIL CH IN VALID
   END;
 
-  PROCEDURE U08;
+  PROCEDURE CLEARLN;
   BEGIN
     IF CRTPRE[4] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[4], 1, 0, 12)
   END;
 
-  PROCEDURE U09;
+  PROCEDURE CLEARY;
   BEGIN
-    U23(0, Y);
+    MOVETO(0, Y);
     IF CRTPRE[2] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[2], 1, 0, 12)
   END;
 
-  PROCEDURE U10;
+  PROCEDURE NDFWD;
   BEGIN
     IF CRTPRE[0] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[0], 1, 0, 12)
   END;
 
-  PROCEDURE U11;
+  PROCEDURE CLREOL;
   BEGIN
-    U23(X, Y);
+    MOVETO(X, Y);
     IF CRTPRE[1] THEN
       UNITWRITE(2, ESCAPE, 1, 0, 12);
     UNITWRITE(2, CRTCH[1], 1, 0, 12)
@@ -313,11 +441,11 @@ IMPLEMENTATION
 
   (*$I-*)
   (*$R-*)
-  PROCEDURE U12;
+  PROCEDURE CLRSCR;
   BEGIN
     IF CRTCH[3] = '0' THEN
       BEGIN
-        U23(0, CUR.Y);
+        MOVETO(0, CUR.Y);
         UNITWRITE(2, CRTCH[2], 1, 0, 12)
       END
     ELSE
@@ -328,17 +456,17 @@ IMPLEMENTATION
       END
   END;
 
-  FUNCTION U13;
+  FUNCTION HASCRT;
   BEGIN
-    U13 := CRTCH[N] <> CHR(0)
+    HASCRT := CRTCH[N] <> CHR(0)
   END;
 
-  FUNCTION U14;
+  FUNCTION HASINFO;
   BEGIN
-    U14 := CRTINFOCH[N] <> CHR(0)
+    HASINFO := CRTINFOCH[N] <> CHR(0)
   END;
 
-  FUNCTION U15;
+  FUNCTION KEYCODE;
   VAR
     PREF: BOOLEAN;
     CODE: INTEGER;
@@ -353,10 +481,10 @@ IMPLEMENTATION
     CODE := KEYMAP[ORD(CH)];
     IF NOT (PREF = INFOPREF[CODE]) THEN
       CODE := 10;
-    U15 := CODE
+    KEYCODE := CODE
   END;
 
-  PROCEDURE U16;
+  PROCEDURE PADLEFT;
   VAR
     T: STR80;
   BEGIN
@@ -366,7 +494,7 @@ IMPLEMENTATION
     S := T
   END;
 
-  PROCEDURE U17;
+  PROCEDURE PADRIGHT;
   VAR
     T: STR80;
   BEGIN
@@ -376,7 +504,7 @@ IMPLEMENTATION
     S := T
   END;
 
-  PROCEDURE U18;
+  PROCEDURE TRIMLEAD;
   VAR
     I: INTEGER;
   BEGIN
@@ -385,7 +513,7 @@ IMPLEMENTATION
     MOVELEFT(S[I + 1], S[1], LENGTH(S))
   END;
 
-  PROCEDURE U19;
+  PROCEDURE TRIMTAIL;
   VAR
     I: INTEGER;
   BEGIN
@@ -393,7 +521,7 @@ IMPLEMENTATION
     S[0] := CHR(LENGTH(S) + I)
   END;
 
-  PROCEDURE U20;
+  PROCEDURE STRIPSP;
   VAR
     I: INTEGER;
     J: INTEGER;
@@ -408,7 +536,7 @@ IMPLEMENTATION
       END
   END;
 
-  PROCEDURE U21;
+  PROCEDURE NUMSTR;
   VAR
     POS: INTEGER;
     NEG: BOOLEAN;
@@ -438,13 +566,13 @@ IMPLEMENTATION
       END
   END;
 
-  FUNCTION U22;
+  FUNCTION STRNUM;
   VAR
     NEG: BOOLEAN;
     DIG: INTEGER;
   BEGIN
     NEG := FALSE;
-    U22 := FALSE;
+    STRNUM := FALSE;
     N := 0;
     IF S[1] = '-' THEN
       BEGIN
@@ -460,27 +588,27 @@ IMPLEMENTATION
     IF S <> '' THEN
       BEGIN
         IF N > 3276 THEN
-          EXIT(U22);
+          EXIT(STRNUM);
         IF (N = 3276) AND (S[1] > '7') THEN
-          EXIT(U22);
+          EXIT(STRNUM);
         DIG := ORD(S[1]) - 48;
         N := N * 10 + DIG
       END;
     IF NEG THEN
       N := -N;
-    U22 := TRUE
+    STRNUM := TRUE
   END;
   (*$R+*)
   (*$I+*)
 
-  PROCEDURE U23;
+  PROCEDURE MOVETO;
   BEGIN
     CUR.X := X;
     CUR.Y := Y;
     GOTOXY(X, Y)
   END;
 
-  PROCEDURE U24;
+  PROCEDURE GETXY;
   BEGIN
     X := CUR.X;
     Y := CUR.Y
@@ -488,46 +616,46 @@ IMPLEMENTATION
 
   (*$I-*)
   (*$R-*)
-  FUNCTION U25;
+  FUNCTION INKEY;
   VAR
     CH: PACKED ARRAY [0..0] OF CHAR;
   BEGIN
-    U25 := ' ';
+    INKEY := ' ';
     UNITREAD(2, CH, 1, 0, 12);
-    U25 := CH[0];
-    W5668 := CH[0] = CHR(27)
+    INKEY := CH[0];
+    SAWESC := CH[0] = CHR(27)
   END;
 
-  FUNCTION U26;
+  FUNCTION INSET;
   VAR
     CH: CHAR;
   BEGIN
-    CH := U25;
+    CH := INKEY;
     WHILE NOT (CH IN VALID) DO
       BEGIN
-        U42;
-        CH := U25
+        BELL;
+        CH := INKEY
       END;
     IF ECHO THEN
-      IF CH IN SET125 THEN
+      IF CH IN ECHOSET THEN
         UNITWRITE(1, CH, 1, 0, 12);
-    U26 := CH
+    INSET := CH
   END;
 
-  FUNCTION U27;
+  FUNCTION CMDKEY;
   VAR
     CODE: INTEGER;
     OK: BOOLEAN;
   BEGIN
     REPEAT
-      CH := U25;
-      CODE := U15(CH);
+      CH := INKEY;
+      CODE := KEYCODE(CH);
       IF CH IN VALID THEN
         OK := TRUE
       ELSE
-        IF U43(CH) IN VALID THEN
+        IF UPCHAR(CH) IN VALID THEN
           BEGIN
-            CH := U43(CH);
+            CH := UPCHAR(CH);
             OK := TRUE
           END
         ELSE
@@ -536,104 +664,104 @@ IMPLEMENTATION
           ELSE
             BEGIN
               OK := FALSE;
-              U42
+              BELL
             END
     UNTIL OK;
     IF CODE = 10 THEN
-      IF (CH IN SET125) AND ECHO THEN
+      IF (CH IN ECHOSET) AND ECHO THEN
         UNITWRITE(1, CH, 1, 0, 12);
-    W106 := CODE;
-    U27 := CODE
+    LASTKEY := CODE;
+    CMDKEY := CODE
   END;
   (*$R+*)
   (*$I+*)
 
-  FUNCTION U28;
+  FUNCTION WASESC;
   BEGIN
-    U28 := W5668;
-    W5668 := FALSE
+    WASESC := SAWESC;
+    SAWESC := FALSE
   END;
 
-  FUNCTION U29;
+  FUNCTION WASANS;
   BEGIN
-    U29 := W5756;
-    W5756 := FALSE
+    WASANS := ANSOK;
+    ANSOK := FALSE
   END;
 
-  PROCEDURE U30;
+  PROCEDURE DRAWYN;
   BEGIN
     IF FLAG THEN
-      U33(X, Y, 'Yes')
+      PUTSTR(X, Y, 'Yes')
     ELSE
-      U33(X, Y, 'No ')
+      PUTSTR(X, Y, 'No ')
   END;
 
   (*$I-*)
   (*$R-*)
-  PROCEDURE U31;
+  PROCEDURE ASKYN;
   VAR
     CH: CHAR;
   BEGIN
-    U30(X, Y, FLAG);
-    U24(X, Y);
-    U23(X - 3, Y);
-    W106 := U27([CHR(13), 'F', 'N', 'T', 'Y',
+    DRAWYN(X, Y, FLAG);
+    GETXY(X, Y);
+    MOVETO(X - 3, Y);
+    LASTKEY := CMDKEY([CHR(13), 'F', 'N', 'T', 'Y',
                  'f', 'n', 't', 'y'],
                 [3, 4], CH, FALSE);
-    CH := U43(CH);
-    W5756 := TRUE;
+    CH := UPCHAR(CH);
+    ANSOK := TRUE;
     CASE CH OF
       'T', 'Y':
         FLAG := TRUE;
       'F', 'N':
         FLAG := FALSE;
       OTHERWISE
-        W5756 := FALSE
+        ANSOK := FALSE
     END;
-    U30(X - 3, Y, FLAG)
+    DRAWYN(X - 3, Y, FLAG)
   END;
 
-  FUNCTION U32;
+  FUNCTION YESNO;
   BEGIN
-    U31(-1, 0, FLAG);
-    U32 := FLAG
+    ASKYN(-1, 0, FLAG);
+    YESNO := FLAG
   END;
 
-  PROCEDURE U33;
+  PROCEDURE PUTSTR;
   BEGIN
     IF X < 0 THEN
-      U24(X, Y);
+      GETXY(X, Y);
     CUR.X := X;
     CUR.Y := Y;
-    U23(X, Y);
+    MOVETO(X, Y);
     UNITWRITE(1, S[1], LENGTH(S), 0, 0);
     CUR.X := CUR.X + LENGTH(S);
-    IF CUR.X > W108 THEN
-      CUR.X := W108
+    IF CUR.X > SCRWIDE THEN
+      CUR.X := SCRWIDE
   END;
 
-  PROCEDURE U34;
+  PROCEDURE CENTER;
   VAR
     PAD: INTEGER;
   BEGIN
     PAD := 0;
-    U02(0, Y);
-    IF LENGTH(S) > (W108 + 1) THEN
-      S := COPY(S, 1, W108 + 1);
-    IF LENGTH(S) < (W108 + 1) THEN
-      PAD := ((W108 + 1) - LENGTH(S)) DIV 2;
+    ERASEOS(0, Y);
+    IF LENGTH(S) > (SCRWIDE + 1) THEN
+      S := COPY(S, 1, SCRWIDE + 1);
+    IF LENGTH(S) < (SCRWIDE + 1) THEN
+      PAD := ((SCRWIDE + 1) - LENGTH(S)) DIV 2;
     IF PAD > 0 THEN
       PAD := PAD - 1;
-    U33(PAD, Y, S)
+    PUTSTR(PAD, Y, S)
   END;
 
-  PROCEDURE U35;
+  PROCEDURE PUTPAD;
   BEGIN
-    U17(S, N, ' ');
-    U33(X, Y, S)
+    PADRIGHT(S, N, ' ');
+    PUTSTR(X, Y, S)
   END;
 
-  PROCEDURE U36;
+  PROCEDURE EDITSTR;
   VAR
     CH: CHAR;
     UNUSED: STR80;
@@ -643,18 +771,18 @@ IMPLEMENTATION
     CODE: INTEGER;
   BEGIN
     IF X < 0 THEN
-      U24(X, Y);
+      GETXY(X, Y);
     T := '';
     I := 0;
-    U35(X, Y, ' ', N);
-    U23(X, Y);
+    PUTPAD(X, Y, ' ', N);
+    MOVETO(X, Y);
     REPEAT
       IF I >= N THEN
         VALID := []
       ELSE
-        VALID := SET125;
+        VALID := ECHOSET;
       VALID := VALID + [CHR(13)];
-      CODE := U27(VALID, W105, CH, TRUE);
+      CODE := CMDKEY(VALID, EDITKEYS, CH, TRUE);
       CASE CODE OF
         0, 5, 8:
           IF CH <> CHR(13) THEN
@@ -674,22 +802,22 @@ IMPLEMENTATION
               WRITE(CHR(8), ' ', CHR(8))
             END
       END
-    UNTIL (CODE IN W5766) OR (CH = CHR(13));
+    UNTIL (CODE IN STOPKEY) OR (CH = CHR(13));
     T[0] := CHR(I);
-    U35(X, Y, T, N);
+    PUTPAD(X, Y, T, N);
     S := T
   END;
 
-  PROCEDURE U37;
+  PROCEDURE PUTNUM;
   VAR
     T: STR80;
   BEGIN
-    U21(VAL, T);
-    U16(T, WID, ' ');
-    U33(X, Y, T)
+    NUMSTR(VAL, T);
+    PADLEFT(T, WID, ' ');
+    PUTSTR(X, Y, T)
   END;
 
-  PROCEDURE U38;
+  PROCEDURE EDITNUM;
   VAR
     CH: CHAR;
     SPARE: INTEGER;
@@ -701,18 +829,18 @@ IMPLEMENTATION
     K: INTEGER;
   BEGIN
     IF X < 0 THEN
-      U24(X, Y);
+      GETXY(X, Y);
     T := '';
     I := 0;
-    U35(X, Y, ' ', WID);
-    U23(X, Y);
+    PUTPAD(X, Y, ' ', WID);
+    MOVETO(X, Y);
     REPEAT
       IF I = WID THEN
         VALID := []
       ELSE
         VALID := SETDIG;
       VALID := VALID + [CHR(13)];
-      CODE := U27(VALID, W105, CH, TRUE);
+      CODE := CMDKEY(VALID, EDITKEYS, CH, TRUE);
       CASE CODE OF
         0, 5, 8:
           IF I > 0 THEN
@@ -729,50 +857,50 @@ IMPLEMENTATION
           ELSE
             BEGIN
               NUM := 0;
-              W5676 := 1;
+              DIGIX := 1;
               K := I;
-              WHILE W5676 <= K DO
+              WHILE DIGIX <= K DO
                 BEGIN
-                  NUM := (NUM * 10 + ORD(T[W5676])) - 48;
-                  W5676 := W5676 + 1
+                  NUM := (NUM * 10 + ORD(T[DIGIX])) - 48;
+                  DIGIX := DIGIX + 1
                 END
             END
       END
-    UNTIL (CODE IN W5766) OR (CH = CHR(13));
-    U37(X, Y, NUM, WID)
+    UNTIL (CODE IN STOPKEY) OR (CH = CHR(13));
+    PUTNUM(X, Y, NUM, WID)
   END;
 
-  FUNCTION U39;
+  FUNCTION WAITCODE;
   VAR
     CH: CHAR;
   BEGIN
-    U34(W107 - 1, S);
-    U34(W107, 'Press SPACE to continue');
-    U39 := U27([CHR(13), ' '], [3, 4], CH, FALSE);
-    IF W106 = 10 THEN
-      U39 := 3
+    CENTER(SCRHIGH - 1, S);
+    CENTER(SCRHIGH, 'Press SPACE to continue');
+    WAITCODE := CMDKEY([CHR(13), ' '], [3, 4], CH, FALSE);
+    IF LASTKEY = 10 THEN
+      WAITCODE := 3
   END;
   (*$R+*)
   (*$I+*)
 
-  PROCEDURE U40;
+  PROCEDURE CLRFOOT;
   BEGIN
-    U02(0, W107 - 1)
+    ERASEOS(0, SCRHIGH - 1)
   END;
 
   (*$I-*)
   (*$R-*)
-  PROCEDURE U41;
+  PROCEDURE HITSPACE;
   VAR
     CODE: INTEGER;
     CH: CHAR;
   BEGIN
-    U42;
-    U33(0, W107, 'Press SPACEBAR to continue');
-    CODE := U27([CHR(13), ' '], [4], CH, FALSE)
+    BELL;
+    PUTSTR(0, SCRHIGH, 'Press SPACEBAR to continue');
+    CODE := CMDKEY([CHR(13), ' '], [4], CH, FALSE)
   END;
 
-  PROCEDURE U42;
+  PROCEDURE BELL;
   VAR
     CH: CHAR;
   BEGIN
@@ -782,31 +910,31 @@ IMPLEMENTATION
   (*$R+*)
   (*$I+*)
 
-  FUNCTION U43; EXTERNAL;
-  PROCEDURE U44; EXTERNAL;
-  FUNCTION U45; EXTERNAL;
-  PROCEDURE U46; EXTERNAL;
-  PROCEDURE U47; EXTERNAL;
-  PROCEDURE U48; EXTERNAL;
+  FUNCTION UPCHAR; EXTERNAL;
+  PROCEDURE UPSTR; EXTERNAL;
+  FUNCTION FORMDISK; EXTERNAL;
+  PROCEDURE SAVSTAT; EXTERNAL;
+  PROCEDURE DISINT; EXTERNAL;
+  PROCEDURE RSTSTAT; EXTERNAL;
 
   (*$I-*)
   (*$R-*)
-  PROCEDURE U49;
+  PROCEDURE READDIRS;
   BEGIN
-    W5654 := SYSCOM^.SEGTABLE[1].CODEUNIT;
-    W5741 := SYSCOM^.SEGTABLE[0].CODEUNIT;
-    UNITREAD(W5654, PROGDIR, 26, 2, 0);
-    W5757 := IORESULT;
-    IF W5757 <> 0 THEN
+    PROGUNIT := SYSCOM^.SEGTABLE[1].CODEUNIT;
+    BOOTUNIT := SYSCOM^.SEGTABLE[0].CODEUNIT;
+    UNITREAD(PROGUNIT, PROGDIR, 26, 2, 0);
+    DIRIO := IORESULT;
+    IF DIRIO <> 0 THEN
       BEGIN
         WRITE('Unable to read directory block of program disk ');
         WRITELN
       END;
-    IF W5741 <> W5654 THEN
+    IF BOOTUNIT <> PROGUNIT THEN
       BEGIN
-        UNITREAD(W5741, BOOTDIR, 26, 2, 0);
-        W5757 := IORESULT;
-        IF W5757 <> 0 THEN
+        UNITREAD(BOOTUNIT, BOOTDIR, 26, 2, 0);
+        DIRIO := IORESULT;
+        IF DIRIO <> 0 THEN
           BEGIN
             WRITE('Unable to read directory block of boot disk');
             WRITELN
@@ -816,7 +944,7 @@ IMPLEMENTATION
   (*$R+*)
   (*$I+*)
 
-  PROCEDURE U50;
+  PROCEDURE NEEDDISK;
   VAR
     D1: INTEGER;
     D2: INTEGER;
@@ -825,32 +953,32 @@ IMPLEMENTATION
     REST: ARRAY [1..6] OF INTEGER;
 
     (*$I-*)
-    PROCEDURE U51(VAR U: INTEGER; VAR BLK: DIR26);
+    PROCEDURE WAITVOL(VAR U: INTEGER; VAR BLK: DIR26);
     BEGIN
       REPEAT
         FILLCHAR(D1, 26, CHR(0));
         UNITREAD(U, D1, 26, 2, 0);
-        W5757 := IORESULT;
-        IF (W5757 <> 0) OR (VID <> BLK.VID) THEN
+        DIRIO := IORESULT;
+        IF (DIRIO <> 0) OR (VID <> BLK.VID) THEN
           BEGIN
-            W5757 := 1;
-            U09(22);
+            DIRIO := 1;
+            CLEARY(22);
             WRITE('Insert ', BLK.VID, ' in unit #', U);
-            U41;
-            U11(0, 22)
+            HITSPACE;
+            CLREOL(0, 22)
           END
-      UNTIL W5757 = 0
+      UNTIL DIRIO = 0
     END;
     (*$I+*)
 
   BEGIN
-    U51(W5654, PROGDIR);
-    IF W5654 <> W5741 THEN
-      U51(W5741, BOOTDIR)
+    WAITVOL(PROGUNIT, PROGDIR);
+    IF PROGUNIT <> BOOTUNIT THEN
+      WAITVOL(BOOTUNIT, BOOTDIR)
   END;
 
   (*$R-*)
-  PROCEDURE U52;
+  PROCEDURE INITCRT;
   VAR
     I: INTEGER;
     J: INTEGER;
@@ -919,23 +1047,23 @@ IMPLEMENTATION
     CUR.WIDTH := 79;
     CUR.X := 0;
     CUR.Y := 0;
-    W5766 := [4];
-    W107 := CUR.HEIGHT;
-    W108 := CUR.WIDTH;
-    W5756 := FALSE;
-    W5668 := FALSE;
+    STOPKEY := [4];
+    SCRHIGH := CUR.HEIGHT;
+    SCRWIDE := CUR.WIDTH;
+    ANSOK := FALSE;
+    SAWESC := FALSE;
     SETDIG := ['0'..'9'];
     SETALNUM := ['A'..'Z', 'a'..'z'];
     SETAZ := ['A'..'Z'];
-    SET125 := [' '..'}'];
-    W5755 := ' ';
+    ECHOSET := [' '..'}'];
+    ASPACE := ' ';
     SETDASH := SETDIG + ['-'];
-    W105 := [0..12] - [10]
+    EDITKEYS := [0..12] - [10]
   END;
   (*$R+*)
 
 BEGIN
-  U52
+  INITCRT
 END;
 
 BEGIN

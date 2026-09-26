@@ -1,6 +1,6 @@
 ;---------------------------------------------------
 ; UTILITY's six native procedures, BACKUP.CODE
-; segment 7: U43..U48.
+; segment 7: UPCHAR..RSTSTAT.
 ;
 ; Declared EXTERNAL in ppm/src/UTILITY.TEXT. Assemble
 ; with Apple's SYSTEM.ASSMBLER and link the result
@@ -10,12 +10,12 @@
 ; Shipped order in the segment is 43, 44, 46, 47,
 ; 48, 45 -- assembly order, not interface order.
 ;
-; U43 uppercases one CHAR (a-z and $E1-$FA).
-; U44 uppercases a VAR string in place, high bit
-; off. U45 indexes a table in its own image and
-; JSR $1300. U46 saves the processor status in
-; SAVEP; U47 SEI; U48 restores SAVEP. SAVEP is
-; .DEF/.REF so U48's load is segment-relative.
+; UPCHAR uppercases one CHAR (a-z and $E1-$FA).
+; UPSTR uppercases a VAR string in place, high bit
+; off. FORMDISK indexes a table in its own image and
+; JSR $1300. SAVSTAT saves the processor status in
+; SAVEP; DISINT SEI; RSTSTAT restores SAVEP. SAVEP is
+; .DEF/.REF so RSTSTAT's load is segment-relative.
 ;
 ; Zero page $00-$03. A native procedure runs inside
 ; the interpreter; everything below $50 is free.
@@ -24,9 +24,9 @@
 RET     .EQU 00
 STRP    .EQU 02
 
-        .FUNC U43,1
-        .TITLE "U43 Function"
-; FUNCTION U43(CH: CHAR): CHAR
+        .FUNC UPCHAR,1
+        .TITLE "UPCHAR Function"
+; FUNCTION UPCHAR(CH: CHAR): CHAR
         PLA
         STA RET
         PLA
@@ -64,9 +64,9 @@ STORE   PHA
         RTS
         .BYTE 000
 
-        .PROC U44,1
-        .TITLE "U44 Procedure"
-; PROCEDURE U44(VAR S: STR80)
+        .PROC UPSTR,1
+        .TITLE "UPSTR Procedure"
+; PROCEDURE UPSTR(VAR S: STR80)
         PLA
         STA RET
         PLA
@@ -102,9 +102,9 @@ DONE    LDA RET+1
         PHA
         RTS
 
-        .PROC U46,0
-        .TITLE "U46 Procedure"
-; PROCEDURE U46 -- PHP into SAVEP for U48 to restore.
+        .PROC SAVSTAT,0
+        .TITLE "SAVSTAT Procedure"
+; PROCEDURE SAVSTAT -- PHP into SAVEP for RSTSTAT to restore.
         .DEF SAVEP
         PHP
         PLA
@@ -112,24 +112,24 @@ DONE    LDA RET+1
         RTS
 SAVEP   .BYTE 000,000
 
-        .PROC U47,0
-        .TITLE "U47 Procedure"
-; PROCEDURE U47 -- disable interrupts.
+        .PROC DISINT,0
+        .TITLE "DISINT Procedure"
+; PROCEDURE DISINT -- disable interrupts.
         SEI
         RTS
 
-        .PROC U48,0
-        .TITLE "U48 Procedure"
-; PROCEDURE U48 -- restore the status U46 saved.
+        .PROC RSTSTAT,0
+        .TITLE "RSTSTAT Procedure"
+; PROCEDURE RSTSTAT -- restore the status SAVSTAT saved.
         .REF SAVEP
         LDA SAVEP
         PHA
         PLP
         RTS
 
-        .FUNC U45,1
-        .TITLE "U45 Function"
-; FUNCTION U45(N: INTEGER): INTEGER
+        .FUNC FORMDISK,1
+        .TITLE "FORMDISK Function"
+; FUNCTION FORMDISK(N: INTEGER): INTEGER
 ;
 ; Low byte of N indexes TABLE; A goes to $1300.
 ; RTN, TABLE and TEMP live in this procedure's

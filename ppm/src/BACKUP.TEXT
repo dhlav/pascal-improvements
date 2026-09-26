@@ -4,7 +4,7 @@
   DORESTOR take 8, 9, 10. The host declares no variables:
   UTILITY's interface is the whole global frame.
 
-  Host procedures 2..19 are FORWARD so the SEGMENT
+  Host procedures 2..25 are FORWARD so the SEGMENT
   PROCEDURES can sit before any body (error 399 /
   CODEINSEG). INITIALI calls 14, 15, 16, 18, 19. }
 
@@ -13,29 +13,105 @@ PROGRAM BACKUP;
 USES CHAINSTUFF,
      (*$U WORKHD:UTILITY.CODE*) UTILITY;
 
+(*$V-*)
+
 TYPE
   NAME7 = PACKED ARRAY [1..7] OF CHAR;
   BYTEARR = PACKED ARRAY [0..47] OF 0..255;
   BAP = ^BYTEARR;
+  NAMEREST = PACKED ARRAY [2..15] OF CHAR;
+  { Forty-byte ProDOS directory entry. Key block is
+    bytes 17 and 18 (KEYLO, KEYHI). }
+  DIRENT = PACKED RECORD
+             NAMELEN: 0..15;
+             STORTYPE: 0..15;
+             FIRST: CHAR;
+             REST: NAMEREST;
+             FTYPE: 0..255;
+             KEYLO: 0..255;
+             KEYHI: 0..255;
+             PAD: 0..255;
+             TAIL: PACKED ARRAY [0..19] OF CHAR
+           END;
+  ENT40REC = PACKED RECORD
+               PAD00: 0..255;
+               PAD01: 0..255;
+               PAD02: 0..255;
+               PAD03: 0..255;
+               PAD04: 0..255;
+               PAD05: 0..255;
+               PAD06: 0..255;
+               PAD07: 0..255;
+               PAD08: 0..255;
+               PAD09: 0..255;
+               PAD10: 0..255;
+               PAD11: 0..255;
+               PAD12: 0..255;
+               PAD13: 0..255;
+               PAD14: 0..255;
+               PAD15: 0..255;
+               PAD16: 0..255;
+               KEYLO: 0..255;
+               KEYHI: 0..255;
+               USEDLO: 0..255;
+               USEDHI: 0..255;
+               PAD21: 0..255;
+               PAD22: 0..255;
+               PAD23: 0..255;
+               PAD24: 0..255;
+               PAD25: 0..255;
+               PAD26: 0..255;
+               PAD27: 0..255;
+               PAD28: 0..255;
+               PAD29: 0..255;
+               PAD30: 0..255;
+               PAD31: 0..255;
+               PAD32: 0..255;
+               PAD33: 0..255;
+               PAD34: 0..255;
+               PAD35: 0..255;
+               PAD36: 0..255;
+               PAD37: 0..255;
+               PAD38: 0..255;
+               PAD39: 0..255
+             END;
+  DIR78 = ARRAY [0..77] OF DIRENT13;
+  STR1 = STRING[1];
+  BITBUF = PACKED ARRAY [0..4095] OF BOOLEAN;
+  { 11-word volume header (22 bytes). }
+  DIRHDR = RECORD
+             FIRST: INTEGER;
+             LASTB: INTEGER;
+             KIND: INTEGER;
+             VID: NAM7;
+             EOV: INTEGER;
+             NF: INTEGER;
+             PAD10: INTEGER;
+             PAD11: INTEGER
+           END;
 
-PROCEDURE P02; FORWARD;
-PROCEDURE P03; FORWARD;
-PROCEDURE P04; FORWARD;
-PROCEDURE P05; FORWARD;
-PROCEDURE P06; FORWARD;
-PROCEDURE P07; FORWARD;
-PROCEDURE P08; FORWARD;
-PROCEDURE P09; FORWARD;
-PROCEDURE P10; FORWARD;
-PROCEDURE P11; FORWARD;
-PROCEDURE P12; FORWARD;
-PROCEDURE P13; FORWARD;
-PROCEDURE P14; FORWARD;
-PROCEDURE P15; FORWARD;
-PROCEDURE P16; FORWARD;
-PROCEDURE P17; FORWARD;
-PROCEDURE P18(ERR, FLAG: INTEGER); FORWARD;
-PROCEDURE P19; FORWARD;
+PROCEDURE WRITELST(VAR HDR: HDRREC; VAR SEL: BITS32; VAR SIZES: ARR32;
+              VAR DESCS: NAM15ARR; VAR NAMES: NAM7ARR;
+              VAR FILES: FILEARR); FORWARD;
+PROCEDURE SUMKIND(VAR HDR: HDRREC; VAR F: TEXT); FORWARD;
+PROCEDURE STAT2; FORWARD;
+PROCEDURE STATVOL; FORWARD;
+FUNCTION ASKUNIT(X, Y: INTEGER; VAR UNITN: INTEGER;
+             MSG: STR80): BOOLEAN; FORWARD;
+PROCEDURE ADVLINE(REST: INTEGER; LIM: INTEGER; N: INTEGER);
+  FORWARD;
+PROCEDURE HINTKEY; FORWARD;
+FUNCTION DRVCTL: INTEGER; FORWARD;
+FUNCTION ASKOPT(Y: INTEGER; VALID: CHARSET): CHAR; FORWARD;
+PROCEDURE SHOWSEL; FORWARD;
+PROCEDURE MAINMENU; FORWARD;
+PROCEDURE TYPEMENU; FORWARD;
+PROCEDURE CLRSTATE; FORWARD;
+PROCEDURE LOADVOLS; FORWARD;
+PROCEDURE READHDR; FORWARD;
+PROCEDURE SETTITLE; FORWARD;
+PROCEDURE SHOWERR(ERR, FLAG: INTEGER); FORWARD;
+PROCEDURE QUITBK; FORWARD;
 
 (*$I-*)
 (*$R+*)
@@ -55,121 +131,2895 @@ SEGMENT PROCEDURE INITIALI;
        END;
     LIM: INTEGER;
   BEGIN
-    W5325 := 128;
-    WHILE W5324 = 0 DO
+    PFUNIT := 128;
+    WHILE DRVADDR = 0 DO
       BEGIN
         B.I := 232;
         (*$R-*)
-        MOVELEFT(B.P^^[3 * (W5325 - 128) + 1], PUN.A, 2);
+        MOVELEFT(B.P^^[3 * (PFUNIT - 128) + 1], PUN.A, 2);
         (*$R+*)
         PUN.A := PUN.A + 3;
         IF PUN.Q^ = 'PROFILE' THEN
-          W5324 := PUN.A - 3
+          DRVADDR := PUN.A - 3
         ELSE
           BEGIN
-            W5325 := W5325 + 1;
-            IF W5325 > 143 THEN
-              P18(12, 0)
+            PFUNIT := PFUNIT + 1;
+            IF PFUNIT > 143 THEN
+              SHOWERR(12, 0)
           END
       END;
-    UNITSTATUS(W5325, VOLS, 16384);
-    W791 := IORESULT;
-    IF W791 <> 0 THEN
-      P18(12, 0);
-    W5327 := 1;
+    UNITSTATUS(PFUNIT, VOLS, 16384);
+    LASTIO := IORESULT;
+    IF LASTIO <> 0 THEN
+      SHOWERR(12, 0);
+    STATFLG := 1;
     VOLS2 := VOLS;
-    W5509 := W5418;
-    W5519 := 1;
+    PAD5509 := PAD5418;
+    TMP := 1;
     LIM := 30;
-    WHILE W5519 <= LIM DO
+    WHILE TMP <= LIM DO
       BEGIN
-        VOLS[W5519].BUSY := FALSE;
-        W5519 := W5519 + 1
+        VOLS[TMP].BUSY := FALSE;
+        TMP := TMP + 1
       END;
-    W5326 := [];
-    W275 := -1;
-    W5653 := -1;
-    W111 := 0;
+    DRVSAVL := [];
+    NDRIVES := -1;
+    FIRSTDRV := -1;
+    DRIVE := 0;
     LIM := 7;
-    WHILE W111 <= LIM DO
+    WHILE DRIVE <= LIM DO
       BEGIN
-        P16;
-        IF W791 = 0 THEN
+        READHDR;
+        IF LASTIO = 0 THEN
           BEGIN
-            W5326 := W5326 + [W111];
-            IF W5653 < 0 THEN
-              W5653 := W111;
-            W275 := W111;
+            DRVSAVL := DRVSAVL + [DRIVE];
+            IF FIRSTDRV < 0 THEN
+              FIRSTDRV := DRIVE;
+            NDRIVES := DRIVE;
             DIRBLK[4] := DIRBLK[4] MOD 16;
-            MOVELEFT(DIRBLK[4], VOLNAM[W111], 16)
+            MOVELEFT(DIRBLK[4], VOLNAM[DRIVE], 16)
           END;
-        W111 := W111 + 1
+        DRIVE := DRIVE + 1
       END;
-    W275 := W275 + 1;
-    IF W275 = 0 THEN
-      P18(17, 0)
+    NDRIVES := NDRIVES + 1;
+    IF NDRIVES = 0 THEN
+      SHOWERR(17, 0)
   END;
 
 BEGIN
-  W5324 := 0;
-  W5056 := 1;
-  W5629 := 0;
+  DRVADDR := 0;
+  CONFIRM := TRUE;
+  REFMT := 0;
   LISTING := 'CONSOLE:';
   DASHES := '-';
-  U17(DASHES, 80, '-');
-  W5054 := 280;
-  W4996 := 5;
-  P14;
-  FILLCHAR(BLK661, 256, CHR(0));
-  W5327 := 0;
+  PADRIGHT(DASHES, 80, '-');
+  FLSIZE := 280;
+  FLUNIT := 5;
+  CLRSTATE;
+  FILLCHAR(VOLNMS, 256, CHR(0));
+  STATFLG := 0;
   SCANPROF;
-  IF W5653 < 0 THEN
+  IF FIRSTDRV < 0 THEN
     BEGIN
       WRITE('No ProFiles are Available');
       WRITELN;
-      U41;
-      P19
+      HITSPACE;
+      QUITBK
     END
   ELSE
-    W111 := W5653;
-  P15
+    DRIVE := FIRSTDRV;
+  LOADVOLS
 END;
 (*$I+*)
 
+(*$I-*)
 SEGMENT PROCEDURE DOBACKUP;
-BEGIN
-END;
+VAR
+  RESTART: BOOLEAN;
+  NBLK: INTEGER;
+  SAVVOL: INTEGER;
+  SAVFPOS: INTEGER;
+  SAVSRC: INTEGER;
+  SAVBLK: INTEGER;
+  SAVDISK: INTEGER;
+  HP: RECORD
+        CASE INTEGER OF
+          0: (P: ^INTEGER);
+          1: (I: INTEGER);
+          2: (R: ONEW)
+      END;
+  LOADED: INTEGER;
 
-SEGMENT PROCEDURE DORESTOR;
-BEGIN
-END;
+  PROCEDURE ABORTBK; FORWARD;
 
-PROCEDURE P02; BEGIN END;
-PROCEDURE P03; BEGIN END;
-PROCEDURE P04; BEGIN END;
-PROCEDURE P05; BEGIN END;
-PROCEDURE P06; BEGIN END;
-PROCEDURE P07; BEGIN END;
-PROCEDURE P08; BEGIN END;
-PROCEDURE P09; BEGIN END;
-PROCEDURE P10; BEGIN END;
-PROCEDURE P11; BEGIN END;
-PROCEDURE P12; BEGIN END;
-PROCEDURE P13; BEGIN END;
-PROCEDURE P14; BEGIN END;
-PROCEDURE P15; BEGIN END;
-PROCEDURE P16; BEGIN END;
-PROCEDURE P17; BEGIN END;
-PROCEDURE P18; BEGIN END;
-PROCEDURE P19; BEGIN END;
+  PROCEDURE ASKDISK;
+  VAR
+    DIR: DIRHDR;
+    UNITNM: STR80;
+    MSG: STR80;
+    FMT: INTEGER;
+
+    PROCEDURE DISKOPT;
+    VAR
+      PAD: ARRAY [1..16] OF INTEGER;
+      CH: CHAR;
+      S: STR80;
+      PAD2: ARRAY [1..12] OF INTEGER;
+    BEGIN
+      CLREOL(0, STATROW + 1);
+      IF MSG <> '' THEN
+        PUTSTR(0, STATROW + 1, MSG);
+      PUTSTR(4, STATROW + 2, 'N(ew disk');
+      PUTSTR(4, STATROW + 3, 'D(rive Change');
+      PUTSTR(4, STATROW + 4, 'C(ancel Backup');
+      CH := ASKOPT(STATROW + 6, ['C', 'D', 'N']);
+      CLREOL(0, STATROW + 1);
+      CASE CH OF
+        'C':
+          ABORTBK;
+        'D':
+          BEGIN
+            S := CONCAT(CONCAT(ACT, PREP2), ' which unit number? ');
+            IF NOT ASKUNIT(0, STATROW + 1, FLUNIT, S) THEN
+              ABORTBK;
+            NUMSTR(FLUNIT, UNITNM);
+            CLEARY(STATROW + 1);
+            WRITE('Insert new disk in unit ', UNITNM);
+            HITSPACE
+          END;
+        'N':
+          BEGIN
+            S := CONCAT('Insert new disk in unit ', UNITNM);
+            PUTSTR(0, STATROW + 1, S);
+            HITSPACE
+          END
+      END;
+      IF WASESC THEN
+        ABORTBK;
+      CLREOL(0, STATROW + 1)
+    END;
+
+    PROCEDURE OKDISK;
+    VAR
+      FILL: INTEGER;
+      S: STR80;
+      PAD: ARRAY [1..26] OF INTEGER;
+    BEGIN
+      IF (LASTIO <> 0) OR ODD(REFMT) THEN
+        BEGIN
+          REFMT := 0;
+          CLREOL(0, STATROW + 1);
+          PUTSTR(0, STATROW + 1, 'Formatting...');
+          DISINT;
+          UNITREAD(FLUNIT, FILL, 2, 0, 0);
+          FMT := FORMDISK(FLUNIT);
+          RSTSTAT;
+          IF FMT = 0 THEN
+            BEGIN
+              PUTSTR(0, STATROW + 1, 'Disk formatted successfully');
+              EXIT(ASKDISK)
+            END;
+          CASE FMT OF
+            43:
+              MSG := 'Disk is write protected or drive is not connected';
+            51:
+              MSG := 'Drive is too slow';
+            52:
+              MSG := 'Drive is too fast';
+            OTHERWISE
+              MSG := 'Disk can not be formatted'
+          END;
+          DISKOPT
+        END
+      ELSE
+        IF (LENGTH(DIR.VID) < 8) AND (LENGTH(DIR.VID) > 0) AND
+           (DIR.FIRST = 0) AND (DIR.EOV = FLSIZE) THEN
+          BEGIN
+            IF DIR.VID = BKNAME THEN
+              BEGIN
+                S := CONCAT(CONCAT('The disk in unit ', UNITNM),
+                            ' appears to be the one just written');
+                PUTSTR(0, STATROW + 1, S);
+                PUTSTR(0, STATROW + 2,
+                    'Are you sure you have just inserted a new disk ?');
+                IF YESNO(FALSE) THEN
+                  BEGIN
+                    CLREOL(0, STATROW + 1);
+                    EXIT(ASKDISK)
+                  END;
+                CLREOL(0, STATROW + 1);
+                S := CONCAT('Insert new disk in unit ', UNITNM);
+                PUTSTR(0, STATROW + 1, S);
+                HITSPACE;
+                CLREOL(0, STATROW + 1);
+                EXIT(OKDISK)
+              END
+            ELSE
+              BEGIN
+                S := CONCAT(CONCAT('Destroy data on ', DIR.VID), ' ? ');
+                PUTSTR(0, STATROW + 1, S)
+              END
+          END
+        ELSE
+          BEGIN
+            MSG := CONCAT(CONCAT('Disk in unit ', UNITNM),
+                          ' appears to contain data');
+            PUTSTR(0, STATROW + 1, MSG);
+            PUTSTR(0, STATROW + 2, 'Do you wish to overwrite this disk ? ')
+          END;
+      IF YESNO(FALSE) THEN
+        EXIT(ASKDISK);
+      CLREOL(0, STATROW + 1);
+      MSG := '';
+      DISKOPT
+    END;
+
+  BEGIN
+    NUMSTR(FLUNIT, UNITNM);
+    SAVSTAT;
+    REPEAT
+      DISINT;
+      UNITREAD(FLUNIT, DIR, 22, 0, 0);
+      LASTIO := IORESULT;
+      IF LASTIO = 0 THEN
+        BEGIN
+          UNITREAD(FLUNIT, DIR, 22, 2, 0);
+          LASTIO := IORESULT
+        END;
+      RSTSTAT;
+      OKDISK
+    UNTIL FALSE
+  END;
+
+  PROCEDURE PREPDEST;
+  VAR
+    FILL: ARRAY [1..41] OF INTEGER;
+    LINE: INTEGER;
+    S: STRING[33];
+  BEGIN
+    CLREOL(0, 2);
+    IF ODD(RESTMODE) THEN
+      WRITE('Restoring ')
+    ELSE
+      WRITE('Backing up ');
+    HDRBLKS := (1028 + 511) DIV 512;
+    CASE BKTYPE OF
+      2:
+        BEGIN
+          WRITE(FILECNT, ' File');
+          IF FILECNT <> 1 THEN
+            WRITE(CHR(115));
+          HDRBLKS := HDRBLKS + ((8400 + 511) DIV 512)
+        END;
+      3:
+        BEGIN
+          WRITE(VOLCNT, ' Volume');
+          IF VOLCNT <> 1 THEN
+            WRITE(CHR(115))
+        END;
+      4:
+        WRITE('Pascal Area');
+      5:
+        WRITE('ProDOS Area');
+      6:
+        WRITE('entire ProFile')
+    END;
+    WRITE(FROMTO, 'Drive ', DRIVE, '.(', VOLNAM[DRIVE], ')');
+    MOVETO(0, 4);
+    DISKCNT := (DATBLKS + HDRBLKS + FLSIZE - 4) DIV (FLSIZE - 3);
+    WRITE(ACT, ' will use ', DISKCNT, ' disk');
+    IF DISKCNT > 1 THEN
+      WRITE(CHR(115));
+    FLUNIT := 5;
+    S := CONCAT(CONCAT(ACT, PREP2), ' which unit number? ');
+    IF NOT ASKUNIT(0, 6, FLUNIT, S) THEN
+      ABORTBK;
+    LINE := 8;
+    IF NOT ODD(RESTMODE) THEN
+      BEGIN
+        PUTSTR(0, 8, 'Verify destination disk [Yes/No] ? ');
+        VERIFY := TRUE;
+        ASKYN(-1, 0, VERIFY);
+        LINE := LINE + 2;
+        IF WASESC THEN
+          ABORTBK
+      END;
+    PUTSTR(0, LINE, 'Send Listing to : ');
+    EDITSTR(-1, 0, LISTING, 23);
+    IF WASESC THEN
+      ABORTBK;
+    UPSTR(LISTING);
+    IF LISTING = '' THEN
+      LISTING := 'CONSOLE:';
+    ERASEOS(18, LINE);
+    WRITE(LISTING);
+    IF NOT ODD(RESTMODE) THEN
+      BEGIN
+        PUTSTR(0, LINE + 2, 'Comments? ');
+        COMMENT := '';
+        EDITSTR(-1, 0, COMMENT, 70);
+        IF WASESC THEN
+          ABORTBK
+      END;
+    CLREOL(0, 3);
+    STATVOL
+  END;
+
+  PROCEDURE UNSVOL;
+  VAR
+    I: INTEGER;
+    LAST: INTEGER;
+    J: INTEGER;
+    ONE: INTEGER;
+    LIM: INTEGER;
+  BEGIN
+    LAST := FILECNT;
+    I := FILECNT;
+    ONE := 1;
+    WHILE I >= ONE DO
+      BEGIN
+        IF FILES[I].VOL = VOLNOW THEN
+          BEGIN
+            DATBLKS := DATBLKS - (FILES[I].HI - FILES[I].LO);
+            J := I;
+            LIM := LAST;
+            WHILE J <= LIM DO
+              BEGIN
+                FILES[J] := FILES[J + 1];
+                J := J + 1
+              END;
+            LAST := LAST - 1
+          END;
+        I := I - 1
+      END;
+    FILECNT := LAST;
+    SELBITS[VOLNOW] := FALSE;
+    VOLCNT := VOLCNT - 1
+  END;
+
+  PROCEDURE SELVOLS;
+  VAR
+    PROMPT: STR80;
+    LINE: STR80;
+    CH: CHAR;
+    U: RECORD
+         CASE BOOLEAN OF
+           FALSE: (LIM: INTEGER);
+           TRUE: (S: STRING[28])
+       END;
+  BEGIN
+    CHOSEN := 0;
+    CLREOL(0, 4);
+    PROMPT := CONCAT(CONCAT(ACT, FROMTO), 'which volume : ');
+    PUTSTR(0, 5, PROMPT);
+    MARKCNT := 0;
+    PUTSTR(0, 6, DASHES);
+    LINE := '    Name      Description';
+    PUTSTR(0, 7, LINE);
+    IF VOLSIN > 16 THEN
+      PUTSTR(40, 7, LINE);
+    TMP := 1;
+    U.LIM := VOLSIN;
+    WHILE TMP <= U.LIM DO
+      BEGIN
+        MOVETO(0 + 40 * ((TMP - 1) DIV 16), 8 + ((TMP - 1) MOD 16));
+        IF SELBITS[TMP] THEN
+          WRITE('   +')
+        ELSE
+          WRITE('    ');
+        WRITE(VOLNMS[TMP],
+              CHR(32): (10 - LENGTH(VOLNMS[TMP])),
+              DESCS[TMP]);
+        TMP := TMP + 1
+      END;
+    VOLNOW := 1;
+    SHOWSEL;
+    REPEAT
+      MOVETO(0 + 40 * ((VOLNOW - 1) DIV 16), 8 + ((VOLNOW - 1) MOD 16));
+      WRITE('->');
+      GETKEY(CH, [CHR(8), CHR(10), CHR(11), CHR(13), CHR(21), CHR(27)]);
+      MOVETO(0 + 40 * ((VOLNOW - 1) DIV 16), 8 + ((VOLNOW - 1) MOD 16));
+      WRITE('  ');
+      CASE ORD(CH) OF
+        27:
+          VOLCNT := 0;
+        13:
+          CHOSEN := 1;
+        8:
+          IF SELBITS[VOLNOW] THEN
+            BEGIN
+              UNSVOL;
+              MARKCNT := MARKCNT - 1;
+              ERASEOS(LENGTH(PROMPT), 5);
+              SHOWSEL;
+              MOVETO(3 + 40 * ((VOLNOW - 1) DIV 16),
+                  8 + ((VOLNOW - 1) MOD 16));
+              WRITE(' ')
+            END;
+        11:
+          IF VOLNOW > 1 THEN
+            VOLNOW := VOLNOW - 1
+          ELSE
+            VOLNOW := VOLSIN;
+        10:
+          IF VOLNOW = VOLSIN THEN
+            VOLNOW := 1
+          ELSE
+            VOLNOW := VOLNOW + 1;
+        21:
+          IF NOT SELBITS[VOLNOW] THEN
+            BEGIN
+              SELBITS[VOLNOW] := TRUE;
+              VOLCNT := VOLCNT + 1;
+              MARKCNT := MARKCNT + 1;
+              SHOWSEL;
+              ERASEOS(LENGTH(PROMPT), 5);
+              WRITE(VOLNMS[VOLNOW], ':  (', DESCS[VOLNOW], ')');
+              MOVETO(3 + 40 * ((VOLNOW - 1) DIV 16),
+                  8 + ((VOLNOW - 1) MOD 16));
+              WRITE('+');
+              IF BKTYPE = 2 THEN
+                EXIT(SELVOLS)
+            END
+      END
+    UNTIL CH IN [CHR(13), CHR(27)]
+  END;
+
+  FUNCTION OPENDISK: BOOLEAN;
+  VAR
+    UNITNM: STR80;
+    S: STR80;
+  BEGIN
+    OPENDISK := FALSE;
+    DISKNO := DISKNO + 1;
+    NUMSTR(DISKNO, UNITNM);
+    UNITNM := CONCAT('BACKUP', UNITNM);
+    IF LENGTH(UNITNM) > 7 THEN
+      DELETE(UNITNM, 6, 1);
+    IF NOT ODD(REFMT) THEN
+      BEGIN
+        MOVETO(0, STATROW + 1);
+        WRITE('Insert a blank disk in disk unit #', FLUNIT, ' (',
+              UNITNM, ')');
+        WRITELN;
+        HITSPACE;
+        IF WASESC THEN
+          ABORTBK;
+        CLREOL(0, STATROW + 1)
+      END;
+    ASKDISK;
+    CLREOL(0, STATROW + 1);
+    HDR.FIRST := 0;
+    HDR.LASTB := 3;
+    (*$R-*)
+    HDR.KIND.K := 0;
+    (*$R+*)
+    HDR.VID := UNITNM;
+    HDR.EOV := 280;
+    HDR.NF := 0;
+    HDR.DLAST := 0;
+    HDR.COMMENT := COMMENT;
+    HDR.BKBLKS := DATBLKS;
+    HDR.NDISKS := DISKCNT;
+    HDR.DISKNUM := DISKNO;
+    HDR.TYP := BKTYPE;
+    HDR.NVOLS := VOLCNT;
+    HDR.NFILES := FILECNT;
+    UNITWRITE(FLUNIT, HDR, 512, 2, 0);
+    FLBLK := 3;
+    IF DISKNO = 1 THEN
+      BEGIN
+        UNITWRITE(FLUNIT, VOLTBL, 1028, FLBLK, 0);
+        FLBLK := FLBLK + ((1028 + 511) DIV 512);
+        IF BKTYPE = 2 THEN
+          BEGIN
+            UNITWRITE(FLUNIT, FILES, 8400, FLBLK, 0);
+            FLBLK := FLBLK + ((8400 + 511) DIV 512)
+          END
+      END;
+    SAVPROG := BLKDONE - 1;
+    SAVFILE := FILEPOS;
+    SAVVOL := VOLNOW;
+    SAVFPOS := FILEPOS;
+    SAVBLK := NBLK;
+    SAVSRC := SRCBLOCK;
+    SAVDISK := DISKNO;
+    OPENDISK := TRUE
+  END;
+
+  PROCEDURE RDBLOCK;
+  BEGIN
+    UNITREAD(PFUNIT, DIRBLK, 512, SRCBLOCK + BLKDONE, DRVCTL);
+    LASTIO := IORESULT;
+    IF LASTIO <> 0 THEN
+      BEGIN
+        CLREOL(0, 22);
+        WRITE('ERROR: I/O Error ', LASTIO,
+              ' reading ProFile - backup cancelled');
+        HITSPACE;
+        ABORTBK
+      END;
+    BLKDONE := BLKDONE + 1;
+    PUTNUM(35, STATROW, BLKDONE, 5)
+  END;
+
+  PROCEDURE IOERRBK(MSG: STR80);
+  VAR
+    CH: CHAR;
+  BEGIN
+    IF LASTIO <> 0 THEN
+      BEGIN
+        MOVETO(0, STATROW + 1);
+        WRITELN;
+        WRITE('ERROR: I/O Error ', LASTIO, MSG, ' on unit ', FLUNIT);
+        WRITELN;
+        WRITE('       R(eformat disk');
+        WRITELN;
+        WRITE('       N(ew disk');
+        WRITELN;
+        WRITE('       D(rive change');
+        WRITELN;
+        WRITE('       C(ancel backup');
+        WRITELN;
+        CH := ASKOPT(23, ['C', 'D', 'N', 'R']);
+        CLREOL(0, STATROW + 1);
+        CASE CH OF
+          'C':
+            ABORTBK;
+          'D':
+            IF NOT ASKUNIT(0, STATROW + 1, FLUNIT,
+                       'Backup to which unit number ? ') THEN
+              ABORTBK;
+          'N':
+            ;
+          'R':
+            REFMT := 1
+        END;
+        STATROW := 6;
+        CLREOL(0, STATROW);
+        WRITE('Copying backup data');
+        RESTART := TRUE;
+        VOLNOW := SAVVOL;
+        SRCBLOCK := SAVSRC;
+        FILEPOS := SAVFPOS;
+        NBLK := SAVBLK;
+        DISKNO := SAVDISK - 1;
+        FILEPOS := SAVFILE;
+        BLKDONE := SAVPROG;
+        FLBLK := -1
+      END
+  END;
+
+  PROCEDURE VERIFYDK;
+  VAR
+    LIM: INTEGER;
+  BEGIN
+    IF VERIFY THEN
+      BEGIN
+        PUTSTR(0, STATROW + 1, 'Verifying disk for readability');
+        TMP := 0;
+        LIM := FLSIZE - 1;
+        WHILE TMP <= LIM DO
+          BEGIN
+            UNITREAD(FLUNIT, DIRBLK, 512, TMP, 0);
+            LASTIO := IORESULT;
+            IOERRBK(' Verifying');
+            IF LASTIO <> 0 THEN
+              EXIT(VERIFYDK);
+            TMP := TMP + 1
+          END;
+        CLEARY(STATROW + 1)
+      END;
+    BKNAME := HDR.VID;
+    FLBLK := 0
+  END;
+
+  PROCEDURE WRBLOCK;
+  BEGIN
+    IF FLBLK <= 0 THEN
+      REPEAT
+        IF WASESC THEN
+          ABORTBK
+      UNTIL OPENDISK;
+    UNITWRITE(FLUNIT, DIRBLK, 512, FLBLK, 0);
+    LASTIO := IORESULT;
+    IOERRBK(' Writing');
+    FLBLK := FLBLK + 1;
+    IF FLBLK >= FLSIZE THEN
+      VERIFYDK
+  END;
+
+  PROCEDURE BKFILES;
+  VAR
+    DIR: DIR78;
+
+    PROCEDURE SELFILES;
+    VAR
+      PAT: NAM15;
+      START: INTEGER;
+      BASE: INTEGER;
+      SUF: NAM15;
+      PRE: NAM15;
+      HASQ: BOOLEAN;
+      HASEQ: BOOLEAN;
+      STOPF: BOOLEAN;
+      LIM: INTEGER;
+
+      FUNCTION CUTWILD(CH: STR1): BOOLEAN;
+      BEGIN
+        IF POS(CH, PAT) <> 0 THEN
+          BEGIN
+            PRE := COPY(PAT, 1, POS(CH, PAT) - 1);
+            SUF := COPY(PAT, POS(CH, PAT) + 1,
+                        LENGTH(PAT) - POS(CH, PAT));
+            CUTWILD := TRUE
+          END
+        ELSE
+          CUTWILD := FALSE
+      END;
+
+      FUNCTION HITWILD(S: NAM15): BOOLEAN;
+      VAR
+        U: RECORD
+             CASE BOOLEAN OF
+               FALSE: (LIM: INTEGER);
+               TRUE: (MSG: STRING[39])
+           END;
+      BEGIN
+        HITWILD := FALSE;
+        IF STOPF THEN
+          EXIT(HITWILD);
+        TMP := 1;
+        U.LIM := FILECNT;
+        WHILE TMP <= U.LIM DO
+          BEGIN
+            IF (S = FILES[TMP].NM) AND
+               (VOLNOW = FILES[TMP].VOL) THEN
+              EXIT(HITWILD);
+            TMP := TMP + 1
+          END;
+        IF PAT = S THEN
+          BEGIN
+            HITWILD := TRUE;
+            EXIT(HITWILD)
+          END;
+        IF NOT (HASEQ OR HASQ) THEN
+          EXIT(HITWILD);
+        IF LENGTH(PRE) + LENGTH(SUF) > LENGTH(S) THEN
+          EXIT(HITWILD);
+        IF (COPY(S, 1, LENGTH(PRE)) <> PRE) OR
+           (COPY(S, LENGTH(S) - LENGTH(SUF) + 1,
+                 LENGTH(SUF)) <> SUF) THEN
+          EXIT(HITWILD);
+        IF HASQ THEN
+          BEGIN
+            CLEARY(7);
+            U.MSG := CONCAT(CONCAT('Backup file ', S),
+                            ' [Yes/No] ? ');
+            PUTSTR(0, 7, U.MSG);
+            HITWILD := YESNO(TRUE);
+            IF WASESC THEN
+              BEGIN
+                HITWILD := FALSE;
+                STOPF := TRUE
+              END
+          END
+        ELSE
+          HITWILD := TRUE
+      END;
+
+      PROCEDURE FULLFILE;
+      BEGIN
+        IF FILECNT >= 300 THEN
+          BEGIN
+            PUTSTR(0, 22, 'Maximum number of files has been selected');
+            PUTSTR(0, 23, 'Proceed with backup - [Yes/No] ');
+            CHOSEN := ORD(YESNO(TRUE));
+            EXIT(SELFILES)
+          END
+      END;
+
+    BEGIN
+      CLREOL(0, 6);
+      PUTSTR(0, 8, DASHES);
+      REPEAT
+        IF FILECNT > 0 THEN
+          BEGIN
+            BASE := FILECNT - 10;
+            IF BASE < 1 THEN
+              BASE := 1;
+            START := BASE;
+            LIM := FILECNT;
+            WHILE START <= LIM DO
+              BEGIN
+                PAT := FILES[START].NM;
+                PADRIGHT(PAT, 15, ' ');
+                PUTSTR(0, 9 + START - BASE, PAT);
+                START := START + 1
+              END
+          END;
+        FULLFILE;
+        CLEARY(7);
+        PUTSTR(0, 7, 'Backup which file(s) ? ');
+        PAT := '';
+        EDITSTR(-1, 0, PAT, 15);
+        UPSTR(PAT);
+        IF WASESC THEN
+          BEGIN
+            UNSVOL;
+            EXIT(SELFILES)
+          END;
+        IF PAT <> '' THEN
+          BEGIN
+            HASQ := FALSE;
+            HASEQ := FALSE;
+            PRE := '';
+            SUF := '';
+            IF CUTWILD('=') THEN
+              HASEQ := TRUE
+            ELSE
+              HASQ := CUTWILD('?');
+            STOPF := FALSE;
+            START := 1;
+            LIM := DIR[0].NF;
+            WHILE START <= LIM DO
+              BEGIN
+                IF (NOT STOPF) AND HITWILD(DIR[START].NM) THEN
+                  BEGIN
+                    FILECNT := FILECNT + 1;
+                    FILES[FILECNT].D13 := DIR[START];
+                    ONEBLKS := DIR[START].HI - DIR[START].LO;
+                    DATBLKS := DATBLKS + ONEBLKS;
+                    FILES[FILECNT].VOL := VOLNOW;
+                    FULLFILE
+                  END;
+                START := START + 1
+              END
+          END;
+        SHOWSEL
+      UNTIL PAT = ''
+    END;
+
+    PROCEDURE NEXTCOPY;
+    BEGIN
+      VOLNOW := FILES[FILEPOS].VOL;
+      ADVLINE(6, 15, 1);
+      CLEARY(STATROW);
+      WRITE(FILEPOS: 3, ' of ', FILECNT: 3, ' - ', VOLNMS[VOLNOW], ':',
+            FILES[FILEPOS].NM);
+      IF NOT RESTART THEN
+        BEGIN
+          SRCBLOCK := VOLTBL[VOLNOW].A + FILES[FILEPOS].LO;
+          BLKDONE := 0;
+          NBLK := FILES[FILEPOS].HI - FILES[FILEPOS].LO
+        END;
+      RESTART := FALSE
+    END;
+
+  BEGIN
+    HINTKEY;
+    SHOWSEL;
+    REPEAT
+      SELVOLS;
+      IF VOLCNT = 0 THEN
+        ABORTBK;
+      IF NOT ODD(CHOSEN) THEN
+        BEGIN
+          UNITREAD(PFUNIT, DIR, 2028, VOLTBL[VOLNOW].A + 2, DRVCTL);
+          SELFILES
+        END
+    UNTIL ODD(CHOSEN);
+    IF FILECNT = 0 THEN
+      BEGIN
+        PUTSTR(0, 22, 'No files have been selected for Backup');
+        HITSPACE;
+        ABORTBK
+      END;
+    IF DATBLKS = 0 THEN
+      BEGIN
+        PUTSTR(0, 22, 'Selections for Backup contain 0 blocks of data');
+        HITSPACE;
+        ABORTBK
+      END;
+    PREPDEST;
+    CLREOL(0, 3);
+    STATROW := 6;
+    FILEPOS := 1;
+    SAVFILE := 1;
+    SAVPROG := 0;
+    PAD5058 := 0;
+    RESTART := FALSE;
+    REPEAT
+      NEXTCOPY;
+      REPEAT
+        IF RESTART THEN
+          NEXTCOPY;
+        IF NBLK <> 0 THEN
+          BEGIN
+            RDBLOCK;
+            RESTART := FALSE;
+            WRBLOCK
+          END
+      UNTIL BLKDONE = NBLK;
+      FILEPOS := FILEPOS + 1;
+      IF FILEPOS > FILECNT THEN
+        VERIFYDK
+    UNTIL FILEPOS > FILECNT;
+    MOVETO(0, STATROW + 1);
+    WRITE(FILECNT, ' File');
+    IF FILECNT <> 1 THEN
+      WRITE(CHR(115));
+    WRITE(' backed up successfully');
+    HITSPACE
+  END;
+
+  PROCEDURE BKVOLS;
+  VAR
+    LIM: INTEGER;
+    I: INTEGER;
+  BEGIN
+    HINTKEY;
+    SHOWSEL;
+    SELVOLS;
+    IF WASESC THEN
+      ABORTBK;
+    LIM := VOLTBL[0].B;
+    DATBLKS := 0;
+    VOLNOW := 1;
+    I := LIM;
+    WHILE VOLNOW <= I DO
+      BEGIN
+        IF SELBITS[VOLNOW] THEN
+          DATBLKS := DATBLKS + VOLTBL[VOLNOW].B;
+        VOLNOW := VOLNOW + 1
+      END;
+    IF VOLCNT = 0 THEN
+      BEGIN
+        PUTSTR(0, 22, 'No volumes have been selected for Backup');
+        HITSPACE;
+        ABORTBK
+      END;
+    PREPDEST;
+    CLREOL(0, 3);
+    STATROW := 6;
+    VOLNOW := 1;
+    I := LIM;
+    WHILE VOLNOW <= I DO
+      BEGIN
+        IF SELBITS[VOLNOW] THEN
+          BEGIN
+            ADVLINE(6, 15, 1);
+            BLKDONE := 0;
+            SRCBLOCK := VOLTBL[VOLNOW].A;
+            CLEARY(STATROW);
+            WRITE(VOLNMS[VOLNOW], ' (', DESCS[VOLNOW], ')');
+            NBLK := VOLTBL[VOLNOW].B;
+            REPEAT
+              IF NBLK > 0 THEN
+                BEGIN
+                  RDBLOCK;
+                  WRBLOCK
+                END
+            UNTIL BLKDONE = NBLK;
+            IF VOLNOW = LIM THEN
+              VERIFYDK
+          END;
+        VOLNOW := VOLNOW + 1
+      END;
+    ADVLINE(6, 15, 1);
+    MOVETO(0, STATROW);
+    WRITE(VOLCNT, ' volume');
+    IF VOLCNT <> 1 THEN
+      WRITE(CHR(115));
+    WRITE(' backed up successfully ');
+    HITSPACE
+  END;
+
+  PROCEDURE BKAREA;
+  BEGIN
+    CASE BKTYPE OF
+      4:
+        BEGIN
+          SRCBLOCK := AREAKEY;
+          NBLK := AREASZ
+        END;
+      5:
+        BEGIN
+          SRCBLOCK := 0;
+          NBLK := AREAKEY
+        END;
+      6:
+        BEGIN
+          SRCBLOCK := 0;
+          NBLK := DISKBLKS
+        END
+    END;
+    DATBLKS := NBLK;
+    PREPDEST;
+    STATROW := 6;
+    MOVETO(0, STATROW);
+    WRITE('Backing up ', DATBLKS, ' blocks');
+    BLKDONE := 0;
+    REPEAT
+      RDBLOCK;
+      WRBLOCK;
+      IF BLKDONE = NBLK THEN
+        VERIFYDK
+    UNTIL BLKDONE = NBLK;
+    MOVETO(0, 12);
+    WRITE(NBLK, ' blocks backed up from ');
+    CASE BKTYPE OF
+      4:
+        WRITE(' Pascal Area');
+      5:
+        WRITE(' ProDOS Area');
+      6:
+        WRITE(' ProFile')
+    END;
+    HITSPACE
+  END;
+
+  PROCEDURE LOADCODE;
+  VAR
+    F: FILE;
+
+    PROCEDURE NOFORMAT;
+    BEGIN
+      IF WAITCODE('Unable to load formatter code - use pre-formatted disks') = 4 THEN
+        EXIT(DOBACKUP);
+      LOADED := 0;
+      EXIT(LOADCODE)
+    END;
+
+  BEGIN
+    HP.R := HEAP.R;
+    IF HP.I > 4864 THEN
+      NOFORMAT;
+    HP.I := 4864;
+    RELEASE(HP.P);
+    RESET(F, 'BACKUP.DATA');
+    TMP := BLOCKREAD(F, HP.P^, 3);
+    IF TMP <> 3 THEN
+      NOFORMAT;
+    HP.I := 4864 + 512 * 3;
+    RELEASE(HP.P);
+    LOADED := 1
+  END;
+
+  PROCEDURE ABORTBK;
+  BEGIN
+    CASE BKTYPE OF
+      2:
+        EXIT(BKFILES);
+      3:
+        EXIT(BKVOLS);
+      4, 5, 6:
+        EXIT(BKAREA);
+      OTHERWISE
+        EXIT(DOBACKUP)
+    END
+  END;
 
 BEGIN
-  U49;
-  INITIALI;
-  MARK(HEAP);
+  LOADCODE;
+  RESTMODE := 0;
+  ACT := 'Backup';
+  FROMTO := ' from ';
+  PREP2 := ' to ';
   REPEAT
-    U08;
-    U10
-  UNTIL FALSE;
+    CLRSTATE;
+    TYPEMENU;
+    IF (VOLSIN = 0) AND (BKTYPE IN [2, 3]) THEN
+      BEGIN
+        SHOWERR(22, 1);
+        EXIT(DOBACKUP)
+      END;
+    SETTITLE;
+    SHOWSEL;
+    CASE BKTYPE OF
+      2:
+        BKFILES;
+      3:
+        BKVOLS;
+      4, 5, 6:
+        BKAREA
+    END;
+    IF LASTKEY = 4 THEN
+      LISTING := 'CONSOLE:';
+    STAT2;
+    NEEDDISK;
+    IF LISTING <> 'CONSOLE:' THEN
+      WRITELST(HDR, SELBITS, VOLTBL, DESCS, VOLNMS, FILES)
+  UNTIL FALSE
+END;
+(*$I+*)
+
+(*$I-*)
+SEGMENT PROCEDURE DORESTOR;
+VAR
+  LSIZES: ARR32;
+  LDESCS: NAM15ARR;
+  LNAMES: NAM7ARR;
+  LSEL: BITS32;
+  BAKSEL: BITS32;
+  LASTVOL: INTEGER;
+  NSHOWN: INTEGER;
+  RESTCNT: INTEGER;
+  SKIPV: BOOLEAN;
+  SKIPF: BOOLEAN;
+  BAKPOS: INTEGER;
+  DESTBLK: INTEGER;
+  DESTBASE: INTEGER;
+  COPIED: INTEGER;
+  BAKOFF: INTEGER;
+  VIDX: INTEGER;
+  DIR: DIR78;
+  SLOT: INTEGER;
+  ENT: DIRENT13;
+  NEED: INTEGER;
+  FIRST: BOOLEAN;
+  MORE: BOOLEAN;
+  DSKN: INTEGER;
+
+  PROCEDURE ABORTRS; FORWARD;
+
+  FUNCTION MOUNTN(N: INTEGER): BOOLEAN;
+  VAR
+    BLK: INTEGER;
+    VID: STRING[10];
+
+    PROCEDURE INSDISK;
+    BEGIN
+      MOVETO(0, STATROW + 2);
+      WRITE('Please insert disk ', N, ' of backup in unit ', FLUNIT);
+      HITSPACE;
+      CLREOL(0, STATROW + 1);
+      IF LASTKEY = 4 THEN
+        EXIT(MOUNTN)
+    END;
+
+  BEGIN
+    MORE := TRUE;
+    MOUNTN := FALSE;
+    NUMSTR(N, VID);
+    VID := CONCAT('BACKUP', VID);
+    IF LENGTH(VID) > 7 THEN
+      DELETE(VID, 6, 1);
+    IF FIRST THEN
+      BEGIN
+        CLREOL(0, 2);
+        WRITE(TITLE);
+        FLUNIT := 5;
+        IF NOT ASKUNIT(0, 4, FLUNIT, 'Enter disk unit number ') THEN
+          EXIT(MOUNTN);
+        NUMSTR(FLUNIT, UNITSTR);
+        PUTSTR(0, 2, CONCAT(CONCAT(TITLE, ' from '), UNITSTR))
+      END;
+    REPEAT
+      UNITREAD(FLUNIT, HDR, 120, 2, 0);
+      LASTIO := IORESULT;
+      IF FIRST THEN
+        CLREOL(0, 4);
+      IF (LENGTH(HDR.VID) > 7) OR (LENGTH(HDR.VID) < 1) OR
+         (HDR.FIRST <> 0) OR (HDR.LASTB <> 3) OR
+         (HDR.EOV <> FLSIZE) OR
+         (COPY(HDR.VID, 1, 4) <> 'BACK') OR (LASTIO <> 0) THEN
+        BEGIN
+          CLEARY(STATROW + 1);
+          WRITE('Disk in unit ', FLUNIT, ' is not a backup disk');
+          INSDISK
+        END
+      ELSE
+        BEGIN
+          WRITELN;
+          IF FIRST THEN
+            SUMKIND(HDR, OUTPUT);
+          IF HDR.VID <> VID THEN
+            BEGIN
+              IF NOT MORE THEN
+                BEGIN
+                  CLEARY(STATROW + 1);
+                  WRITE('Disk is number ', HDR.DISKNUM, ' of backup')
+                END;
+              INSDISK
+            END
+        END;
+      MORE := FALSE
+    UNTIL HDR.VID = VID;
+    DSKN := N;
+    MOUNTN := TRUE;
+    CLREOL(0, STATROW + 1);
+    IF NOT FIRST THEN
+      EXIT(MOUNTN);
+    BLK := 3;
+    IF HDR.TYP IN [2, 3, 4] THEN
+      BEGIN
+        UNITREAD(FLUNIT, LSIZES, 1028, BLK, 0);
+        LASTIO := IORESULT
+      END;
+    BLK := BLK + ((1028 + 511) DIV 512);
+    IF HDR.TYP = 2 THEN
+      BEGIN
+        UNITREAD(FLUNIT, FILES, 8400, BLK, 0);
+        LASTIO := IORESULT
+      END
+  END;
+
+  PROCEDURE LISTSEL;
+  BEGIN
+    CLREOL(0, 3);
+    STATROW := 6;
+    STAT2;
+    NEEDDISK;
+    PUTSTR(0, 6, 'Send Listing to: ');
+    LISTING := 'CONSOLE:';
+    EDITSTR(-1, 0, LISTING, 23);
+    UPSTR(LISTING);
+    IF LISTING = '' THEN
+      LISTING := 'CONSOLE:';
+    WRITELST(HDR, LSEL, LSIZES, LDESCS, LNAMES, FILES)
+  END;
+
+  PROCEDURE UNSFILE;
+  VAR
+    I: INTEGER;
+    LIM: INTEGER;
+  BEGIN
+    I := 1;
+    LIM := HDR.NFILES;
+    WHILE I <= LIM DO
+      BEGIN
+        IF SELFL[I] AND (FILES[I].VOL = VOLNOW) THEN
+          BEGIN
+            DATBLKS := DATBLKS - (FILES[I].HI - FILES[I].LO);
+            SELFL[I] := FALSE;
+            FILECNT := FILECNT - 1
+          END;
+        I := I + 1
+      END;
+    SELBITS[VOLNOW] := FALSE;
+    VOLCNT := VOLCNT - 1
+  END;
+
+  PROCEDURE SELRVOL;
+  VAR
+    PROMPT: STR80;
+    LINE: STR80;
+    CH: CHAR;
+    U: RECORD
+         CASE BOOLEAN OF
+           FALSE: (CUR: INTEGER);
+           TRUE: (S: STRING[28])
+       END;
+  BEGIN
+    CHOSEN := 0;
+    CLREOL(0, 4);
+    PROMPT := CONCAT(CONCAT(ACT, FROMTO), 'which volume : ');
+    PUTSTR(0, 5, PROMPT);
+    MARKCNT := 0;
+    PUTSTR(0, 6, DASHES);
+    LINE := '    Name      Description';
+    PUTSTR(0, 7, LINE);
+    VOLIX := 0;
+    TMP := 0;
+    REPEAT
+      VOLIX := VOLIX + 1;
+      IF BAKSEL[VOLIX] THEN
+        BEGIN
+          TMP := TMP + 1;
+          MOVETO(0 + 40 * ((TMP - 1) DIV 16),
+              8 + ((TMP - 1) MOD 16));
+          IF SELBITS[VOLIX] THEN
+            WRITE('   +')
+          ELSE
+            WRITE('    ');
+          WRITE(LNAMES[VOLIX],
+                CHR(32): (10 - LENGTH(LNAMES[VOLIX])),
+                LDESCS[VOLIX])
+        END
+    UNTIL VOLIX = LSIZES[0].B;
+    NSHOWN := TMP;
+    IF NSHOWN > 16 THEN
+      PUTSTR(40, 7, LINE);
+    U.CUR := 1;
+    SHOWSEL;
+    REPEAT
+      MOVETO(0 + 40 * ((U.CUR - 1) DIV 16),
+          8 + ((U.CUR - 1) MOD 16));
+      WRITE('->');
+      GETKEY(CH, [CHR(8), CHR(10), CHR(11), CHR(13), CHR(21), CHR(27)]);
+      MOVETO(0 + 40 * ((U.CUR - 1) DIV 16),
+          8 + ((U.CUR - 1) MOD 16));
+      WRITE('  ');
+      VOLNOW := 0;
+      TMP := 0;
+      REPEAT
+        VOLNOW := VOLNOW + 1;
+        IF BAKSEL[VOLNOW] THEN
+          TMP := TMP + 1
+      UNTIL TMP >= U.CUR;
+      CASE ORD(CH) OF
+        27:
+          VOLCNT := 0;
+        13:
+          CHOSEN := 1;
+        8:
+          IF SELBITS[VOLNOW] THEN
+            BEGIN
+              UNSFILE;
+              MARKCNT := MARKCNT - 1;
+              ERASEOS(LENGTH(PROMPT), 5);
+              SHOWSEL;
+              MOVETO(3 + 40 * ((U.CUR - 1) DIV 16),
+                  8 + ((U.CUR - 1) MOD 16));
+              WRITE(' ')
+            END;
+        11:
+          IF U.CUR > 1 THEN
+            U.CUR := U.CUR - 1
+          ELSE
+            U.CUR := NSHOWN;
+        10:
+          IF U.CUR = NSHOWN THEN
+            U.CUR := 1
+          ELSE
+            U.CUR := U.CUR + 1;
+        21:
+          IF NOT SELBITS[VOLNOW] THEN
+            BEGIN
+              SELBITS[VOLNOW] := TRUE;
+              VOLCNT := VOLCNT + 1;
+              MARKCNT := MARKCNT + 1;
+              SHOWSEL;
+              ERASEOS(LENGTH(PROMPT), 5);
+              WRITE(LNAMES[VOLNOW], ':  (', LDESCS[VOLNOW], ')');
+              MOVETO(3 + 40 * ((U.CUR - 1) DIV 16),
+                  8 + ((U.CUR - 1) MOD 16));
+              WRITE('+');
+              IF BKTYPE = 2 THEN
+                EXIT(SELRVOL)
+            END
+      END
+    UNTIL CH IN [CHR(13), CHR(27)]
+  END;
+
+  FUNCTION ULESS(A, B: INTEGER): BOOLEAN;
+  BEGIN
+    IF A >= 0 THEN
+      IF B >= 0 THEN
+        ULESS := A < B
+      ELSE
+        ULESS := TRUE
+    ELSE
+      IF B >= 0 THEN
+        ULESS := FALSE
+      ELSE
+        ULESS := A < B
+  END;
+
+  FUNCTION SAFEDIV(DVND, DVSR: INTEGER): INTEGER;
+  VAR
+    T: INTEGER;
+  BEGIN
+    IF DVND >= 0 THEN
+      SAFEDIV := DVND DIV DVSR
+    ELSE
+      BEGIN
+        T := (DVND + 32767) + 1;
+        SAFEDIV := ((T DIV DVSR) + (32767 DIV DVSR))
+               + ((((T MOD DVSR) + (32767 MOD DVSR)) + 1) DIV DVSR)
+      END
+  END;
+
+  FUNCTION SAFEMOD(DVND, DVSR: INTEGER): INTEGER;
+  VAR
+    T: INTEGER;
+  BEGIN
+    IF DVND >= 0 THEN
+      SAFEMOD := DVND MOD DVSR
+    ELSE
+      BEGIN
+        T := (DVND + 32767) + 1;
+        SAFEMOD := (((T MOD DVSR) + (32767 MOD DVSR)) + 1) MOD DVSR
+      END
+  END;
+
+  PROCEDURE GROWPA(NBLK: INTEGER);
+  VAR
+    ENT40: ENT40REC;
+    OFF: INTEGER;
+    BUF: DIR512;
+  BEGIN
+    UNITREAD(PFUNIT, BUF, 512, ENTBLK, DRVCTL);
+    LASTIO := IORESULT;
+    IF LASTIO <> 0 THEN
+      EXIT(GROWPA);
+    OFF := ENTIX MOD ENTS;
+    MOVELEFT(BUF[4 + OFF * ENTLEN], ENT40, 40);
+    AREASZ := ENT40.USEDHI * 256 + ENT40.USEDLO + NBLK;
+    ENT40.USEDHI := SAFEDIV(AREASZ, 256);
+    ENT40.USEDLO := SAFEMOD(AREASZ, 256);
+    PAKEY := ENT40.KEYHI * 256 + ENT40.KEYLO - NBLK;
+    ENT40.KEYHI := SAFEDIV(PAKEY, 256);
+    ENT40.KEYLO := SAFEMOD(PAKEY, 256);
+    MOVELEFT(ENT40, BUF[4 + OFF * ENTLEN], 40);
+    UNITWRITE(PFUNIT, BUF, 512, ENTBLK, DRVCTL);
+    LASTIO := IORESULT;
+    IF LASTIO <> 0 THEN
+      EXIT(GROWPA)
+  END;
+
+  PROCEDURE SPLIT(N: INTEGER; VAR QUOT, HI, LO: INTEGER);
+  BEGIN
+    QUOT := MAPBASE + SAFEDIV(N, 8 * 512);
+    HI := SAFEMOD(N, 8 * 512) DIV 8;
+    LO := SAFEMOD(N, 8 * 512) MOD 8
+  END;
+
+  FUNCTION CLRBITS(HIBLK, LOBLK: INTEGER): BOOLEAN;
+  VAR
+    BUF: BITBUF;
+    BOT: INTEGER;
+    TOP: INTEGER;
+    HIQB, LOQB, HIHB, LOHB, HILB, LOLB: INTEGER;
+    BIT: INTEGER;
+    LIM: INTEGER;
+  BEGIN
+    CLRBITS := FALSE;
+    SPLIT(HIBLK, HIQB, HIHB, HILB);
+    SPLIT(LOBLK, LOQB, LOHB, LOLB);
+    TOP := HIHB * 8 + HILB;
+    BOT := 0;
+    REPEAT
+      UNITREAD(PFUNIT, BUF, 512, HIQB, DRVCTL);
+      IF IORESULT <> 0 THEN
+        EXIT(CLRBITS);
+      IF HIQB = LOQB THEN
+        BOT := LOHB * 8 + LOLB;
+      BIT := TOP;
+      LIM := BOT;
+      WHILE BIT >= LIM DO
+        BEGIN
+          BUF[ORD(ODD(BIT) AND ODD(4088))
+              + (7 - ORD(ODD(BIT) AND ODD(7)))] := FALSE;
+          BIT := BIT - 1
+        END;
+      UNITWRITE(PFUNIT, BUF, 512, HIQB, DRVCTL);
+      HIQB := HIQB - 1;
+      TOP := 4095
+    UNTIL ULESS(HIQB, LOQB);
+    CLRBITS := TRUE
+  END;
+
+  FUNCTION HASROOM(HIBLK, LOBLK: INTEGER): BOOLEAN;
+  VAR
+    BUF: BITBUF;
+    BOT: INTEGER;
+    TOP: INTEGER;
+    HIQB, LOQB, HIHB, LOHB, HILB, LOLB: INTEGER;
+    SPAN: INTEGER;
+    BIT: INTEGER;
+    LIM: INTEGER;
+  BEGIN
+    HASROOM := FALSE;
+    SPAN := HIBLK - LOBLK + 1;
+    IF ULESS(HIBLK, SPAN) THEN
+      EXIT(HASROOM);
+    SPLIT(HIBLK, HIQB, HIHB, HILB);
+    SPLIT(SPAN, LOQB, LOHB, LOLB);
+    TOP := HIHB * 8 + HILB;
+    BOT := 0;
+    REPEAT
+      UNITREAD(PFUNIT, BUF, 512, HIQB, DRVCTL);
+      IF IORESULT <> 0 THEN
+        EXIT(HASROOM);
+      IF HIQB = LOQB THEN
+        BOT := LOHB * 8 + LOLB;
+      BIT := TOP;
+      LIM := BOT;
+      WHILE BIT >= LIM DO
+        BEGIN
+          IF NOT BUF[ORD(ODD(BIT) AND ODD(4088))
+                     + (7 - ORD(ODD(BIT) AND ODD(7)))] THEN
+            EXIT(HASROOM);
+          BIT := BIT - 1
+        END;
+      HIQB := HIQB - 1;
+      TOP := 4095
+    UNTIL ULESS(HIQB, LOQB);
+    HASROOM := TRUE
+  END;
+
+  PROCEDURE BINDVOL;
+  VAR
+    WAS: BOOLEAN;
+    OK: BOOLEAN;
+    S: STR80;
+
+    FUNCTION MKVOL: INTEGER;
+    VAR
+      BUF: ARRAY [0..255] OF INTEGER;
+      NEEDN: INTEGER;
+      START: INTEGER;
+      IDX: INTEGER;
+      P: INTEGER;
+
+      PROCEDURE GAPFOR(NEEDN: INTEGER; VAR IDX, START: INTEGER);
+      VAR
+        I: INTEGER;
+        BASE: INTEGER;
+        GAP: INTEGER;
+      BEGIN
+        IDX := 0;
+        I := 0;
+        GAP := 0;
+        WHILE (I <= VOLTBL[0].B) AND (GAP < NEEDN) DO
+          BEGIN
+            I := I + 1;
+            IF I > VOLTBL[0].B THEN
+              BEGIN
+                IF VOLTBL[0].B > 0 THEN
+                  BEGIN
+                    BASE := VOLTBL[VOLTBL[0].B].A + VOLTBL[VOLTBL[0].B].B;
+                    GAP := (PAKEY + VOLTBL[0].A) - BASE
+                  END
+                ELSE
+                  BEGIN
+                    BASE := PAKEY + 2;
+                    GAP := (PAKEY + VOLTBL[0].A) - BASE
+                  END
+              END
+            ELSE
+              IF I = 1 THEN
+                BEGIN
+                  BASE := PAKEY + 2;
+                  GAP := VOLTBL[1].A - BASE
+                END
+              ELSE
+                BEGIN
+                  BASE := VOLTBL[I - 1].A + VOLTBL[I - 1].B;
+                  GAP := VOLTBL[I].A - BASE
+                END
+          END;
+        IF GAP >= NEEDN THEN
+          BEGIN
+            IDX := I;
+            START := BASE
+          END
+      END;
+
+    BEGIN
+      PUTSTR(0, STATROW + 2, 'Attempting to create volume');
+      MKVOL := 0;
+      NEEDN := LSIZES[VOLIX].B;
+      GAPFOR(NEEDN, IDX, START);
+      IF IDX = 0 THEN
+        BEGIN
+          IF NOT HASROOM(PAKEY - 1, NEEDN) THEN
+            EXIT(MKVOL);
+          IF NOT CLRBITS(PAKEY - 1, PAKEY - NEEDN) THEN
+            EXIT(MKVOL);
+          VOLTBL[0].A := VOLTBL[0].A + NEEDN;
+          GROWPA(NEEDN);
+          IF LASTIO <> 0 THEN
+            EXIT(MKVOL);
+          UNITWRITE(PFUNIT, VOLTBL, 256 + 512, PAKEY, DRVCTL);
+          LASTIO := IORESULT;
+          IF LASTIO <> 0 THEN
+            EXIT(MKVOL);
+          GAPFOR(NEEDN, IDX, START)
+        END;
+      IF IDX = 0 THEN
+        EXIT(MKVOL);
+      TMP := VOLTBL[0].B;
+      P := IDX;
+      WHILE TMP >= P DO
+        BEGIN
+          VOLTBL[TMP + 1] := VOLTBL[TMP];
+          VOLNMS[TMP + 1] := VOLNMS[TMP];
+          DESCS[TMP + 1] := DESCS[TMP];
+          TMP := TMP - 1
+        END;
+      WITH VOLTBL[IDX] DO
+        BEGIN
+          A := START;
+          B := NEEDN;
+          C.B0 := 0;
+          C.B1 := 0;
+          C.F := FALSE
+        END;
+      VOLNMS[IDX] := LNAMES[VOLIX];
+      DESCS[IDX] := LDESCS[VOLIX];
+      VOLTBL[0].B := VOLTBL[0].B + 1;
+      UNITWRITE(PFUNIT, VOLTBL, 768, PAKEY, DRVCTL);
+      MKVOL := IDX
+    END;
+
+  BEGIN
+    SKIPV := FALSE;
+    WAS := CONFIRM;
+    VIDX := 0;
+    REPEAT
+      VIDX := VIDX + 1;
+      IF VIDX > 31 THEN
+        BEGIN
+          MOVETO(0, STATROW + 1);
+          WRITE('There are already ', 31, ' volumes on this ProFile');
+          WRITELN;
+          WRITE('Volume ', LNAMES[VOLIX],
+                ' does not exist and can not be created');
+          WRITELN;
+          HITSPACE;
+          ABORTRS
+        END
+    UNTIL (VIDX > VOLTBL[0].B) OR
+          ((DESCS[VIDX] = LDESCS[VOLIX]) AND
+           (VOLNMS[VIDX] = LNAMES[VOLIX]));
+    IF VIDX > VOLTBL[0].B THEN
+      BEGIN
+        MOVETO(0, STATROW + 1);
+        WRITE('Volume ', LNAMES[VOLIX], ' does not exist');
+        WRITELN;
+        IF BKTYPE = 2 THEN
+          BEGIN
+            HITSPACE;
+            ABORTRS
+          END;
+        VIDX := MKVOL;
+        IF VIDX = 0 THEN
+          BEGIN
+            MOVETO(0, STATROW + 3);
+            WRITE('Unable to create volume - insufficient space available');
+            WRITELN;
+            HITSPACE;
+            ABORTRS
+          END;
+        WAS := FALSE
+      END;
+    IF VOLTBL[VIDX].B <> LSIZES[VOLIX].B THEN
+      BEGIN
+        S := CONCAT(CONCAT(CONCAT('Volume ', LNAMES[VOLIX]),
+                           ' length on backup '),
+                    'is not equal to length on ProFile');
+        PUTSTR(0, STATROW + 1, S);
+        IF BKTYPE = 2 THEN
+          BEGIN
+            PUTSTR(0, STATROW + 2,
+                'Restore files to different size volume ? [Yes/No] ');
+            IF NOT YESNO(FALSE) THEN
+              ABORTRS
+          END
+        ELSE
+          BEGIN
+            PUTSTR(0, STATROW + 2, 'Cannot restore volume');
+            HITSPACE;
+            ABORTRS
+          END
+      END;
+    CLREOL(0, STATROW + 1);
+    IF WAS AND (BKTYPE = 3) THEN
+      BEGIN
+        S := CONCAT(CONCAT('Volume ', LNAMES[VOLIX]),
+                    ' exists on ProFile - replace it ? [Yes/No] ');
+        PUTSTR(0, STATROW + 1, S);
+        OK := YESNO(FALSE);
+        CLEARY(STATROW + 1);
+        IF NOT OK THEN
+          BEGIN
+            SKIPV := TRUE;
+            EXIT(BINDVOL)
+          END
+      END;
+    UNITREAD(PFUNIT, DIR, 2028, VOLTBL[VIDX].A + 2, DRVCTL);
+    LASTVOL := VOLIX
+  END;
+
+  PROCEDURE RDBAK;
+  VAR
+    CH: CHAR;
+    KEYS: CHARSET;
+    DISK: INTEGER;
+    BLK: INTEGER;
+  BEGIN
+    DISK := (BAKPOS DIV (FLSIZE - 3)) + 1;
+    BLK := (BAKPOS MOD (FLSIZE - 3)) + 3;
+    IF DISK <> DSKN THEN
+      IF NOT MOUNTN(DISK) THEN
+        ABORTRS;
+    REPEAT
+      UNITREAD(FLUNIT, DIRBLK, 512, BLK, 0);
+      LASTIO := IORESULT;
+      IF LASTIO <> 0 THEN
+        BEGIN
+          MOVETO(0, STATROW + 1);
+          WRITELN;
+          WRITE('ERROR: I/O Error ', LASTIO, ' on unit ', FLUNIT);
+          WRITELN;
+          WRITE('       D(rive change');
+          WRITELN;
+          WRITE('       I(gnore error - replace with zeros');
+          WRITELN;
+          IF BKTYPE = 2 THEN
+            BEGIN
+              WRITE('       F(ile skip - process next file');
+              WRITELN
+            END;
+          IF BKTYPE IN [2, 3] THEN
+            BEGIN
+              WRITE('       V(olume skip - process next volume');
+              WRITELN
+            END;
+          WRITE('       C(ancel remainder of restore');
+          WRITELN;
+          KEYS := ['C', 'D', 'I'];
+          IF BKTYPE = 2 THEN
+            KEYS := KEYS + ['F', 'V'];
+          IF BKTYPE = 3 THEN
+            KEYS := KEYS + ['V'];
+          CH := ASKOPT(23, KEYS);
+          CLREOL(0, STATROW + 1);
+          CASE CH OF
+            'C':
+              ABORTRS;
+            'D':
+              BEGIN
+                IF NOT ASKUNIT(0, STATROW + 1, FLUNIT,
+                           'Restore from which unit number ? ') THEN
+                  ABORTRS;
+                IF NOT MOUNTN(DISK) THEN
+                  ABORTRS
+              END;
+            'I':
+              BEGIN
+                FILLCHAR(DIRBLK, 512, CHR(0));
+                LASTIO := 0
+              END;
+            'F':
+              BEGIN
+                SKIPF := TRUE;
+                LASTIO := 0
+              END;
+            'V':
+              BEGIN
+                SKIPV := TRUE;
+                LASTIO := 0
+              END
+          END
+        END
+    UNTIL LASTIO = 0;
+    BAKPOS := BAKPOS + 1
+  END;
+
+  PROCEDURE WRPROF;
+  BEGIN
+    UNITWRITE(PFUNIT, DIRBLK, 512, DESTBLK, DRVCTL);
+    LASTIO := IORESULT;
+    IF LASTIO <> 0 THEN
+      BEGIN
+        CLREOL(0, 22);
+        WRITE('ERROR: I/O Error ', LASTIO,
+              ' writing to ProFile. Backup Cancelled');
+        HITSPACE;
+        ABORTRS
+      END;
+    DESTBLK := DESTBLK + 1;
+    PUTNUM(35, STATROW, DESTBLK - DESTBASE, 5)
+  END;
+
+  PROCEDURE RSFILES;
+  VAR
+    LIM: INTEGER;
+
+    PROCEDURE SELRFILE;
+    VAR
+      PAT: NAM15;
+      START: INTEGER;
+      SUF: NAM15;
+      PRE: NAM15;
+      HASQ: BOOLEAN;
+      HASEQ: BOOLEAN;
+      STOPF: BOOLEAN;
+      LIM: INTEGER;
+      S: STRING[39];
+
+      FUNCTION RCUTWILD(CH: STR1): BOOLEAN;
+      BEGIN
+        IF POS(CH, PAT) <> 0 THEN
+          BEGIN
+            PRE := COPY(PAT, 1, POS(CH, PAT) - 1);
+            SUF := COPY(PAT, POS(CH, PAT) + 1,
+                        LENGTH(PAT) - POS(CH, PAT));
+            RCUTWILD := TRUE
+          END
+        ELSE
+          RCUTWILD := FALSE
+      END;
+
+      FUNCTION RHITWILD(S: NAM15): BOOLEAN;
+      VAR
+        U: RECORD
+             CASE BOOLEAN OF
+               FALSE: (LIM: INTEGER);
+               TRUE: (MSG: STRING[39])
+           END;
+      BEGIN
+        RHITWILD := FALSE;
+        IF STOPF THEN
+          EXIT(RHITWILD);
+        IF SELFL[START] THEN
+          EXIT(RHITWILD);
+        IF PAT = S THEN
+          BEGIN
+            RHITWILD := TRUE;
+            EXIT(RHITWILD)
+          END;
+        IF NOT (HASEQ OR HASQ) THEN
+          EXIT(RHITWILD);
+        IF LENGTH(PRE) + LENGTH(SUF) > LENGTH(S) THEN
+          EXIT(RHITWILD);
+        IF (COPY(S, 1, LENGTH(PRE)) <> PRE) OR
+           (COPY(S, LENGTH(S) - LENGTH(SUF) + 1, LENGTH(SUF)) <> SUF) THEN
+          EXIT(RHITWILD);
+        IF HASQ THEN
+          BEGIN
+            CLEARY(7);
+            U.MSG := CONCAT(CONCAT(CONCAT(ACT, ' file '), S),
+                            ' [Yes/No] ? ');
+            PUTSTR(0, 7, U.MSG);
+            RHITWILD := YESNO(TRUE);
+            IF WASESC THEN
+              BEGIN
+                RHITWILD := FALSE;
+                STOPF := TRUE
+              END
+          END
+        ELSE
+          RHITWILD := TRUE
+      END;
+
+    BEGIN
+      REPEAT
+        CLREOL(0, 6);
+        PUTSTR(0, 8, DASHES);
+        SHOWY := 0;
+        IF FILECNT > 0 THEN
+          BEGIN
+            SHOWY := 0;
+            SHOWIX := 0;
+            START := 0;
+            REPEAT
+              REPEAT
+                START := START + 1
+              UNTIL SELFL[START];
+              SHOWIX := SHOWIX + 1
+            UNTIL (FILECNT - SHOWIX) < 10;
+            REPEAT
+              PAT := FILES[START].NM;
+              PADRIGHT(PAT, 15, ' ');
+              PUTSTR(0, 9 + SHOWY, PAT);
+              SHOWY := SHOWY + 1;
+              (*$R-*)
+              REPEAT
+                START := START + 1
+              UNTIL SELFL[START] OR (START > HDR.NFILES);
+              (*$R+*)
+            UNTIL START > HDR.NFILES
+          END;
+        CLEARY(7);
+        S := CONCAT(ACT, ' which file(s) ? ');
+        PUTSTR(0, 7, S);
+        PAT := '';
+        EDITSTR(-1, 0, PAT, 15);
+        UPSTR(PAT);
+        IF WASESC THEN
+          EXIT(SELRFILE);
+        IF PAT <> '' THEN
+          BEGIN
+            HASQ := FALSE;
+            HASEQ := FALSE;
+            PRE := '';
+            SUF := '';
+            IF RCUTWILD('=') THEN
+              HASEQ := TRUE
+            ELSE
+              HASQ := RCUTWILD('?');
+            STOPF := FALSE;
+            START := 1;
+            LIM := HDR.NFILES;
+            WHILE START <= LIM DO
+              BEGIN
+                IF (VOLNOW = FILES[START].VOL) AND RHITWILD(FILES[START].NM)
+                   AND (NOT STOPF) THEN
+                  BEGIN
+                    FILECNT := FILECNT + 1;
+                    SELFL[START] := TRUE
+                  END;
+                START := START + 1
+              END
+          END;
+        SHOWSEL
+      UNTIL PAT = ''
+    END;
+
+    PROCEDURE PUTFILE;
+    VAR
+      BEST: INTEGER;
+      CH: CHAR;
+      I: INTEGER;
+      LIM: INTEGER;
+      P: ^FILEREC;
+      S: STR80;
+
+      PROCEDURE DELDIR;
+      VAR
+        I: INTEGER;
+        LIM: INTEGER;
+      BEGIN
+        I := SLOT;
+        LIM := DIR[0].NF - 1;
+        WHILE I <= LIM DO
+          BEGIN
+            DIR[I] := DIR[I + 1];
+            I := I + 1
+          END;
+        DIR[DIR[0].NF].NM := '';
+        DIR[0].NF := DIR[0].NF - 1
+      END;
+
+      PROCEDURE INSDIR;
+      VAR
+        I: INTEGER;
+        LIM: INTEGER;
+      BEGIN
+        I := DIR[0].NF;
+        LIM := SLOT;
+        WHILE I >= LIM DO
+          BEGIN
+            DIR[I + 1] := DIR[I];
+            I := I - 1
+          END;
+        DIR[SLOT] := ENT;
+        DIR[0].NF := DIR[0].NF + 1
+      END;
+
+      PROCEDURE FITGAP;
+      VAR
+        FREE: INTEGER;
+        NMOV: INTEGER;
+        BGAP: INTEGER;
+        GAP: INTEGER;
+        I: INTEGER;
+        CH: CHAR;
+        SRC: INTEGER;
+        DST: INTEGER;
+        LIM: INTEGER;
+        LIM2: INTEGER;
+      BEGIN
+        REPEAT
+          FREE := 0;
+          GAP := 0;
+          BGAP := 0;
+          BEST := 0;
+          SLOT := 1;
+          LIM := DIR[0].NF + 1;
+          WHILE SLOT <= LIM DO
+            BEGIN
+              IF SLOT = DIR[0].NF + 1 THEN
+                GAP := DIR[0].EOV
+              ELSE
+                GAP := DIR[SLOT].LO;
+              GAP := GAP - DIR[SLOT - 1].HI;
+              FREE := FREE + GAP;
+              IF (GAP >= NEED) AND ((BEST = 0) OR (GAP < BGAP)) THEN
+                BEGIN
+                  BEST := SLOT;
+                  BGAP := GAP
+                END;
+              SLOT := SLOT + 1
+            END;
+          IF FREE < NEED THEN
+            BEGIN
+              WRITE('Insufficient free space on ', LNAMES[VOLIX]);
+              WRITELN;
+              WRITE('  F(ile skip');
+              WRITELN;
+              WRITE('  V(olume skip');
+              WRITELN;
+              WRITE('  C(ancel remainder of restore');
+              WRITELN;
+              CH := ASKOPT(STATROW + 4, ['C', 'F', 'V']);
+              IF CH = 'C' THEN
+                ABORTRS;
+              CLREOL(0, STATROW);
+              IF CH = 'V' THEN
+                SKIPV := TRUE;
+              EXIT(PUTFILE)
+            END;
+          IF BEST = 0 THEN
+            BEGIN
+              WRITE(LNAMES[VOLIX], ' must be krunched to restore ',
+                    FILES[FILEIX].NM);
+              WRITELN;
+              WRITE('Krunch it ? [Yes/No] ');
+              IF NOT YESNO(FALSE) THEN
+                EXIT(PUTFILE);
+              I := 1;
+              LIM := DIR[0].NF;
+              WHILE I <= LIM DO
+                BEGIN
+                  IF DIR[I].LO > DIR[I - 1].HI THEN
+                    BEGIN
+                      NMOV := DIR[I].HI - DIR[I].LO;
+                      SRC := VOLTBL[VIDX].A + DIR[I].LO;
+                      DST := VOLTBL[VIDX].A + DIR[I - 1].HI;
+                      TMP := 1;
+                      LIM2 := NMOV;
+                      WHILE TMP <= LIM2 DO
+                        BEGIN
+                          UNITREAD(PFUNIT, DIRBLK, 512, SRC, DRVCTL);
+                          UNITWRITE(PFUNIT, DIRBLK, 512, DST, DRVCTL);
+                          SRC := SRC + 1;
+                          DST := DST + 1;
+                          TMP := TMP + 1
+                        END;
+                      DIR[I].LO := DIR[I - 1].HI;
+                      DIR[I].HI := DIR[I].LO + NMOV;
+                      UNITWRITE(PFUNIT, DIR, 2028, VOLTBL[VIDX].A + 2, DRVCTL)
+                    END;
+                  I := I + 1
+                END
+            END
+        UNTIL BEST <> 0
+      END;
+
+    BEGIN
+      SLOT := 1;
+      WHILE (SLOT <= DIR[0].NF) AND
+            (DIR[SLOT].NM <> FILES[FILEIX].NM) DO
+        SLOT := SLOT + 1;
+      IF SLOT <= DIR[0].NF THEN
+        BEGIN
+          IF CONFIRM THEN
+            BEGIN
+              CLEARY(STATROW);
+              S := CONCAT(CONCAT(CONCAT(LNAMES[VOLIX], ':'),
+                                 FILES[FILEIX].NM),
+                          ' exists on ProFile - replace it ? [Yes/No] ');
+              PUTSTR(0, STATROW, S);
+              IF NOT YESNO(FALSE) THEN
+                BEGIN
+                  ADVLINE(6, 15, 1);
+                  EXIT(PUTFILE)
+                END
+            END;
+          DELDIR;
+          UNITWRITE(PFUNIT, DIR, 2028, VOLTBL[VIDX].A + 2, DRVCTL)
+        END;
+      CLEARY(STATROW);
+      IF DIR[0].NF = 77 THEN
+        BEGIN
+          WRITE('Directory of ', LNAMES[VOLIX], ' is full ');
+          WRITELN;
+          WRITE('  F(ile skip');
+          WRITELN;
+          WRITE('  V(olume skip');
+          WRITELN;
+          WRITE('  C(ancel remainder of restore');
+          WRITELN;
+          CH := ASKOPT(STATROW + 4, ['C', 'F', 'V']);
+          IF CH = 'C' THEN
+            ABORTRS;
+          CLREOL(0, STATROW);
+          IF CH = 'V' THEN
+            SKIPV := TRUE;
+          EXIT(PUTFILE)
+        END;
+      ENT := FILES[FILEIX].D13;
+      NEED := ENT.HI - ENT.LO;
+      FITGAP;
+      ENT.LO := DIR[BEST - 1].HI;
+      ENT.HI := ENT.LO + NEED;
+      SLOT := BEST;
+      INSDIR;
+      UNITWRITE(PFUNIT, DIR, 2028, VOLTBL[VIDX].A + 2, DRVCTL);
+      BAKOFF := ((1028 + 511) DIV 512) + ((8400 + 511) DIV 512);
+      TMP := 1;
+      LIM := FILEIX - 1;
+      WHILE TMP <= LIM DO
+        BEGIN
+          BAKOFF := BAKOFF + (FILES[TMP].HI - FILES[TMP].LO);
+          TMP := TMP + 1
+        END;
+      WRITE(LNAMES[VOLIX], ':', FILES[FILEIX].NM);
+      COPIED := 0;
+      BAKPOS := BAKOFF;
+      DESTBLK := VOLTBL[VIDX].A + ENT.LO;
+      DESTBASE := DESTBLK;
+      IF NEED > 0 THEN
+        BEGIN
+          SKIPV := FALSE;
+          SKIPF := FALSE;
+          REPEAT
+            RDBAK;
+            IF SKIPF OR SKIPV THEN
+              BEGIN
+                ADVLINE(6, 15, 1);
+                EXIT(PUTFILE)
+              END;
+            WRPROF;
+            COPIED := COPIED + 1
+          UNTIL COPIED = NEED
+        END;
+      ADVLINE(6, 15, 1);
+      RESTCNT := RESTCNT + 1
+    END;
+
+  BEGIN
+    HINTKEY;
+    SHOWSEL;
+    FILLCHAR(SELFL, 38, CHR(0));
+    REPEAT
+      SELRVOL;
+      IF VOLCNT = 0 THEN
+        ABORTRS;
+      IF NOT ODD(CHOSEN) THEN
+        SELRFILE
+    UNTIL ODD(CHOSEN);
+    LASTVOL := 0;
+    CLREOL(0, 3);
+    STATROW := 6;
+    FILEIX := 1;
+    LIM := HDR.NFILES;
+    WHILE FILEIX <= LIM DO
+      BEGIN
+        VOLIX := FILES[FILEIX].VOL;
+        IF VOLIX <> LASTVOL THEN
+          BINDVOL;
+        IF SELFL[FILEIX] AND (NOT SKIPV) THEN
+          PUTFILE
+        ELSE
+          BEGIN
+            MOVETO(0, STATROW);
+            WRITE(LNAMES[VOLIX], ':', FILES[FILEIX].NM, ' skipped');
+            WRITELN;
+            ADVLINE(6, 15, 1)
+          END;
+        FILEIX := FILEIX + 1
+      END;
+    MOVETO(0, STATROW + 2);
+    WRITE('Restored ', RESTCNT, ' of ', FILECNT, ' Files successfully');
+    WRITELN;
+    HITSPACE
+  END;
+
+  PROCEDURE RSVOLS;
+  VAR
+    I: INTEGER;
+    LIM: INTEGER;
+    SPARE: INTEGER;
+  BEGIN
+    HINTKEY;
+    SHOWSEL;
+    SELRVOL;
+    IF VOLCNT = 0 THEN
+      ABORTRS;
+    CLREOL(0, 3);
+    WRITE('Restoring ', VOLCNT, ' Volume');
+    IF VOLCNT <> 1 THEN
+      WRITE(CHR(115));
+    STATROW := 6;
+    VOLIX := 1;
+    LIM := LSIZES[0].B;
+    WHILE VOLIX <= LIM DO
+      BEGIN
+        IF SELBITS[VOLIX] THEN
+          BEGIN
+            CLEARY(STATROW);
+            WRITE(LNAMES[VOLIX], ' (', LDESCS[VOLIX], ')');
+            BINDVOL;
+            IF NOT SKIPV THEN
+              BEGIN
+                COPIED := 0;
+                BAKOFF := (1028 + 511) DIV 512;
+                I := 1;
+                SPARE := VOLIX - 1;
+                WHILE I <= SPARE DO
+                  BEGIN
+                    IF BAKSEL[I] THEN
+                      BAKOFF := BAKOFF + LSIZES[I].B;
+                    I := I + 1
+                  END;
+                BAKPOS := BAKOFF;
+                DESTBLK := VOLTBL[VIDX].A;
+                DESTBASE := DESTBLK;
+                REPEAT
+                  RDBAK;
+                  IF SKIPV THEN
+                    COPIED := LSIZES[VOLIX].B
+                  ELSE
+                    BEGIN
+                      WRPROF;
+                      COPIED := COPIED + 1
+                    END
+                UNTIL COPIED = LSIZES[VOLIX].B
+              END;
+            IF SKIPV THEN
+              PUTSTR(35, STATROW, 'Skipped or Cancelled');
+            ADVLINE(6, 15, 1)
+          END;
+        VOLIX := VOLIX + 1
+      END;
+    MOVETO(0, STATROW + 2);
+    WRITE('Volume Restore completed');
+    WRITELN;
+    WRITE('Use Volume Manager to check volume assignments');
+    WRITELN;
+    HITSPACE
+  END;
+
+  PROCEDURE RSAREA;
+  VAR
+    N: INTEGER;
+
+    PROCEDURE COPYBLK(START, NBLK: INTEGER);
+    BEGIN
+      CLEARY(STATROW);
+      WRITE('Restoring ', NBLK, ' Blocks');
+      COPIED := 0;
+      BAKOFF := (1028 + 511) DIV 512;
+      BAKPOS := BAKOFF;
+      DESTBLK := START;
+      DESTBASE := DESTBLK;
+      REPEAT
+        RDBAK;
+        WRPROF;
+        COPIED := COPIED + 1
+      UNTIL COPIED = NBLK;
+      MOVETO(0, STATROW + 1);
+      WRITE(NBLK, ' blocks restored');
+      WRITELN;
+      WRITE('Use Volume Manager to check volume assignments');
+      WRITELN;
+      HITSPACE
+    END;
+
+  BEGIN
+    STATROW := 6;
+    PUTSTR(0, STATROW, 'Area restores may overwrite large amounts of data');
+    PUTSTR(0, STATROW + 1,
+        'Do you really wish to perform area restore ? [Yes/No] ');
+    IF NOT YESNO(FALSE) THEN
+      ABORTRS;
+    CLREOL(0, STATROW);
+    CASE BKTYPE OF
+      4:
+        BEGIN
+          IF AREASZ > HDR.BKBLKS THEN
+            BEGIN
+              SHOWERR(19, 1);
+              ABORTRS
+            END;
+          IF AREASZ < HDR.BKBLKS THEN
+            BEGIN
+              N := HDR.BKBLKS - AREASZ;
+              CLEARY(STATROW);
+              WRITE('Attempting to find ', N, ' blocks');
+              IF NOT HASROOM(PAKEY - 1, N) THEN
+                BEGIN
+                  SHOWERR(20, 1);
+                  ABORTRS
+                END;
+              CLEARY(STATROW);
+              WRITE('Allocating ', N, ' blocks');
+              IF NOT CLRBITS(PAKEY - 1, PAKEY - N) THEN
+                BEGIN
+                  SHOWERR(20, 1);
+                  ABORTRS
+                END;
+              CLEARY(STATROW);
+              WRITE('Updating ProDOS entry for PASCAL.AREA');
+              GROWPA(N)
+            END;
+          COPYBLK(PAKEY, AREASZ)
+        END;
+      5:
+        BEGIN
+          IF AREAKEY <> HDR.BKBLKS THEN
+            BEGIN
+              SHOWERR(20, 1);
+              ABORTRS
+            END;
+          COPYBLK(0, AREAKEY)
+        END;
+      6:
+        BEGIN
+          IF DISKBLKS <> HDR.BKBLKS THEN
+            BEGIN
+              SHOWERR(21, 1);
+              ABORTRS
+            END;
+          COPYBLK(0, DISKBLKS)
+        END
+    END
+  END;
+
+  PROCEDURE ABORTRS;
+  BEGIN
+    CASE BKTYPE OF
+      2:
+        EXIT(RSFILES);
+      3:
+        EXIT(RSVOLS);
+      4, 5, 6:
+        EXIT(RSAREA);
+      OTHERWISE
+        EXIT(DORESTOR)
+    END
+  END;
+
+BEGIN
+  RESTMODE := 1;
+  ACT := 'Restore';
+  FROMTO := ' to ';
+  PREP2 := ' from ';
+  REPEAT
+    CLRSTATE;
+    TYPEMENU;
+    IF WASESC THEN
+      EXIT(DORESTOR);
+    SETTITLE;
+    SHOWSEL;
+    STATVOL;
+    FIRST := TRUE;
+    IF MOUNTN(1) THEN
+      BEGIN
+        FIRST := FALSE;
+        RESTCNT := 0;
+        NSHOWN := VOLCNT;
+        VOLCNT := 0;
+        BAKSEL := LSEL;
+        FILLCHAR(SELBITS, 4, CHR(0));
+        IF BKTYPE = 1 THEN
+          LISTSEL
+        ELSE
+          BEGIN
+            HITSPACE;
+            CLEARY(23);
+            IF HDR.TYP <> BKTYPE THEN
+              SHOWERR(19, 1)
+            ELSE
+              CASE BKTYPE OF
+                2:
+                  RSFILES;
+                3:
+                  RSVOLS;
+                4, 5, 6:
+                  RSAREA
+              END
+          END
+      END;
+    STAT2
+  UNTIL FALSE
+END;
+(*$I+*)
+
+(*$I-*)
+PROCEDURE WRITELST;
+VAR
+  F: TEXT;
+  U: RECORD
+       CASE INTEGER OF
+         1: (LIM: INTEGER;
+             LIM2: INTEGER);
+         2: (S: STRING[38])
+     END;
+
+  PROCEDURE VOLROW;
+  BEGIN
+    IF LISTING = 'CONSOLE:' THEN
+      MOVETO(0, STATROW);
+    WRITE(F, NAMES[VOLIX], ' ':(10 - LENGTH(NAMES[VOLIX])),
+          DESCS[VOLIX], ' ':(20 - LENGTH(DESCS[VOLIX])),
+          SIZES[VOLIX].B:5);
+    WRITELN(F);
+    ADVLINE(6, 22, 1)
+  END;
+
+  PROCEDURE FILEROW;
+  BEGIN
+    IF LISTING = 'CONSOLE:' THEN
+      MOVETO(0, STATROW);
+    WITH FILES[FILEIX] DO
+      BEGIN
+        WRITE(F, '  ', NM, ' ':(20 - LENGTH(NM)),
+              HI - LO:5,
+              DAT.MONTH:8, '/', DAT.DAY, '/', DAT.YEAR);
+        WRITELN(F)
+      END;
+    ADVLINE(6, 22, 1)
+  END;
+
+BEGIN
+  REPEAT
+    IF (POS('.TEXT', LISTING) = 0) AND (LISTING <> 'CONSOLE:') AND
+       (LISTING <> 'PRINTER:') AND (LENGTH(LISTING) < 18) THEN
+      LISTING := CONCAT(LISTING, '.TEXT');
+    IF NOT (LISTING = 'CONSOLE:') THEN
+      REWRITE(F, LISTING)
+    ELSE
+      MOVELEFT(OUTPUT, F, 602);
+    LASTIO := IORESULT;
+    IF LASTIO <> 0 THEN
+      BEGIN
+        CLREOL(0, STATROW);
+        PUTSTR(0, STATROW, CONCAT('Unable to open ', LISTING));
+        PUTSTR(0, STATROW + 1, 'Send Listing to : ');
+        EDITSTR(-1, 0, LISTING, 23);
+        UPSTR(LISTING);
+        IF WASESC THEN
+          EXIT(WRITELST);
+        IF LISTING = '' THEN
+          LISTING := 'CONSOLE:'
+      END
+  UNTIL LASTIO = 0;
+  IF LISTING <> 'CONSOLE:' THEN
+    BEGIN
+      MOVETO(0, STATROW + 2);
+      WRITE('Backup listing is being written to ', LISTING)
+    END
+  ELSE
+    CLREOL(0, 2);
+  WRITE(F, 'Backup Listing');
+  WRITELN(F);
+  WRITE(F, CHR(13));
+  WRITELN(F);
+  STATROW := 4;
+  SUMKIND(HDR, F);
+  WRITE(F, 'ProFile Volume Table at Time of Backup ');
+  WRITELN(F);
+  WRITE(F, 'Volume      Description        Size');
+  WRITELN(F);
+  STATROW := STATROW + 2;
+  PAGEFLG := 1;
+  VOLIX := 1;
+  U.LIM := SIZES[0].B;
+  WHILE VOLIX <= U.LIM DO
+    BEGIN
+      VOLROW;
+      VOLIX := VOLIX + 1
+    END;
+  ADVLINE(6, 22, 2);
+  IF (LISTING = 'CONSOLE:') AND (STATROW <> 6) THEN
+    BEGIN
+      HITSPACE;
+      CLREOL(0, 6)
+    END;
+  STATROW := 7;
+  WRITE(F, 'Contents of this Backup');
+  WRITELN(F);
+  IF HDR.TYP IN [2, 3, 4] THEN
+    BEGIN
+      VOLIX := 1;
+      U.LIM := SIZES[0].B;
+      WHILE VOLIX <= U.LIM DO
+        BEGIN
+          IF SEL[VOLIX] THEN
+            BEGIN
+              VOLROW;
+              IF HDR.TYP = 2 THEN
+                BEGIN
+                  FILEIX := 1;
+                  U.LIM2 := HDR.NFILES;
+                  WHILE FILEIX <= U.LIM2 DO
+                    BEGIN
+                      IF FILES[FILEIX].VOL = VOLIX THEN
+                        FILEROW;
+                      FILEIX := FILEIX + 1
+                    END
+                END
+            END;
+          VOLIX := VOLIX + 1
+        END
+    END;
+  IF LISTING <> 'CONSOLE:' THEN
+    CLOSE(F, LOCK)
+  ELSE
+    HITSPACE
+END;
+
+PROCEDURE SHOWIO(ERR: INTEGER; MSG: STR80); FORWARD;
+FUNCTION NEXTDIR(VAR ENT: DIRENT): BOOLEAN; FORWARD;
+PROCEDURE SELDRIVE; FORWARD;
+PROCEDURE BANNER; FORWARD;
+
+PROCEDURE SUMKIND;
+VAR
+  COUNT: INTEGER;
+  KIND: STR80;
+BEGIN
+  CASE HDR.TYP OF
+    2:
+      KIND := 'File';
+    3:
+      KIND := 'Volume';
+    4:
+      KIND := 'Pascal Area';
+    5:
+      KIND := 'ProDOS Area';
+    6:
+      KIND := 'ProFile'
+  END;
+  WRITE(F, KIND, ' Backup contains ');
+  COUNT := -1;
+  CASE HDR.TYP OF
+    2:
+      BEGIN
+        COUNT := HDR.NFILES;
+        KIND := 'File'
+      END;
+    3:
+      BEGIN
+        COUNT := HDR.NVOLS;
+        KIND := 'Volume'
+      END
+  END;
+  IF COUNT <> 1 THEN
+    KIND := CONCAT(KIND, 's');
+  IF COUNT <> -1 THEN
+    WRITE(F, COUNT, ' ', KIND, ' ');
+  IF HDR.NDISKS = 1 THEN
+    WRITE(F, '1 Disk')
+  ELSE
+    WRITE(F, HDR.NDISKS, ' Disks');
+  WRITE(F, CHR(13), 'Comment: ', HDR.COMMENT);
+  WRITELN(F);
+  ADVLINE(6, 22, 3)
+END;
+(*$I+*)
+
+(*$I-*)
+PROCEDURE STAT2;
+BEGIN
+  IF ODD(STATFLG) THEN
+    UNITSTATUS(PFUNIT, VOLS2, 16386)
+END;
+(*$I+*)
+
+(*$I-*)
+PROCEDURE STATVOL;
+BEGIN
+  UNITSTATUS(PFUNIT, VOLS, 16386)
+END;
+(*$I+*)
+(*$I-*)
+FUNCTION ASKUNIT;
+VAR
+  UNITL: INTEGER;
+BEGIN
+  UNITL := UNITN;
+  ASKUNIT := FALSE;
+  PUTSTR(X, Y, MSG);
+  REPEAT
+    EDITNUM(X + LENGTH(MSG), Y, UNITL, 2);
+    PUTNUM(X + LENGTH(MSG), Y, UNITL, 2);
+    IF WASESC THEN
+      EXIT(ASKUNIT);
+    IF UNITL IN [4, 5, 9..12] THEN
+      BEGIN
+        STATVOL;
+        UNITCLEAR(UNITL);
+        LASTIO := IORESULT;
+        STAT2
+      END
+    ELSE
+      LASTIO := 9;
+    IF LASTIO <> 0 THEN
+      BEGIN
+        SHOWERR(25, 1);
+        CLREOL(X + LENGTH(MSG), Y)
+      END
+  UNTIL LASTIO = 0;
+  ASKUNIT := TRUE;
+  UNITN := UNITL
+END;
+(*$I+*)
+
+PROCEDURE ADVLINE;
+BEGIN
+  STATROW := STATROW + N;
+  IF STATROW > LIM THEN
+    BEGIN
+      STATROW := REST;
+      IF (LISTING = 'CONSOLE:') AND ODD(PAGEFLG) THEN
+        HITSPACE;
+      CLREOL(0, STATROW)
+    END
+END;
+
+(*$I-*)
+PROCEDURE HINTKEY;
+BEGIN
+  MOVETO(0, 3);
+  WRITE('(Press RETURN to accept selections, press ESCAPE to cancel ',
+        ACT, ')')
+END;
+(*$I+*)
+
+FUNCTION DRVCTL;
+BEGIN
+  DRVCTL := 2 + DRIVE * 8192
+END;
+
+(*$I-*)
+FUNCTION ASKOPT;
+VAR
+  CH: CHAR;
+BEGIN
+  MOVETO(0, Y);
+  WRITE('Press the first letter to select an option. Option? ');
+  GETKEY(CH, VALID);
+  ASKOPT := CH
+END;
+(*$I+*)
+
+(*$I-*)
+PROCEDURE SHOWSEL;
+BEGIN
+  MOVETO(0, 2);
+  WRITE(TITLE, '. Currently selected ');
+  IF BKTYPE = 2 THEN
+    BEGIN
+      WRITE(FILECNT, ' ');
+      IF FILECNT = 1 THEN
+        WRITE('File')
+      ELSE
+        WRITE('Files')
+    END;
+  IF BKTYPE = 3 THEN
+    BEGIN
+      WRITE(VOLCNT, ' ');
+      IF VOLCNT = 1 THEN
+        WRITE('Volume')
+      ELSE
+        WRITE('Volumes')
+    END;
+  WRITE(FROMTO, 'drive ', DRIVE, '.(', VOLNAM[DRIVE], ')')
+END;
+(*$I+*)
+
+(*$I-*)
+PROCEDURE MAINMENU;
+VAR
+  CH: CHAR;
+BEGIN
+  REPEAT
+    RELEASE(HEAP.P);
+    CLEARLN;
+    BANNER;
+    PUTSTR(5, 4, 'S(elect a ProFile for Backup/Restore.');
+    WRITE(' Current Drive is ', DRIVE);
+    PUTSTR(5, 6, 'B(ackup Files, Volumes, or Areas.');
+    PUTSTR(5, 8, 'R(estore Files, Volumes, or Areas.');
+    PUTSTR(5, 10, 'Q(uit.');
+    CENTER(22, 'Written by Naru Enterprises, Inc.');
+    CH := ASKOPT(2, ['B', 'Q', 'R', 'S']);
+    CLRSTATE;
+    NEEDDISK;
+    CASE CH OF
+      'S':
+        SELDRIVE;
+      'R':
+        DORESTOR;
+      'B':
+        DOBACKUP;
+      'Q':
+        QUITBK
+    END
+  UNTIL FALSE
+END;
+(*$I+*)
+
+(*$I-*)
+PROCEDURE TYPEMENU;
+VAR
+  KEYS: CHARSET;
+  ROW: INTEGER;
+BEGIN
+  BKTYPE := 0;
+  REPEAT
+    { Escape is a one-character constant so the set
+      folds to one LDC. CHR(27) is SGS+UNI. }
+    KEYS := ['', 'D', 'F', 'N', 'P', 'V'];
+    CLEARLN;
+    BANNER;
+    PUTSTR(0, 2, CONCAT(ACT, ' Files, Volumes, or Areas'));
+    ROW := 6;
+    IF ODD(RESTMODE) THEN
+      BEGIN
+        PUTSTR(5, ROW, 'L(ist backup directory');
+        ROW := ROW + 2;
+        PUTSTR(5, ROW, 'C(onfirm Volume or File Replacement');
+        ROW := ROW + 2;
+        KEYS := KEYS + ['C', 'L']
+      END;
+    PUTSTR(5, ROW, CONCAT('F(iles. ', ACT, ' selected files in a volume'));
+    ROW := ROW + 2;
+    PUTSTR(5, ROW, CONCAT('V(olumes. ', ACT, ' selected volumes'));
+    ROW := ROW + 2;
+    PUTSTR(5, ROW, CONCAT('P(ascal Area. ', ACT, ' the entire Pascal Area'));
+    ROW := ROW + 2;
+    PUTSTR(5, ROW, CONCAT('N(on-Pascal. ', ACT, ' the ProDOS Area'));
+    ROW := ROW + 2;
+    PUTSTR(5, ROW, CONCAT('D(evice. ', ACT, ' the entire ProFile'));
+    CASE ASKOPT(4, KEYS) OF
+      'L':
+        BKTYPE := 1;
+      'C':
+        BEGIN
+          CLREOL(0, 4);
+          PUTSTR(0, 4,
+            'Confirm before replacing existing File or Volume [Yes/No] ?');
+          ASKYN(-1, 0, CONFIRM)
+        END;
+      'F':
+        BKTYPE := 2;
+      'V':
+        BKTYPE := 3;
+      'P':
+        BKTYPE := 4;
+      'N':
+        BKTYPE := 5;
+      'D':
+        BKTYPE := 6;
+      OTHERWISE
+        EXIT(MAINMENU)
+    END;
+    IF (BKTYPE IN [2, 3, 4]) AND (PAKEY = 0) THEN
+      BEGIN
+        PUTSTR(0, 22, 'No pascal area on drive');
+        HITSPACE;
+        BKTYPE := 0
+      END
+  UNTIL BKTYPE <> 0
+END;
+(*$I+*)
+
+PROCEDURE CLRSTATE;
+BEGIN
+  FILLCHAR(SELBITS, 4, CHR(0));
+  BKNAME := '';
+  LISTING := 'CONSOLE:';
+  DISKNO := 0;
+  PAGEFLG := 0;
+  FILECNT := 0;
+  DATBLKS := 0;
+  FLBLK := 0;
+  STATROW := 3;
+  VOLCNT := 0;
+  COMMENT := '';
+  DISKCNT := 0
+END;
+
+(*$I-*)
+PROCEDURE LOADVOLS;
+VAR
+  NAME: NAM15;
+  ENT: DIRENT;
+  LIM: INTEGER;
+BEGIN
+  VOLS[1].STAT := DRIVE;
+  VOLS2[1].STAT := DRIVE;
+  UNITSTATUS(PFUNIT, VOLS2, 16386);
+  PAKEY := 0;
+  ENTIX := 0;
+  WHILE PAKEY = 0 DO
+    BEGIN
+      IF NOT NEXTDIR(ENT) THEN
+        EXIT(LOADVOLS);
+      MOVELEFT(ENT, NAME, 16);
+      (*$R-*)
+      NAME[0] := CHR(ORD(NAME[0]) MOD 16);
+      (*$R+*)
+      UPSTR(NAME);
+      IF NAME = 'PASCAL.AREA' THEN
+        BEGIN
+          PAKEY := ENT.KEYHI * 256 + ENT.KEYLO;
+          ENTBLK := DIRAT
+        END
+    END;
+  UNITREAD(PFUNIT, VOLTBL, 256 + 512, PAKEY, DRVCTL);
+  LASTIO := IORESULT;
+  IF LASTIO <> 0 THEN
+    SHOWIO(LASTIO, 'Unable to read directory from Profile');
+  AREAKEY := PAKEY;
+  AREASZ := VOLTBL[0].A;
+  VOLSIN := VOLTBL[0].B;
+  TMP := 1;
+  LIM := VOLTBL[0].B;
+  WHILE TMP <= LIM DO
+    BEGIN
+      UNITREAD(PFUNIT, DIRBLK, 25, VOLTBL[TMP].A + 2, DRVCTL);
+      LASTIO := IORESULT;
+      IF LASTIO <> 0 THEN
+        SHOWIO(LASTIO, 'Unable to read directory from Profile');
+      MOVELEFT(DIRBLK[6], VOLNMS[TMP], 8);
+      SELBITS[TMP] := FALSE;
+      TMP := TMP + 1
+    END
+END;
+
+PROCEDURE READHDR;
+BEGIN
+  DIRAT := 2;
+  UNITREAD(PFUNIT, DIRBLK, 512, DIRAT, DRVCTL);
+  LASTIO := IORESULT;
+  IF LASTIO = 0 THEN
+    BEGIN
+      ENTLEN := DIRBLK[35];
+      ENTS := DIRBLK[36];
+      DISKBLKS := DIRBLK[41] + DIRBLK[42] * 256;
+      AREAKEY := DISKBLKS;
+      MAPBASE := DIRBLK[39] + DIRBLK[40] * 256
+    END
+END;
+(*$I+*)
+
+PROCEDURE SETTITLE;
+BEGIN
+  CASE BKTYPE OF
+    1:
+      TITLE := 'List Backup Files';
+    2:
+      TITLE := CONCAT('Select Files to ', ACT);
+    3:
+      TITLE := CONCAT('Select Volumes to ', ACT);
+    4:
+      TITLE := CONCAT(ACT, ' Pascal Area');
+    5:
+      TITLE := CONCAT(ACT, ' Non-Pascal Area');
+    6:
+      TITLE := CONCAT(ACT, ' entire ProFile')
+  END
+END;
+
+PROCEDURE SHOWERR;
+VAR
+  MSG: STR80;
+BEGIN
+  CASE ERR OF
+    12:
+      MSG := 'No ProFile Driver found';
+    17:
+      MSG := 'No ProFile Drives found';
+    19:
+      MSG := 'Restore type must match backup type';
+    20:
+      MSG := 'Unable to acquire blocks';
+    22:
+      MSG := 'File/Volume backup requires Volumes on ProFile';
+    25:
+      MSG := 'No such unit';
+    OTHERWISE
+      BEGIN
+        NUMSTR(ERR, MSG);
+        MSG := CONCAT('(', MSG, ') - see program')
+      END
+  END;
+  PUTSTR(0, 22, CONCAT('ERROR : ', MSG));
+  HITSPACE;
+  IF FLAG = 0 THEN
+    QUITBK
+END;
+
+PROCEDURE QUITBK;
+VAR
+  S: STR80;
+BEGIN
+  CLREOL(0, 3);
+  PUTSTR(0, 12, 'Leaving Pascal Backup');
+  STAT2;
+  NEEDDISK;
+  GETCVAL(S);
+  SETCVAL('');
+  IF S <> '' THEN
+    SETCHAIN(S);
   EXIT(BACKUP)
+END;
+
+(*$I-*)
+PROCEDURE SHOWIO;
+BEGIN
+  WRITE('I/O Error ', ERR, ' ', MSG);
+  WRITELN;
+  HITSPACE;
+  EXIT(MAINMENU)
+END;
+(*$I+*)
+
+(*$I-*)
+FUNCTION NEXTDIR;
+VAR
+  IX: INTEGER;
+BEGIN
+  NEXTDIR := FALSE;
+  IF ENTIX = 0 THEN
+    BEGIN
+      DIRAT := 2;
+      READHDR;
+      IF LASTIO <> 0 THEN
+        SHOWIO(LASTIO, 'Unable to read directory from Profile')
+    END;
+  ENTIX := ENTIX + 1;
+  IX := ENTIX MOD ENTS;
+  IF IX = 0 THEN
+    BEGIN
+      DIRAT := DIRBLK[3] * 256 + DIRBLK[2];
+      IF DIRAT <> 0 THEN
+        BEGIN
+          UNITREAD(PFUNIT, DIRBLK, 512, DIRAT, DRVCTL);
+          LASTIO := IORESULT;
+          IF LASTIO <> 0 THEN
+            EXIT(NEXTDIR)
+        END
+      ELSE
+        EXIT(NEXTDIR)
+    END;
+  NEXTDIR := TRUE;
+  MOVELEFT(DIRBLK[4 + IX * ENTLEN], ENT, 40)
+END;
+(*$I+*)
+
+(*$I-*)
+PROCEDURE SELDRIVE;
+VAR
+  U: RECORD
+       CASE INTEGER OF
+         1: (LIM: INTEGER);
+         2: (S: STRING[35])
+     END;
+BEGIN
+  DRIVE := FIRSTDRV;
+  CLREOL(0, 2);
+  PUTSTR(0, 2, 'Select a ProFile for Backup/Restore');
+  PUTSTR(5, 6, 'Drive Number      ProDOS Volume Name');
+  TMP := 0;
+  U.LIM := NDRIVES - 1;
+  WHILE TMP <= U.LIM DO
+    BEGIN
+      MOVETO(10, 8 + TMP);
+      WRITE(TMP, '              ');
+      IF TMP IN DRVSAVL THEN
+        WRITE(VOLNAM[TMP])
+      ELSE
+        WRITE('** Drive not available');
+      TMP := TMP + 1
+    END;
+  REPEAT
+    CLEARY(4);
+    { 1.3 SAS of the literal; 1.1 SCONCAT into the overlay. }
+    U.S := 'Select which drive? (Enter Number) ';
+    PUTSTR(0, 4, U.S);
+    IF DRIVE >= NDRIVES THEN
+      DRIVE := FIRSTDRV;
+    EDITNUM(-1, 0, DRIVE, 1);
+    IF WASESC THEN
+      BEGIN
+        DRIVE := FIRSTDRV;
+        EXIT(SELDRIVE)
+      END
+  UNTIL (DRIVE < NDRIVES) AND (DRIVE IN DRVSAVL);
+  LOADVOLS
+END;
+(*$I+*)
+{ The banner is 80 characters; the 1.3 compiler
+  rejects that literal with error 277 (TOOLONG). }
+PROCEDURE BANNER; BEGIN END;
+
+BEGIN
+  READDIRS;
+  DRIVE := 0;
+  INITIALI;
+  MARK(HEAP.P);
+  WHILE TRUE DO
+    MAINMENU
 END.

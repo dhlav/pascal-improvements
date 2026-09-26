@@ -2,10 +2,10 @@
 
   A plain unit. VOLUI is the one interface heading, so it
   is procedure 2. The helpers below are private and are
-  numbered from 3 in this order. IOFAIL and P04..P17 are
+  numbered from 3 in this order. IOFAIL and SAFEDIV..PDVALID are
   the same bodies as PASCALPR, compiled in this unit so a
   global load is the long LDO form and EXIT carries
-  segment 8. P18..P26 and VOLUI (with nested P27, P28)
+  segment 8. TITLELN..SETWPROT and VOLUI (with nested VOLCELL, CLRCELL)
   are the volume-manager commands. The unit uses VMGR;
   the linker rewrites those operands onto the host frame
   and turns the VMGR call into CXP 7. }
@@ -20,7 +20,7 @@ IMPLEMENTATION
     IF (IORESULT <> 0) OR (ERRNUM <> 0) THEN
       BEGIN
         IOERR := IORESULT;
-        V22;
+        SHOWERR;
         IOFAIL := TRUE
       END
     ELSE IOFAIL := FALSE
@@ -28,28 +28,28 @@ IMPLEMENTATION
   { Dividend is the first parameter. Names in one group are
     allocated downward, and a function reserves REALSIZE
     words for its result before them. }
-  FUNCTION P04(DVND, DVSR: INTEGER): INTEGER;
+  FUNCTION SAFEDIV(DVND, DVSR: INTEGER): INTEGER;
   VAR T: INTEGER;
   BEGIN
     IF DVND >= 0 THEN
-      P04 := DVND DIV DVSR
+      SAFEDIV := DVND DIV DVSR
     ELSE
       BEGIN
         T := (DVND + 32767) + 1;
-        P04 := ((T DIV DVSR) + (32767 DIV DVSR))
+        SAFEDIV := ((T DIV DVSR) + (32767 DIV DVSR))
                + ((((T MOD DVSR) + (32767 MOD DVSR)) + 1) DIV DVSR)
       END
   END;
 
-  FUNCTION P05(DVND, DVSR: INTEGER): INTEGER;
+  FUNCTION SAFEMOD(DVND, DVSR: INTEGER): INTEGER;
   VAR T: INTEGER;
   BEGIN
     IF DVND >= 0 THEN
-      P05 := DVND MOD DVSR
+      SAFEMOD := DVND MOD DVSR
     ELSE
       BEGIN
         T := (DVND + 32767) + 1;
-        P05 := (((T MOD DVSR) + (32767 MOD DVSR)) + 1) MOD DVSR
+        SAFEMOD := (((T MOD DVSR) + (32767 MOD DVSR)) + 1) MOD DVSR
       END
   END;
 
@@ -62,7 +62,7 @@ IMPLEMENTATION
   { ProDOS name: length nibble, first character, then the
     other fourteen. The array arrives by value, so the
     compiler copies it before this body. }
-  PROCEDURE P07(LEN: INTEGER; CH: CHAR; NAME: NAMEREST;
+  PROCEDURE MKPDSTR(LEN: INTEGER; CH: CHAR; NAME: NAMEREST;
                 VAR DEST: STRING);
   VAR I: INTEGER;
   BEGIN
@@ -79,9 +79,9 @@ IMPLEMENTATION
       END
   END;
 
-  FUNCTION P08(N: DRVNUM): INTEGER;
+  FUNCTION DRVCTL(N: DRVNUM): INTEGER;
   BEGIN
-    P08 := 2 + N * 8192
+    DRVCTL := 2 + N * 8192
   END;
 
   { Line editor. Backspace and delete erase a character;
@@ -90,7 +90,7 @@ IMPLEMENTATION
     No string-index checks: the length byte is stored
     directly, and a checked index of 0 would fault. }
   (*$R-*)
-  FUNCTION P09(VAR S: ANYSTR; LIM: INTEGER;
+  FUNCTION EDITLINE(VAR S: ANYSTR; LIM: INTEGER;
                DIGITS: BOOLEAN): BOOLEAN;
   VAR N: INTEGER;
       CH: CHAR;
@@ -127,58 +127,58 @@ IMPLEMENTATION
                 WRITE(CHR(7))
     UNTIL EOLN(KEYBOARD) OR (CH = CHR(27));
     S[0] := CHR(N);
-    P09 := CH = CHR(27)
+    EDITLINE := CH = CHR(27)
   END;
   (*$R+*)
 
   { Read up to five digits into N. True means escape. }
-  FUNCTION P10(VAR N: INTEGER): BOOLEAN;
+  FUNCTION READNUM(VAR N: INTEGER): BOOLEAN;
   VAR BUF: STRING[5];
       ESC: BOOLEAN;
       I: INTEGER;
   BEGIN
-    ESC := P09(BUF, 5, TRUE);
-    P10 := ESC;
+    ESC := EDITLINE(BUF, 5, TRUE);
+    READNUM := ESC;
     N := 0;
     IF NOT ESC THEN
       FOR I := 1 TO LENGTH(BUF) DO
         N := N * 10 + ORD(BUF[I]) - ORD('0')
   END;
-  FUNCTION P11(N: INTEGER): INTEGER;
+  FUNCTION VOLIDX(N: INTEGER): INTEGER;
   BEGIN
     IF N IN [4, 5] THEN
-      P11 := N - 3
+      VOLIDX := N - 3
     ELSE
       IF N IN [9..20] THEN
-        P11 := N - 6
+        VOLIDX := N - 6
       ELSE
-        P11 := (N - 128) + 15
+        VOLIDX := (N - 128) + 15
   END;
 
-  FUNCTION P12(N: INTEGER): INTEGER;
+  FUNCTION UNITNUM(N: INTEGER): INTEGER;
   BEGIN
     IF (N = 1) OR (N = 2) THEN
-      P12 := N + 3
+      UNITNUM := N + 3
     ELSE
       IF N IN [3..14] THEN
-        P12 := N + 6
+        UNITNUM := N + 6
       ELSE
-        P12 := (N + 128) - 15
+        UNITNUM := (N + 128) - 15
   END;
 
-  PROCEDURE P13(ROW, NLINES: INTEGER);
+  PROCEDURE BLANKLN(ROW, NLINES: INTEGER);
   VAR I: INTEGER;
   BEGIN
     GOTOXY(0, ROW);
     FOR I := 1 TO NLINES DO
       BEGIN
-        V24;
+        CLRLINE;
         WRITELN
       END;
     GOTOXY(0, ROW)
   END;
 
-  FUNCTION P14: BOOLEAN;
+  FUNCTION YESNO: BOOLEAN;
   VAR CH: CHAR;
       OK: BOOLEAN;
   BEGIN
@@ -192,10 +192,10 @@ IMPLEMENTATION
     UNTIL OK;
     IF CH <> CHR(27) THEN
       WRITE(CH);
-    P14 := CH IN ['Y', 'y']
+    YESNO := CH IN ['Y', 'y']
   END;
   { Fold lowercase to upper, then remove every space. }
-  PROCEDURE P15(VAR S: STRING);
+  PROCEDURE CLEANNM(VAR S: STRING);
   VAR AT: INTEGER;
       I: INTEGER;
   BEGIN
@@ -210,55 +210,55 @@ IMPLEMENTATION
   END;
   { Pascal volume name: one to seven characters, from
     space through 'z', except space, '$', ',', '=' and '?'. }
-  FUNCTION P16(NAME: ANYSTR): BOOLEAN;
+  FUNCTION PVVALID(NAME: ANYSTR): BOOLEAN;
   VAR I: INTEGER;
   BEGIN
-    P16 := FALSE;
+    PVVALID := FALSE;
     IF LENGTH(NAME) IN [1..7] THEN
       BEGIN
         FOR I := 1 TO LENGTH(NAME) DO
           IF (NOT (NAME[I] IN [' '..'z']))
              OR (NAME[I] IN [' ', '$', ',', '=', '?']) THEN
-            EXIT(P16);
-        P16 := TRUE
+            EXIT(PVVALID);
+        PVVALID := TRUE
       END
   END;
 
   { ProDOS name: one to fifteen characters. The first is
     'A'..'Z'; the rest may also be a digit or a period. }
-  FUNCTION P17(NAME: STRING): BOOLEAN;
+  FUNCTION PDVALID(NAME: STRING): BOOLEAN;
   VAR I: INTEGER;
   BEGIN
-    P17 := TRUE;
+    PDVALID := TRUE;
     IF LENGTH(NAME) IN [1..15] THEN
       BEGIN
         IF NOT (NAME[1] IN ['A'..'Z']) THEN
-          P17 := FALSE;
+          PDVALID := FALSE;
         FOR I := 2 TO LENGTH(NAME) DO
           IF NOT (NAME[I] IN ['.', '0'..'9', 'A'..'Z']) THEN
-            P17 := FALSE
+            PDVALID := FALSE
       END
     ELSE
-      P17 := FALSE
+      PDVALID := FALSE
   END;
 
   { Title on row 0, then '...'. Value STRING[80] is
     copied on entry. }
-  PROCEDURE P18(S: STRING);
+  PROCEDURE TITLELN(S: STRING);
   BEGIN
     GOTOXY(0, 0);
-    V24;
+    CLRLINE;
     WRITE(S);
     WRITE('...')
   END;
 
   { Cycle DRIVE to the next member of MARKED. }
-  PROCEDURE P19;
+  PROCEDURE NEXTDRV;
   VAR OLD: INTEGER;
   BEGIN
     CLRERR;
     IF MARKED = [] THEN
-      EXIT(P19);
+      EXIT(NEXTDRV);
     OLD := DRIVE;
     { DRVNUM stores would emit CHK 0..7. }
     (*$R-*)
@@ -268,91 +268,91 @@ IMPLEMENTATION
     IF OLD = DRIVE THEN
       BEGIN
         DRIVE := OLD;
-        EXIT(P19)
+        EXIT(NEXTDRV)
       END;
     (*$R+*)
-    P13(0, 4);
-    P18('Moving to next drive');
+    BLANKLN(0, 4);
+    TITLELN('Moving to next drive');
     VOLS[1].STAT := DRIVE;
-    UNITSTATUS(W5, VOLS, 16386);
-    V08(DRIVE);
+    UNITSTATUS(PFUNIT, VOLS, 16386);
+    MOUNTDRV(DRIVE);
     IF IOFAIL THEN
       DRVS[0].EXTRA := 0;
-    V20
+    REDRAW
   END;
 
-  PROCEDURE P20;
+  PROCEDURE RELVOL;
   VAR UNITN: INTEGER;
       VOL: INTEGER;
   BEGIN
     CLRERR;
-    P13(0, 4);
-    P18('Release a volume');
+    BLANKLN(0, 4);
+    TITLELN('Release a volume');
     WRITELN;
-    VOL := V21;
+    VOL := CHOOSE;
     IF VOL = 0 THEN
-      EXIT(P20);
+      EXIT(RELVOL);
     UNITN := DRVS[VOL].ATTRIB.UNITNO;
     IF UNITN IN [128..143, 4, 5, 9..20] THEN
-      IF VOLS[P11(UNITN)].BUSY THEN
-        V05(UNITN);
+      IF VOLS[VOLIDX(UNITN)].BUSY THEN
+        FREEUNIT(UNITN);
     IF IOFAIL THEN
-      EXIT(P20);
-    V17(VOL, 0)
+      EXIT(RELVOL);
+    DRAWUNIT(VOL, 0)
   END;
 
-  PROCEDURE P21;
+  PROCEDURE ASNVOL;
   VAR VOL: INTEGER;
       UNITN: INTEGER;
   BEGIN
     CLRERR;
-    P13(0, 4);
-    P18('Assign a volume');
+    BLANKLN(0, 4);
+    TITLELN('Assign a volume');
     WRITELN;
-    VOL := V21;
+    VOL := CHOOSE;
     IF VOL = 0 THEN
-      EXIT(P21);
+      EXIT(ASNVOL);
     REPEAT
       GOTOXY(0, 1);
-      V24;
+      CLRLINE;
       WRITE('Assign to what Pascal unit number? ');
-      IF P10(UNITN) THEN
-        EXIT(P21);
+      IF READNUM(UNITN) THEN
+        EXIT(ASNVOL);
       IF NOT (UNITN IN [128..143, 4, 5, 9..20]) THEN
         BEGIN
           ERRNUM := 5;
-          V22
+          SHOWERR
         END
     UNTIL UNITN IN [128..143, 4, 5, 9..20];
-    V04(VOL, UNITN);
+    BINDUNIT(VOL, UNITN);
     IF IOFAIL THEN
-      EXIT(P21);
+      EXIT(ASNVOL);
     GOTOXY(0, CURROW);
-    V24;
-    V20
+    CLRLINE;
+    REDRAW
   END;
 
-  PROCEDURE P22;
+  PROCEDURE DOKRUNCH;
   BEGIN
     CLRERR;
-    P13(0, 4);
+    BLANKLN(0, 4);
     WRITELN;
     WRITE('Krunch the Pascal area? (Y/N) ');
-    IF P14 THEN
+    IF YESNO THEN
       BEGIN
         GOTOXY(0, 3);
-        V24;
+        CLRLINE;
         WRITE('Krunching...');
-        V07;
+        KRUNCHPA;
         IF NOT IOFAIL THEN
           BEGIN
             GOTOXY(0, 3);
-            V24
+            CLRLINE
           END
       END
   END;
 
-  PROCEDURE P23;
+  PROCEDURE DELVOL;
   VAR VOL: INTEGER;
       UNUSED: STRING;
       SPARE: INTEGER;
@@ -360,50 +360,50 @@ IMPLEMENTATION
   BEGIN
     KRUNCH := FALSE;
     CLRERR;
-    P13(0, 4);
-    P18('Delete a volume');
+    BLANKLN(0, 4);
+    TITLELN('Delete a volume');
     WRITELN;
-    VOL := V21;
+    VOL := CHOOSE;
     IF VOL = 0 THEN
-      EXIT(P23);
+      EXIT(DELVOL);
     IF DRVS[VOL].ATTRIB.WPROT THEN
       BEGIN
         ERRNUM := 10;
-        V22;
-        EXIT(P23)
+        SHOWERR;
+        EXIT(DELVOL)
       END;
     GOTOXY(0, 2);
-    V24;
+    CLRLINE;
     WRITE('Delete Highlighted Volume ');
     WRITE(VNAMES[VOL]);
     WRITE(': (Y/N)? ');
-    IF P14 THEN
+    IF YESNO THEN
       BEGIN
         GOTOXY(0, 2);
-        V24;
+        CLRLINE;
         WRITE('Krunch the Pascal area (Y/N)?');
-        IF P14 THEN
+        IF YESNO THEN
           BEGIN
             KRUNCH := TRUE;
             GOTOXY(0, 3);
-            V24;
+            CLRLINE;
             WRITE('Krunching...');
-            V03(VOL, TRUE)
+            REMVOL(VOL, TRUE)
           END
         ELSE
-          V03(VOL, FALSE);
+          REMVOL(VOL, FALSE);
         IF IOFAIL THEN
-          EXIT(P23);
+          EXIT(DELVOL);
         IF KRUNCH THEN
           BEGIN
             GOTOXY(0, 3);
-            V24
+            CLRLINE
           END;
-        V20
+        REDRAW
       END
   END;
 
-  PROCEDURE P24;
+  PROCEDURE MAKEVOL;
   VAR SIZE: INTEGER;
       SPARE: INTEGER;
       NAME: STRING[7];
@@ -415,128 +415,128 @@ IMPLEMENTATION
     IF DRVS[0].EXTRA = 31 THEN
       BEGIN
         ERRNUM := 3;
-        V22;
-        EXIT(P24)
+        SHOWERR;
+        EXIT(MAKEVOL)
       END;
-    P13(0, 4);
-    P18('Create a volume');
+    BLANKLN(0, 4);
+    TITLELN('Create a volume');
     REPEAT
       OK := FALSE;
-      P13(1, 1);
+      BLANKLN(1, 1);
       WRITE('What is the name for this volume? ');
-      IF P09(NAME, 7, FALSE) THEN
+      IF EDITLINE(NAME, 7, FALSE) THEN
         BEGIN
           GOTOXY(0, CURROW);
-          V24;
+          CLRLINE;
           WRITE(CHR(14));
-          V18(W12);
-          EXIT(P24)
+          DRAWROW(HILITE);
+          EXIT(MAKEVOL)
         END;
-      P15(NAME);
-      OK := P16(NAME);
+      CLEANNM(NAME);
+      OK := PVVALID(NAME);
       IF NOT OK THEN
         BEGIN
           ERRNUM := 9;
-          V22
+          SHOWERR
         END
     UNTIL OK;
     GOTOXY(0, CURROW);
-    V24;
-    P13(1, 1);
+    CLRLINE;
+    BLANKLN(1, 1);
     WRITE('What is the description field? ');
-    IF P09(DESC, 15, FALSE) THEN
-      EXIT(P24);
+    IF EDITLINE(DESC, 15, FALSE) THEN
+      EXIT(MAKEVOL);
     REPEAT
       OK := FALSE;
-      P13(1, 1);
+      BLANKLN(1, 1);
       WRITE('What is the size of this volume in blocks? ');
-      IF P10(SIZE) THEN
-        EXIT(P24);
+      IF READNUM(SIZE) THEN
+        EXIT(MAKEVOL);
       OK := NOT (SIZE <= 6);
       IF NOT OK THEN
         BEGIN
           ERRNUM := 13;
-          V22
+          SHOWERR
         END
     UNTIL OK;
     GOTOXY(0, CURROW);
-    V24;
-    RES := V02(NAME, DESC, SIZE);
+    CLRLINE;
+    RES := ADDVOL(NAME, DESC, SIZE);
     IF RES <> 0 THEN
-      V20
+      REDRAW
     ELSE
-      V22
+      SHOWERR
   END;
 
-  PROCEDURE P25;
+  PROCEDURE MODVOL;
   VAR VOL: INTEGER;
       DESC: STRING;
       NAME: STRING;
       OK: BOOLEAN;
   BEGIN
     CLRERR;
-    P13(0, 4);
-    P18('Modify a volume');
-    VOL := V21;
+    BLANKLN(0, 4);
+    TITLELN('Modify a volume');
+    VOL := CHOOSE;
     IF VOL = 0 THEN
-      EXIT(P25);
+      EXIT(MODVOL);
     IF DRVS[VOL].ATTRIB.WPROT THEN
       BEGIN
         ERRNUM := 10;
-        V22;
-        EXIT(P25)
+        SHOWERR;
+        EXIT(MODVOL)
       END;
     REPEAT
       OK := FALSE;
-      P13(1, 1);
+      BLANKLN(1, 1);
       WRITE('What is the new name for this volume? RETURN for no change. ');
-      IF P09(NAME, 7, FALSE) THEN
+      IF EDITLINE(NAME, 7, FALSE) THEN
         BEGIN
           GOTOXY(0, CURROW);
-          V24;
+          CLRLINE;
           WRITE(CHR(14));
-          V18(W12);
-          EXIT(P25)
+          DRAWROW(HILITE);
+          EXIT(MODVOL)
         END;
-      P15(NAME);
-      OK := P16(NAME) OR (NAME = '');
+      CLEANNM(NAME);
+      OK := PVVALID(NAME) OR (NAME = '');
       IF NOT OK THEN
         BEGIN
           ERRNUM := 9;
-          V22
+          SHOWERR
         END
     UNTIL OK;
     GOTOXY(0, CURROW);
-    V24;
-    P13(1, 1);
+    CLRLINE;
+    BLANKLN(1, 1);
     WRITE('What is the new description field? RETURN for no change. ');
-    IF P09(DESC, 15, FALSE) THEN
-      EXIT(P25);
-    V09(VOL, NAME, DESC);
+    IF EDITLINE(DESC, 15, FALSE) THEN
+      EXIT(MODVOL);
+    RENAVOL(VOL, NAME, DESC);
     IF IOFAIL THEN
-      EXIT(P25);
-    V18(VOL)
+      EXIT(MODVOL);
+    DRAWROW(VOL)
   END;
 
-  PROCEDURE P26;
+  PROCEDURE SETWPROT;
   VAR VOL: INTEGER;
       FLAG: BOOLEAN;
   BEGIN
     CLRERR;
-    P13(0, 4);
-    P18('Change the write-protection of a volume');
+    BLANKLN(0, 4);
+    TITLELN('Change the write-protection of a volume');
     WRITELN;
-    VOL := V21;
+    VOL := CHOOSE;
     IF VOL = 0 THEN
-      EXIT(P26);
+      EXIT(SETWPROT);
     IF DRVS[VOL].ATTRIB.WPROT THEN
       FLAG := FALSE
     ELSE
       FLAG := TRUE;
-    V06(VOL, FLAG);
+    SETWP(VOL, FLAG);
     IF IOFAIL THEN
-      EXIT(P26);
-    V14(VOL, FLAG)
+      EXIT(SETWPROT);
+    DRAWWP(VOL, FLAG)
   END;
 
   PROCEDURE VOLUI;
@@ -548,7 +548,7 @@ IMPLEMENTATION
 
     { Screen cell for volume index N. Two columns of
       sixteen, rows starting at 7. }
-    PROCEDURE P27(N: INTEGER);
+    PROCEDURE VOLCELL(N: INTEGER);
     BEGIN
       IF (N <= 16) OR ((N >= 33) AND (N <= 48)) THEN
         COL := 2
@@ -568,18 +568,18 @@ IMPLEMENTATION
       ROW := ROW + 7
     END;
 
-    PROCEDURE P28;
+    PROCEDURE CLRCELL;
     BEGIN
-      P27(W12);
+      VOLCELL(HILITE);
       GOTOXY(COL - 2, ROW);
       WRITE('  ')
     END;
 
   BEGIN (*$R VMGR*)
     CLRERR;
-    P13(0, 4);
-    V13;
-    W8 := 1;
+    BLANKLN(0, 4);
+    INITDRV;
+    ERRHERE := 1;
     IF MARKED = [] THEN
       BEGIN
         GOTOXY(0, CURROW);
@@ -587,7 +587,7 @@ IMPLEMENTATION
         WRITELN('ERROR: There are no Profiles with Pascal Areas.');
         REPEAT
           GOTOXY(0, 4);
-          V24;
+          CLRLINE;
           WRITE(CHR(15));
           WRITE('Press SPACE to continue');
           WRITE(CHR(14));
@@ -597,14 +597,14 @@ IMPLEMENTATION
         EXIT(VOLUI)
       END;
     IF DRIVE IN MARKED THEN
-      V08(DRIVE)
+      MOUNTDRV(DRIVE)
     ELSE
       BEGIN
         I := 0;
         WHILE I <= 7 DO
           IF I IN MARKED THEN
             BEGIN
-              V08(I);
+              MOUNTDRV(I);
               I := 7 + 1
             END
           ELSE
@@ -612,17 +612,17 @@ IMPLEMENTATION
       END;
     IF IOFAIL THEN
       DRVS[0].EXTRA := 0;
-    V20;
+    REDRAW;
     REPEAT
       IF ERRNUM + IOERR = 0 THEN
         BEGIN
-          P28;
+          CLRCELL;
           WRITE(CHR(14));
-          V18(W12);
-          W12 := 0
+          DRAWROW(HILITE);
+          HILITE := 0
         END;
       CLRERR;
-      P13(0, 3);
+      BLANKLN(0, 3);
       WRITE('Volume Manager         Copyright 1983 Apple Computer, Inc.     Version 1.0.1');
       WRITELN;
       GOTOXY(0, 1);
@@ -633,20 +633,20 @@ IMPLEMENTATION
       IF CH IN ['a'..'z'] THEN
         CH := CHR(ORD(CH) - ORD('a') + ORD('A'));
       GOTOXY(0, CURROW);
-      V24;
+      CLRLINE;
       WRITELN;
       CASE CH OF
-        'C': P24;
-        'D': P23;
-        'A': P21;
-        'R': P20;
-        'M': P25;
-        'W': P26;
-        'K': P22;
-        'N': P19
+        'C': MAKEVOL;
+        'D': DELVOL;
+        'A': ASNVOL;
+        'R': RELVOL;
+        'M': MODVOL;
+        'W': SETWPROT;
+        'K': DOKRUNCH;
+        'N': NEXTDRV
       END
     UNTIL CH = 'Q';
-    P13(0, 4)
+    BLANKLN(0, 4)
   END;
 BEGIN
 END.
